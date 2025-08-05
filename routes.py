@@ -518,3 +518,170 @@ def campaign_analytics_api(campaign_id):
         },
         'events': analytics['event_counts']
     })
+
+# LUX AI Agent Routes
+@main_bp.route('/lux/generate-campaign', methods=['POST'])
+@login_required
+def lux_generate_campaign():
+    """LUX AI agent - Generate automated campaign"""
+    try:
+        from ai_agent import lux_agent
+        
+        data = request.get_json() or {}
+        campaign_brief = {
+            'objective': data.get('objective', 'Engage audience and drive conversions'),
+            'target_audience': data.get('target_audience', 'All active contacts'),
+            'brand_info': data.get('brand_info', 'Professional business'),
+            'target_tags': data.get('target_tags', []),
+            'schedule_time': None
+        }
+        
+        # Parse schedule time if provided
+        if data.get('schedule_time'):
+            try:
+                campaign_brief['schedule_time'] = datetime.fromisoformat(data['schedule_time'])
+            except ValueError:
+                pass
+        
+        result = lux_agent.create_automated_campaign(campaign_brief)
+        
+        if result:
+            return jsonify({
+                'success': True,
+                'campaign': result,
+                'message': f'LUX created campaign "{result["campaign_name"]}" with {result["recipients_count"]} recipients'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'LUX was unable to create the campaign. Please check your OpenAI configuration.'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"LUX generate campaign error: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
+@main_bp.route('/lux/optimize-campaign/<int:campaign_id>')
+@login_required
+def lux_optimize_campaign(campaign_id):
+    """LUX AI agent - Optimize campaign performance"""
+    try:
+        from ai_agent import lux_agent
+        
+        optimization = lux_agent.optimize_campaign_performance(campaign_id)
+        
+        if optimization:
+            return jsonify({
+                'success': True,
+                'optimization': optimization
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Unable to analyze campaign performance'
+            }), 404
+            
+    except Exception as e:
+        logger.error(f"LUX optimize campaign error: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
+@main_bp.route('/lux/audience-analysis')
+@login_required
+def lux_audience_analysis():
+    """LUX AI agent - Analyze audience segments"""
+    try:
+        from ai_agent import lux_agent
+        
+        contacts = Contact.query.filter_by(is_active=True).all()
+        analysis = lux_agent.analyze_audience_segments(contacts)
+        
+        if analysis:
+            return jsonify({
+                'success': True,
+                'analysis': analysis
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Unable to analyze audience'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"LUX audience analysis error: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
+@main_bp.route('/lux/subject-variants', methods=['POST'])
+@login_required
+def lux_subject_variants():
+    """LUX AI agent - Generate subject line variants"""
+    try:
+        from ai_agent import lux_agent
+        
+        data = request.get_json() or {}
+        objective = data.get('objective', 'Engage audience')
+        original_subject = data.get('original_subject')
+        
+        variants = lux_agent.generate_subject_line_variants(objective, original_subject)
+        
+        if variants:
+            return jsonify({
+                'success': True,
+                'variants': variants
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Unable to generate subject line variants'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"LUX subject variants error: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
+@main_bp.route('/lux/recommendations')
+@login_required
+def lux_recommendations():
+    """LUX AI agent - Get campaign recommendations"""
+    try:
+        from ai_agent import lux_agent
+        
+        recommendations = lux_agent.get_campaign_recommendations()
+        
+        if recommendations:
+            return jsonify({
+                'success': True,
+                'recommendations': recommendations
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Unable to generate recommendations'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"LUX recommendations error: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
+@main_bp.route('/lux')
+@login_required
+def lux_agent_dashboard():
+    """LUX AI Agent dashboard"""
+    # Get recent campaigns for optimization selection
+    recent_campaigns = Campaign.query.filter(Campaign.sent_at.isnot(None)).order_by(Campaign.sent_at.desc()).limit(6).all()
+    
+    return render_template('lux_agent.html', recent_campaigns=recent_campaigns)

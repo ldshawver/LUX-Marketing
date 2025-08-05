@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Email Marketing Automation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Dashboard</h1>
+    <div>
+        <a href="{{ url_for('main.create_campaign') }}" class="btn btn-primary">
+            <i data-feather="plus"></i> New Campaign
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="users" class="text-primary" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ total_contacts }}</h5>
+                        <p class="card-text text-muted">Total Contacts</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="send" class="text-success" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ total_campaigns }}</h5>
+                        <p class="card-text text-muted">Total Campaigns</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="activity" class="text-warning" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ active_campaigns }}</h5>
+                        <p class="card-text text-muted">Active Campaigns</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="mail" class="text-info" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ total_sent }}</h5>
+                        <p class="card-text text-muted">Emails Sent</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Campaigns -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Recent Campaigns</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_campaigns %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Campaign</th>
+                                <th>Status</th>
+                                <th>Recipients</th>
+                                <th>Sent</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for campaign in recent_campaigns %}
+                            <tr>
+                                <td>
+                                    <strong>{{ campaign.name }}</strong><br>
+                                    <small class="text-muted">{{ campaign.subject }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ campaign.status | campaign_status_color }}">
+                                        {{ campaign.status.title() }}
+                                    </span>
+                                </td>
+                                <td>{{ campaign.total_recipients }}</td>
+                                <td>{{ campaign.sent_count }}</td>
+                                <td>{{ campaign.created_at.strftime('%Y-%m-%d') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i data-feather="inbox" class="text-muted" style="width: 3rem; height: 3rem;"></i>
+                    <p class="text-muted mt-2">No campaigns yet. Create your first campaign!</p>
+                    <a href="{{ url_for('main.create_campaign') }}" class="btn btn-primary">
+                        <i data-feather="plus"></i> Create Campaign
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Quick Stats</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Emails Sent</span>
+                        <strong class="text-success">{{ total_sent }}</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Failed Deliveries</span>
+                        <strong class="text-danger">{{ total_failed }}</strong>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('main.contacts') }}" class="btn btn-outline-primary btn-sm">
+                        <i data-feather="users"></i> Manage Contacts
+                    </a>
+                    <a href="{{ url_for('main.templates') }}" class="btn btn-outline-secondary btn-sm">
+                        <i data-feather="file-text"></i> Email Templates
+                    </a>
+                    <a href="{{ url_for('main.analytics') }}" class="btn btn-outline-info btn-sm">
+                        <i data-feather="bar-chart-2"></i> View Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Email Templates - Email Marketing Automation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Email Templates</h1>
+    <div>
+        <a href="{{ url_for('main.create_template') }}" class="btn btn-primary">
+            <i data-feather="plus"></i> Create Template
+        </a>
+    </div>
+</div>
+
+<!-- Templates Grid -->
+{% if templates %}
+<div class="row">
+    {% for template in templates %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ template.name }}</h5>
+                <p class="card-text text-muted">{{ template.subject }}</p>
+                <p class="card-text">
+                    <small class="text-muted">
+                        Created: {{ template.created_at.strftime('%Y-%m-%d') }}
+                    </small>
+                </p>
+            </div>
+            <div class="card-footer">
+                <div class="btn-group w-100">
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="previewTemplate({{ template.id }})">
+                        <i data-feather="eye"></i> Preview
+                    </button>
+                    <a href="{{ url_for('main.create_template') }}?edit={{ template.id }}" class="btn btn-outline-secondary btn-sm">
+                        <i data-feather="edit"></i> Edit
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i data-feather="file-text" class="text-muted" style="width: 4rem; height: 4rem;"></i>
+    <h3 class="mt-3">No templates found</h3>
+    <p class="text-muted">Create your first email template to start building campaigns.</p>
+    <a href="{{ url_for('main.create_template') }}" class="btn btn-primary">
+        <i data-feather="plus"></i> Create Your First Template
+    </a>
+</div>
+{% endif %}
+
+<!-- Template Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Template Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="preview-content">
+                    <!-- Preview content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function previewTemplate(templateId) {
+    // For now, just show a placeholder
+    document.getElementById('preview-content').innerHTML = '<div class="text-center"><i data-feather="eye"></i><p>Template preview functionality coming soon</p></div>';
+    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    modal.show();
+    feather.replace();
+}
+</script>
+{% endblock %}

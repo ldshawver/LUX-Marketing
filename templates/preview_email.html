@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Preview Campaign - Email Marketing Automation{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i data-feather="eye"></i>
+                    Campaign Preview: {{ campaign.name }}
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Subject:</strong> {{ campaign.subject }}
+                </div>
+                
+                <div class="border rounded p-3" style="background: #f8f9fa;">
+                    <h6>Email Preview:</h6>
+                    <iframe id="email-preview" style="width: 100%; height: 600px; border: 1px solid #dee2e6; border-radius: 0.375rem;"></iframe>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('main.campaigns') }}" class="btn btn-secondary">
+                        <i data-feather="arrow-left"></i> Back to Campaigns
+                    </a>
+                    {% if campaign.status in ['draft', 'scheduled'] %}
+                    <form method="POST" action="{{ url_for('main.send_campaign', campaign_id=campaign.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to send this campaign to all recipients?')">
+                        <button type="submit" class="btn btn-success">
+                            <i data-feather="send"></i> Send Campaign
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Campaign Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Status:</strong>
+                    {% set status_color = campaign.status | campaign_status_color %}
+                    <span class="badge bg-{{ status_color }}">
+                        {{ campaign.status.title() }}
+                    </span>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Recipients:</strong> {{ campaign.total_recipients }}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Template:</strong> {{ template.name }}
+                </div>
+                
+                {% if campaign.scheduled_at %}
+                <div class="mb-3">
+                    <strong>Scheduled:</strong> {{ campaign.scheduled_at.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <strong>Created:</strong> {{ campaign.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+                
+                {% if campaign.sent_at %}
+                <div class="mb-3">
+                    <strong>Sent:</strong> {{ campaign.sent_at.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if sample_contact %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Preview Data</h5>
+            </div>
+            <div class="card-body">
+                <p>Preview is shown with sample contact data:</p>
+                <ul class="list-unstyled">
+                    <li><strong>Name:</strong> {{ sample_contact.full_name }}</li>
+                    <li><strong>Email:</strong> {{ sample_contact.email }}</li>
+                    {% if sample_contact.company %}
+                    <li><strong>Company:</strong> {{ sample_contact.company }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Render the email template with sample data
+    const templateContent = `{{ template.html_content | safe }}`;
+    
+    // Replace template variables with sample data
+    const sampleData = templateContent
+        {% if sample_contact %}
+        .replace(/\{\{contact\.first_name\}\}/g, '{{ sample_contact.first_name or "John" }}')
+        .replace(/\{\{contact\.last_name\}\}/g, '{{ sample_contact.last_name or "Doe" }}')
+        .replace(/\{\{contact\.full_name\}\}/g, '{{ sample_contact.full_name }}')
+        .replace(/\{\{contact\.email\}\}/g, '{{ sample_contact.email }}')
+        .replace(/\{\{contact\.company\}\}/g, '{{ sample_contact.company or "Example Corp" }}')
+        .replace(/\{\{contact\.phone\}\}/g, '{{ sample_contact.phone or "+1-555-0123" }}')
+        {% else %}
+        .replace(/\{\{contact\.first_name\}\}/g, 'John')
+        .replace(/\{\{contact\.last_name\}\}/g, 'Doe')
+        .replace(/\{\{contact\.full_name\}\}/g, 'John Doe')
+        .replace(/\{\{contact\.email\}\}/g, 'john.doe@example.com')
+        .replace(/\{\{contact\.company\}\}/g, 'Example Corp')
+        .replace(/\{\{contact\.phone\}\}/g, '+1-555-0123')
+        {% endif %}
+        .replace(/\{\{campaign\.name\}\}/g, '{{ campaign.name }}')
+        .replace(/\{\{campaign\.subject\}\}/g, '{{ campaign.subject }}')
+        .replace(/\{\{unsubscribe_url\}\}/g, '#unsubscribe')
+        .replace(/\{\{tracking_pixel\}\}/g, '');
+    
+    const previewFrame = document.getElementById('email-preview');
+    previewFrame.srcdoc = sampleData;
+});
+</script>
+{% endblock %}

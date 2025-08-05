@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Create Campaign - Email Marketing Automation{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i data-feather="plus"></i>
+                    Create New Campaign
+                </h3>
+            </div>
+            
+            <form method="POST">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <label for="name" class="form-label">Campaign Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                        <div class="form-text">A descriptive name for your campaign</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="subject" class="form-label">Email Subject *</label>
+                        <input type="text" class="form-control" id="subject" name="subject" required>
+                        <div class="form-text">The subject line recipients will see</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="template_id" class="form-label">Email Template *</label>
+                        <select class="form-select" id="template_id" name="template_id" required>
+                            <option value="">Select a template...</option>
+                            {% for template in templates %}
+                            <option value="{{ template.id }}">{{ template.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Choose an email template for your campaign
+                            {% if not templates %}
+                            <br><span class="text-warning">No templates found. <a href="{{ url_for('main.create_template') }}">Create a template first</a>.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="recipient_tags" class="form-label">Recipient Tags</label>
+                        <input type="text" class="form-control" id="recipient_tags" name="recipient_tags" placeholder="customer, newsletter, vip">
+                        <div class="form-text">
+                            Leave empty to send to all contacts, or specify tags to filter recipients (comma-separated)
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="scheduled_at" class="form-label">Schedule Send Time</label>
+                        <input type="datetime-local" class="form-control" id="scheduled_at" name="scheduled_at">
+                        <div class="form-text">
+                            Leave empty to save as draft, or set a future time to schedule the campaign
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i data-feather="info"></i>
+                            Campaign Setup
+                        </h6>
+                        <ul class="mb-0">
+                            <li>Recipients are selected based on active contacts matching the specified tags</li>
+                            <li>If no tags are specified, the campaign will be sent to all active contacts</li>
+                            <li>Scheduled campaigns will be sent automatically at the specified time</li>
+                            <li>Draft campaigns can be sent manually from the campaigns page</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.campaigns') }}" class="btn btn-secondary">
+                            <i data-feather="arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i data-feather="save"></i> Create Campaign
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set minimum datetime to current time
+    const datetimeInput = document.getElementById('scheduled_at');
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    datetimeInput.min = now.toISOString().slice(0, 16);
+});
+</script>
+{% endblock %}

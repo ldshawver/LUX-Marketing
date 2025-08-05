@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{campaign.subject}}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .offer {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 3px dashed #ffc107;
+            padding: 40px 20px;
+            margin: 30px 0;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .offer h1 {
+            margin: 0;
+            color: #dc3545;
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .offer .subtitle {
+            font-size: 24px;
+            margin: 10px 0;
+            color: #856404;
+            font-weight: bold;
+        }
+        .offer .code {
+            background: #dc3545;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 20px 0;
+            letter-spacing: 2px;
+        }
+        .cta {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 20px 40px;
+            font-size: 20px;
+            text-decoration: none;
+            border-radius: 50px;
+            display: inline-block;
+            margin: 30px 0;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+            transition: all 0.3s ease;
+        }
+        .cta:hover {
+            background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.6);
+        }
+        .urgency {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .urgency .timer {
+            color: #dc3545;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .features {
+            text-align: left;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .features h3 {
+            color: #dc3545;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+        .features li {
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+            position: relative;
+            padding-left: 25px;
+        }
+        .features li:before {
+            content: "✓";
+            color: #28a745;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        .features li:last-child {
+            border-bottom: none;
+        }
+        .footer {
+            background: #6c757d;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .footer a {
+            color: white;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .social {
+            margin: 20px 0;
+        }
+        .social a {
+            color: white;
+            margin: 0 10px;
+            font-size: 16px;
+        }
+        @media (max-width: 600px) {
+            .offer h1 {
+                font-size: 36px;
+            }
+            .offer .subtitle {
+                font-size: 18px;
+            }
+            .cta {
+                padding: 15px 30px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔥 MEGA SALE</h1>
+            <p>Exclusive Limited Time Offer!</p>
+        </div>
+        <div class="content">
+            <h2>Hello {{contact.first_name}}!</h2>
+            
+            <p>We have something <strong>INCREDIBLE</strong> just for you...</p>
+            
+            <div class="offer">
+                <h1>50% OFF</h1>
+                <p class="subtitle">EVERYTHING MUST GO!</p>
+                <div class="code">USE CODE: SAVE50</div>
+                <p style="margin: 0; font-size: 16px; color: #856404;">
+                    <strong>Valid on all products • No minimum purchase required</strong>
+                </p>
+            </div>
+            
+            <p style="font-size: 18px;">Don't miss out on this incredible opportunity to save big on all our premium products and services!</p>
+            
+            <div class="features">
+                <h3>What's Included:</h3>
+                <ul>
+                    <li>All premium products at 50% discount</li>
+                    <li>Free shipping on all orders</li>
+                    <li>Extended warranty included</li>
+                    <li>24/7 customer support</li>
+                    <li>30-day money-back guarantee</li>
+                </ul>
+            </div>
+            
+            <a href="#" class="cta">🛍️ SHOP NOW & SAVE 50%</a>
+            
+            <div class="urgency">
+                ⏰ <span class="timer">HURRY! Only 48 Hours Left!</span><br>
+                This exclusive offer expires soon. Don't wait!
+            </div>
+            
+            <p style="color: #6c757d; font-style: italic;">
+                This exclusive offer is available only to our valued customers like you, {{contact.first_name}}.
+            </p>
+        </div>
+        <div class="footer">
+            <p><strong>{{contact.company}} Exclusive Offer</strong></p>
+            <div class="social">
+                <a href="#">Facebook</a> |
+                <a href="#">Twitter</a> |
+                <a href="#">Instagram</a>
+            </div>
+            <p>This offer is exclusive to our valued customers. Offer cannot be combined with other promotions.</p>
+            <p>
+                <a href="{{unsubscribe_url}}">Unsubscribe</a> | 
+                <a href="#">Update Preferences</a> | 
+                <a href="#">Contact Support</a>
+            </p>
+            <p>Your Company Name, 123 Business Street, City, State 12345</p>
+            <img src="{{tracking_pixel}}" width="1" height="1" alt="" style="display: none;">
+        </div>
+    </div>
+</body>
+</html>

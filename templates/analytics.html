@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Email Marketing Automation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Analytics & Reports</h1>
+</div>
+
+<!-- Overview Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="send" class="text-primary" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ total_campaigns }}</h5>
+                        <p class="card-text text-muted">Total Campaigns</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="check-circle" class="text-success" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ sent_campaigns }}</h5>
+                        <p class="card-text text-muted">Sent Campaigns</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="mail" class="text-info" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ total_sent }}</h5>
+                        <p class="card-text text-muted">Emails Delivered</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="x-circle" class="text-danger" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ total_failed }}</h5>
+                        <p class="card-text text-muted">Failed Deliveries</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delivery Rate Chart -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Delivery Rate</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="deliveryChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Campaign Status Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Campaign Performance -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Recent Campaign Performance</h5>
+    </div>
+    <div class="card-body">
+        {% if recent_campaigns %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Campaign</th>
+                        <th>Sent Date</th>
+                        <th>Recipients</th>
+                        <th>Delivered</th>
+                        <th>Failed</th>
+                        <th>Delivery Rate</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for campaign in recent_campaigns %}
+                    <tr>
+                        <td>
+                            <strong>{{ campaign.name }}</strong><br>
+                            <small class="text-muted">{{ campaign.subject }}</small>
+                        </td>
+                        <td>{{ campaign.sent_at.strftime('%Y-%m-%d %H:%M') if campaign.sent_at else '-' }}</td>
+                        <td>{{ campaign.total_recipients }}</td>
+                        <td>
+                            <span class="badge bg-success">{{ campaign.sent_count }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-danger">{{ campaign.failed_count }}</span>
+                        </td>
+                        <td>
+                            {% if campaign.total_recipients > 0 %}
+                                {% set delivery_rate = (campaign.sent_count / campaign.total_recipients * 100) | round(1) %}
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar bg-success" style="width: {{ delivery_rate }}%">
+                                        {{ delivery_rate }}%
+                                    </div>
+                                </div>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set status_color = campaign.status | campaign_status_color %}
+                            <span class="badge bg-{{ status_color }}">
+                                {{ campaign.status.title() }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i data-feather="bar-chart-2" class="text-muted" style="width: 3rem; height: 3rem;"></i>
+            <p class="text-muted mt-2">No campaign data available yet.</p>
+            <a href="{{ url_for('main.create_campaign') }}" class="btn btn-primary">
+                <i data-feather="plus"></i> Create Your First Campaign
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Delivery Rate Doughnut Chart
+const deliveryCtx = document.getElementById('deliveryChart').getContext('2d');
+const deliveryChart = new Chart(deliveryCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Delivered', 'Failed', 'Pending'],
+        datasets: [{
+            data: [{{ total_sent }}, {{ total_failed }}, {{ total_pending }}],
+            backgroundColor: [
+                'rgba(40, 167, 69, 0.8)',
+                'rgba(220, 53, 69, 0.8)',
+                'rgba(255, 193, 7, 0.8)'
+            ],
+            borderColor: [
+                'rgba(40, 167, 69, 1)',
+                'rgba(220, 53, 69, 1)',
+                'rgba(255, 193, 7, 1)'
+            ],
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Campaign Status Chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+const statusChart = new Chart(statusCtx, {
+    type: 'bar',
+    data: {
+        labels: ['Total', 'Sent'],
+        datasets: [{
+            label: 'Campaigns',
+            data: [{{ total_campaigns }}, {{ sent_campaigns }}],
+            backgroundColor: [
+                'rgba(0, 123, 255, 0.8)',
+                'rgba(40, 167, 69, 0.8)'
+            ],
+            borderColor: [
+                'rgba(0, 123, 255, 1)',
+                'rgba(40, 167, 69, 1)'
+            ],
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

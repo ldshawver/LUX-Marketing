@@ -54,12 +54,19 @@ Preferred communication style: Simple, everyday language.
 - **Required Credentials**: Client ID, Client Secret, and Tenant ID
 - **Permissions**: Mail.Send application permission for sending emails
 
+### OpenAI Integration (LUX AI Agent)
+- **Service**: OpenAI GPT-4o for automated email marketing intelligence
+- **Authentication**: API key-based authentication
+- **Features**: Campaign generation, content optimization, audience analysis
+- **Agent Name**: LUX - Automated Email Marketing Assistant
+
 ### Python Libraries
 - **Flask**: Web framework with SQLAlchemy, Login, and other extensions
 - **MSAL**: Microsoft Authentication Library for Graph API access
 - **APScheduler**: Background task scheduling for automated campaigns
 - **Jinja2**: Template engine for email content personalization
 - **Werkzeug**: WSGI utilities and security functions
+- **OpenAI**: AI-powered content generation and optimization
 
 ### Frontend Dependencies
 - **Bootstrap 5**: UI framework with dark theme support

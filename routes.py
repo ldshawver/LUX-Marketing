@@ -1,5 +1,6 @@
 import csv
 import io
+import base64
 from datetime import datetime
 from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response
 from flask_login import login_required, current_user
@@ -8,6 +9,7 @@ from app import db
 from models import Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTracking
 from email_service import EmailService
 from utils import validate_email
+from tracking import decode_tracking_data, record_email_event
 import logging
 
 main_bp = Blueprint('main', __name__)
@@ -363,15 +365,156 @@ def analytics():
     # Email delivery statistics
     total_sent = db.session.query(CampaignRecipient).filter_by(status='sent').count()
     total_failed = db.session.query(CampaignRecipient).filter_by(status='failed').count()
+    total_bounced = db.session.query(CampaignRecipient).filter_by(status='bounced').count()
     total_pending = db.session.query(CampaignRecipient).filter_by(status='pending').count()
+    
+    # Engagement statistics
+    total_opened = db.session.query(CampaignRecipient).filter(CampaignRecipient.opened_at.isnot(None)).count()
+    total_clicked = db.session.query(CampaignRecipient).filter(CampaignRecipient.clicked_at.isnot(None)).count()
+    
+    # Calculate rates
+    total_delivered = total_sent
+    open_rate = (total_opened / total_delivered * 100) if total_delivered > 0 else 0
+    click_rate = (total_clicked / total_delivered * 100) if total_delivered > 0 else 0
+    bounce_rate = (total_bounced / (total_delivered + total_bounced) * 100) if (total_delivered + total_bounced) > 0 else 0
+    
+    # Tracking events breakdown
+    tracking_stats = db.session.query(
+        EmailTracking.event_type, 
+        db.func.count(EmailTracking.id).label('count')
+    ).group_by(EmailTracking.event_type).all()
+    
+    tracking_data = {stat.event_type: stat.count for stat in tracking_stats}
     
     # Recent campaign performance
     recent_campaigns = Campaign.query.filter(Campaign.sent_at.isnot(None)).order_by(Campaign.sent_at.desc()).limit(10).all()
+    
+    # Top performing campaigns by open rate
+    top_campaigns = []
+    for campaign in Campaign.query.filter_by(status='sent').all():
+        recipients = campaign.recipients.filter_by(status='sent').count()
+        opens = campaign.recipients.filter(CampaignRecipient.opened_at.isnot(None)).count()
+        clicks = campaign.recipients.filter(CampaignRecipient.clicked_at.isnot(None)).count()
+        
+        if recipients > 0:
+            campaign_open_rate = (opens / recipients * 100)
+            campaign_click_rate = (clicks / recipients * 100)
+            top_campaigns.append({
+                'campaign': campaign,
+                'recipients': recipients,
+                'opens': opens,
+                'clicks': clicks,
+                'open_rate': campaign_open_rate,
+                'click_rate': campaign_click_rate
+            })
+    
+    # Sort by open rate
+    top_campaigns.sort(key=lambda x: x['open_rate'], reverse=True)
+    top_campaigns = top_campaigns[:5]  # Top 5 campaigns
     
     return render_template('analytics.html',
                          total_campaigns=total_campaigns,
                          sent_campaigns=sent_campaigns,
                          total_sent=total_sent,
                          total_failed=total_failed,
+                         total_bounced=total_bounced,
                          total_pending=total_pending,
-                         recent_campaigns=recent_campaigns)
+                         total_opened=total_opened,
+                         total_clicked=total_clicked,
+                         open_rate=open_rate,
+                         click_rate=click_rate,
+                         bounce_rate=bounce_rate,
+                         tracking_data=tracking_data,
+                         recent_campaigns=recent_campaigns,
+                         top_campaigns=top_campaigns)
+
+@main_bp.route('/track/open/<tracking_id>')
+def track_open(tracking_id):
+    """Track email open events"""
+    campaign_id, contact_id = decode_tracking_data(tracking_id)
+    
+    if campaign_id and contact_id:
+        # Get client info for tracking
+        event_data = {
+            'user_agent': request.headers.get('User-Agent', ''),
+            'ip_address': request.remote_addr,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+        # Record the open event
+        record_email_event(campaign_id, contact_id, 'opened', event_data)
+    
+    # Return a 1x1 transparent pixel
+    from flask import Response
+    
+    # 1x1 transparent GIF in base64
+    pixel_data = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+    pixel_bytes = base64.b64decode(pixel_data)
+    
+    response = Response(pixel_bytes, mimetype='image/gif')
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
+    return response
+
+@main_bp.route('/track/click')
+def track_click():
+    """Track email click events"""
+    tracking_id = request.args.get('tracking_id')
+    original_url = request.args.get('url', '/')
+    
+    if tracking_id:
+        campaign_id, contact_id = decode_tracking_data(tracking_id)
+        
+        if campaign_id and contact_id:
+            # Get client info for tracking
+            event_data = {
+                'user_agent': request.headers.get('User-Agent', ''),
+                'ip_address': request.remote_addr,
+                'clicked_url': original_url,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            
+            # Record the click event
+            record_email_event(campaign_id, contact_id, 'clicked', event_data)
+    
+    # Redirect to the original URL
+    return redirect(original_url)
+
+@main_bp.route('/api/campaign/<int:campaign_id>/analytics')
+@login_required
+def campaign_analytics_api(campaign_id):
+    """API endpoint for campaign analytics"""
+    from tracking import get_campaign_analytics
+    
+    analytics = get_campaign_analytics(campaign_id)
+    if not analytics:
+        return jsonify({'error': 'Campaign not found'}), 404
+    
+    # Convert campaign object to dict for JSON serialization
+    campaign_data = {
+        'id': analytics['campaign'].id,
+        'name': analytics['campaign'].name,
+        'subject': analytics['campaign'].subject,
+        'status': analytics['campaign'].status,
+        'created_at': analytics['campaign'].created_at.isoformat() if analytics['campaign'].created_at else None,
+        'sent_at': analytics['campaign'].sent_at.isoformat() if analytics['campaign'].sent_at else None
+    }
+    
+    return jsonify({
+        'campaign': campaign_data,
+        'metrics': {
+            'total_recipients': analytics['total_recipients'],
+            'sent_count': analytics['sent_count'],
+            'failed_count': analytics['failed_count'],
+            'bounced_count': analytics['bounced_count'],
+            'opened_count': analytics['opened_count'],
+            'clicked_count': analytics['clicked_count'],
+            'delivery_rate': round(analytics['delivery_rate'], 2),
+            'open_rate': round(analytics['open_rate'], 2),
+            'click_rate': round(analytics['click_rate'], 2),
+            'bounce_rate': round(analytics['bounce_rate'], 2)
+        },
+        'events': analytics['event_counts']
+    })

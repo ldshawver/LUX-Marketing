@@ -99,6 +99,8 @@ class EmailService:
     def render_template(self, template_html, contact, campaign):
         """Render email template with contact and campaign data"""
         try:
+            from tracking import process_email_content
+            
             template = Template(template_html)
             
             # Prepare template context
@@ -115,11 +117,16 @@ class EmailService:
                     'name': campaign.name,
                     'subject': campaign.subject
                 },
-                'unsubscribe_url': f"https://yourdomain.com/unsubscribe?email={contact.email}&campaign={campaign.id}",
-                'tracking_pixel': f"https://yourdomain.com/track/open?campaign={campaign.id}&contact={contact.id}"
+                'unsubscribe_url': f"https://yourdomain.com/unsubscribe?email={contact.email}&campaign={campaign.id}"
             }
             
-            return template.render(**context)
+            # Render the basic template
+            rendered_html = template.render(**context)
+            
+            # Add tracking pixels and links
+            tracked_html = process_email_content(rendered_html, campaign.id, contact.id)
+            
+            return tracked_html
             
         except Exception as e:
             logging.error(f"Error rendering template: {str(e)}")

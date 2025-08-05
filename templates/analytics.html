@@ -9,7 +9,7 @@
 
 <!-- Overview Statistics -->
 <div class="row mb-4">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -25,39 +25,71 @@
         </div>
     </div>
     
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
-                        <i data-feather="check-circle" class="text-success" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h5 class="card-title mb-0">{{ sent_campaigns }}</h5>
-                        <p class="card-text text-muted">Sent Campaigns</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <i data-feather="mail" class="text-info" style="width: 2rem; height: 2rem;"></i>
+                        <i data-feather="mail" class="text-success" style="width: 2rem; height: 2rem;"></i>
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <h5 class="card-title mb-0">{{ total_sent }}</h5>
-                        <p class="card-text text-muted">Emails Delivered</p>
+                        <p class="card-text text-muted">Delivered</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="col-md-3">
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="eye" class="text-info" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ total_opened }}</h5>
+                        <p class="card-text text-muted">Opened</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="mouse-pointer" class="text-warning" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ total_clicked }}</h5>
+                        <p class="card-text text-muted">Clicked</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="alert-triangle" class="text-warning" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ total_bounced }}</h5>
+                        <p class="card-text text-muted">Bounced</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-2">
         <div class="card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -66,7 +98,67 @@
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <h5 class="card-title mb-0">{{ total_failed }}</h5>
-                        <p class="card-text text-muted">Failed Deliveries</p>
+                        <p class="card-text text-muted">Failed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Engagement Rates -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="trending-up" class="text-success" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ "%.1f" | format(open_rate) }}%</h5>
+                        <p class="card-text text-muted">Open Rate</p>
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar bg-success" style="width: {{ open_rate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="target" class="text-info" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ "%.1f" | format(click_rate) }}%</h5>
+                        <p class="card-text text-muted">Click Rate</p>
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar bg-info" style="width: {{ click_rate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="shield-off" class="text-warning" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ "%.1f" | format(bounce_rate) }}%</h5>
+                        <p class="card-text text-muted">Bounce Rate</p>
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar bg-warning" style="width: {{ bounce_rate }}%"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -99,10 +191,85 @@
     </div>
 </div>
 
+<!-- Top Performing Campaigns -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Top Performing Campaigns</h5>
+            </div>
+            <div class="card-body">
+                {% if top_campaigns %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Campaign</th>
+                                <th>Recipients</th>
+                                <th>Delivered</th>
+                                <th>Opened</th>
+                                <th>Clicked</th>
+                                <th>Open Rate</th>
+                                <th>Click Rate</th>
+                                <th>Engagement</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in top_campaigns %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item.campaign.name }}</strong><br>
+                                    <small class="text-muted">{{ item.campaign.subject }}</small>
+                                </td>
+                                <td>{{ item.recipients }}</td>
+                                <td><span class="badge bg-success">{{ item.recipients }}</span></td>
+                                <td><span class="badge bg-info">{{ item.opens }}</span></td>
+                                <td><span class="badge bg-warning">{{ item.clicks }}</span></td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-info" style="width: {{ item.open_rate }}%">
+                                            {{ "%.1f" | format(item.open_rate) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-warning" style="width: {{ item.click_rate }}%">
+                                            {{ "%.1f" | format(item.click_rate) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if item.open_rate >= 25 %}
+                                        <span class="badge bg-success">Excellent</span>
+                                    {% elif item.open_rate >= 15 %}
+                                        <span class="badge bg-info">Good</span>
+                                    {% elif item.open_rate >= 10 %}
+                                        <span class="badge bg-warning">Average</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Poor</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i data-feather="trending-up" class="text-muted" style="width: 3rem; height: 3rem;"></i>
+                    <p class="text-muted mt-2">No campaign performance data available yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Recent Campaign Performance -->
 <div class="card">
     <div class="card-header">
-        <h5 class="card-title mb-0">Recent Campaign Performance</h5>
+        <h5 class="card-title mb-0">Recent Campaign Activity</h5>
     </div>
     <div class="card-body">
         {% if recent_campaigns %}
@@ -114,7 +281,8 @@
                         <th>Sent Date</th>
                         <th>Recipients</th>
                         <th>Delivered</th>
-                        <th>Failed</th>
+                        <th>Opened</th>
+                        <th>Clicked</th>
                         <th>Delivery Rate</th>
                         <th>Status</th>
                     </tr>
@@ -132,7 +300,10 @@
                             <span class="badge bg-success">{{ campaign.sent_count }}</span>
                         </td>
                         <td>
-                            <span class="badge bg-danger">{{ campaign.failed_count }}</span>
+                            <span class="badge bg-info">0</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-warning">0</span>
                         </td>
                         <td>
                             {% if campaign.total_recipients > 0 %}

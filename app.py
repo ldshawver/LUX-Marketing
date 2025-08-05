@@ -72,6 +72,19 @@ with app.app_context():
         db.session.commit()
         logging.info("Created default admin user: admin/admin123")
 
+# Add Jinja2 filters
+@app.template_filter('campaign_status_color')
+def campaign_status_color_filter(status):
+    color_mapping = {
+        'draft': 'secondary',
+        'scheduled': 'warning',
+        'sending': 'info',
+        'sent': 'success',
+        'failed': 'danger',
+        'paused': 'dark'
+    }
+    return color_mapping.get(status, 'secondary')
+
 # Initialize scheduler
 from scheduler import init_scheduler
 init_scheduler(app)

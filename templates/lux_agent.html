@@ -16,10 +16,10 @@
 
 <!-- Quick Actions -->
 <div class="row mb-4">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card h-100">
             <div class="card-body text-center">
-                <i data-feather="magic-wand" class="text-primary mb-3" style="width: 3rem; height: 3rem;"></i>
+                <i data-feather="wand" class="text-primary mb-3" style="width: 3rem; height: 3rem;"></i>
                 <h5>Generate Campaign</h5>
                 <p class="card-text text-muted">Let LUX create a complete email campaign for you</p>
                 <button class="btn btn-primary" onclick="showGenerateCampaign()">
@@ -29,7 +29,33 @@
         </div>
     </div>
     
-    <div class="col-md-3">
+    <div class="col-md-2">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i data-feather="shopping-cart" class="text-success mb-3" style="width: 3rem; height: 3rem;"></i>
+                <h5>Product Campaign</h5>
+                <p class="card-text text-muted">Create campaigns with WooCommerce products</p>
+                <button class="btn btn-success" onclick="showProductCampaign()">
+                    <i data-feather="package"></i> Product Campaign
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-2">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i data-feather="image" class="text-warning mb-3" style="width: 3rem; height: 3rem;"></i>
+                <h5>Generate Images</h5>
+                <p class="card-text text-muted">Create campaign visuals with DALL-E</p>
+                <button class="btn btn-warning" onclick="showImageGenerator()">
+                    <i data-feather="camera"></i> Generate Image
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-2">
         <div class="card h-100">
             <div class="card-body text-center">
                 <i data-feather="users" class="text-info mb-3" style="width: 3rem; height: 3rem;"></i>
@@ -42,27 +68,169 @@
         </div>
     </div>
     
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card h-100">
             <div class="card-body text-center">
-                <i data-feather="trending-up" class="text-success mb-3" style="width: 3rem; height: 3rem;"></i>
+                <i data-feather="trending-up" class="text-secondary mb-3" style="width: 3rem; height: 3rem;"></i>
                 <h5>Campaign Optimization</h5>
                 <p class="card-text text-muted">Get AI recommendations to improve performance</p>
-                <button class="btn btn-success" onclick="showOptimization()">
+                <button class="btn btn-secondary" onclick="showOptimization()">
                     <i data-feather="target"></i> Optimize
                 </button>
             </div>
         </div>
     </div>
     
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card h-100">
             <div class="card-body text-center">
-                <i data-feather="lightbulb" class="text-warning mb-3" style="width: 3rem; height: 3rem;"></i>
+                <i data-feather="bulb" class="text-dark mb-3" style="width: 3rem; height: 3rem;"></i>
                 <h5>Smart Recommendations</h5>
                 <p class="card-text text-muted">Get strategic campaign suggestions from LUX</p>
-                <button class="btn btn-warning" onclick="getRecommendations()">
-                    <i data-feather="brain"></i> Get Ideas
+                <button class="btn btn-dark" onclick="getRecommendations()">
+                    <i data-feather="star"></i> Get Ideas
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Campaign Modal -->
+<div class="modal fade" id="productCampaignModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i data-feather="shopping-cart" class="text-success"></i> WooCommerce Product Campaign
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="productCampaignForm">
+                    <div class="mb-3">
+                        <label class="form-label">WooCommerce Store URL</label>
+                        <input type="url" class="form-control" name="woocommerce_url" required
+                               placeholder="https://yourstore.com">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Consumer Key</label>
+                                <input type="text" class="form-control" name="consumer_key" required
+                                       placeholder="ck_xxxxxxxxxxxxxxxx">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Consumer Secret</label>
+                                <input type="password" class="form-control" name="consumer_secret" required
+                                       placeholder="cs_xxxxxxxxxxxxxxxx">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-info btn-sm" onclick="testWooCommerceConnection()">
+                            <i data-feather="wifi"></i> Test Connection
+                        </button>
+                        <span id="connectionStatus" class="ms-2"></span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Campaign Objective</label>
+                        <textarea class="form-control" name="objective" rows="3" 
+                                placeholder="Example: Promote our summer collection to drive sales and showcase new arrivals"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Product Category (Optional)</label>
+                                <input type="text" class="form-control" name="product_filter" 
+                                       placeholder="Leave empty for all products">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Number of Products</label>
+                                <select class="form-control" name="product_limit">
+                                    <option value="3">3 Products</option>
+                                    <option value="6" selected>6 Products</option>
+                                    <option value="9">9 Products</option>
+                                    <option value="12">12 Products</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="include_images" checked>
+                            <label class="form-check-label">
+                                Generate DALL-E campaign image
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="createProductCampaign()">
+                    <i data-feather="package"></i> Create Product Campaign
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Generator Modal -->
+<div class="modal fade" id="imageGeneratorModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i data-feather="image" class="text-warning"></i> DALL-E Image Generator
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="imageGeneratorForm">
+                    <div class="mb-3">
+                        <label class="form-label">Image Description</label>
+                        <textarea class="form-control" name="description" rows="4" required
+                                placeholder="Describe the marketing image you want to create. Example: A professional email header showing modern tech products with a clean, minimalist design"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Style</label>
+                        <select class="form-control" name="style">
+                            <option value="professional marketing">Professional Marketing</option>
+                            <option value="e-commerce product showcase">E-commerce Product</option>
+                            <option value="modern minimalist">Modern Minimalist</option>
+                            <option value="colorful and vibrant">Colorful & Vibrant</option>
+                            <option value="corporate professional">Corporate Professional</option>
+                            <option value="creative artistic">Creative Artistic</option>
+                        </select>
+                    </div>
+                </form>
+                <div id="generatedImagePreview" class="mt-3" style="display: none;">
+                    <h6>Generated Image:</h6>
+                    <img id="previewImage" class="img-fluid rounded" style="max-height: 300px;">
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-primary" onclick="downloadGeneratedImage()">
+                            <i data-feather="download"></i> Download
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="copyImageUrl()">
+                            <i data-feather="copy"></i> Copy URL
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="generateImage()">
+                    <i data-feather="camera"></i> Generate Image
                 </button>
             </div>
         </div>
@@ -537,6 +705,193 @@ function showLoading(show) {
 
 function showOptimization() {
     document.querySelector('[href="#optimization"]').scrollIntoView({ behavior: 'smooth' });
+}
+
+function showProductCampaign() {
+    const modal = new bootstrap.Modal(document.getElementById('productCampaignModal'));
+    modal.show();
+}
+
+function showImageGenerator() {
+    const modal = new bootstrap.Modal(document.getElementById('imageGeneratorModal'));
+    modal.show();
+}
+
+function testWooCommerceConnection() {
+    const form = document.getElementById('productCampaignForm');
+    const formData = new FormData(form);
+    
+    const data = {
+        woocommerce_url: formData.get('woocommerce_url'),
+        consumer_key: formData.get('consumer_key'),
+        consumer_secret: formData.get('consumer_secret')
+    };
+    
+    const statusEl = document.getElementById('connectionStatus');
+    statusEl.innerHTML = '<span class="text-info">Testing...</span>';
+    
+    fetch('/lux/test-woocommerce', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusEl.innerHTML = `<span class="text-success"><i data-feather="check-circle"></i> ${data.message}</span>`;
+            feather.replace();
+        } else {
+            statusEl.innerHTML = `<span class="text-danger"><i data-feather="x-circle"></i> ${data.message}</span>`;
+            feather.replace();
+        }
+    })
+    .catch(error => {
+        statusEl.innerHTML = `<span class="text-danger"><i data-feather="alert-triangle"></i> Connection failed</span>`;
+        feather.replace();
+    });
+}
+
+function createProductCampaign() {
+    const form = document.getElementById('productCampaignForm');
+    const formData = new FormData(form);
+    
+    const data = {
+        woocommerce_url: formData.get('woocommerce_url'),
+        consumer_key: formData.get('consumer_key'),
+        consumer_secret: formData.get('consumer_secret'),
+        objective: formData.get('objective'),
+        product_filter: formData.get('product_filter'),
+        product_limit: parseInt(formData.get('product_limit')),
+        include_images: formData.get('include_images') === 'on'
+    };
+    
+    showLoading(true);
+    
+    fetch('/lux/product-campaign', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        showLoading(false);
+        const modal = bootstrap.Modal.getInstance(document.getElementById('productCampaignModal'));
+        modal.hide();
+        
+        if (data.success) {
+            let imageHtml = '';
+            if (data.campaign.campaign_image) {
+                imageHtml = `
+                    <div class="col-md-4">
+                        <h6>Generated Campaign Image:</h6>
+                        <img src="${data.campaign.campaign_image.image_url}" class="img-fluid rounded" style="max-height: 200px;">
+                    </div>
+                `;
+            }
+            
+            showResult('Product Campaign Created!', `
+                <div class="alert alert-success">
+                    <h6><i data-feather="check-circle"></i> ${data.message}</h6>
+                </div>
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6>Campaign Details:</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Name:</strong> ${data.campaign.name}</li>
+                            <li><strong>Subject:</strong> ${data.campaign.subject}</li>
+                            <li><strong>Products Featured:</strong> ${data.campaign.product_count}</li>
+                            <li><strong>Recipients:</strong> ${data.campaign.recipients_count}</li>
+                        </ul>
+                        <h6>Featured Products:</h6>
+                        <ul>
+                            ${data.campaign.featured_products.map(product => `<li>${product}</li>`).join('')}
+                        </ul>
+                    </div>
+                    ${imageHtml}
+                </div>
+                <div class="mt-3">
+                    <a href="/campaigns" class="btn btn-primary">View Campaign</a>
+                </div>
+            `);
+        } else {
+            showResult('Campaign Creation Failed', `
+                <div class="alert alert-danger">
+                    <i data-feather="x-circle"></i> ${data.message}
+                </div>
+            `);
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        showResult('Error', `
+            <div class="alert alert-danger">
+                <i data-feather="alert-triangle"></i> Network error: ${error.message}
+            </div>
+        `);
+    });
+}
+
+function generateImage() {
+    const form = document.getElementById('imageGeneratorForm');
+    const formData = new FormData(form);
+    
+    const data = {
+        description: formData.get('description'),
+        style: formData.get('style')
+    };
+    
+    showLoading(true);
+    
+    fetch('/lux/generate-image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        showLoading(false);
+        
+        if (data.success) {
+            const previewEl = document.getElementById('generatedImagePreview');
+            const imageEl = document.getElementById('previewImage');
+            
+            imageEl.src = data.image.image_url;
+            imageEl.dataset.imageUrl = data.image.image_url;
+            previewEl.style.display = 'block';
+            
+            // Store image data for download/copy functions
+            window.currentGeneratedImage = data.image;
+        } else {
+            alert('Failed to generate image: ' + data.message);
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        alert('Error: ' + error.message);
+    });
+}
+
+function downloadGeneratedImage() {
+    if (window.currentGeneratedImage) {
+        const link = document.createElement('a');
+        link.href = window.currentGeneratedImage.image_url;
+        link.download = 'lux-generated-image.png';
+        link.click();
+    }
+}
+
+function copyImageUrl() {
+    if (window.currentGeneratedImage) {
+        navigator.clipboard.writeText(window.currentGeneratedImage.image_url).then(() => {
+            alert('Image URL copied to clipboard!');
+        });
+    }
 }
 </script>
 {% endblock %}

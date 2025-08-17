@@ -59,6 +59,8 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: API key-based authentication
 - **Features**: Campaign generation, content optimization, audience analysis
 - **Agent Name**: LUX - Automated Email Marketing Assistant
+- **DALL-E Integration**: Automatic image generation for email campaigns
+- **WooCommerce Integration**: Product-focused campaigns with live product data
 
 ### Python Libraries
 - **Flask**: Web framework with SQLAlchemy, Login, and other extensions

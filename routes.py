@@ -685,3 +685,163 @@ def lux_agent_dashboard():
     recent_campaigns = Campaign.query.filter(Campaign.sent_at.isnot(None)).order_by(Campaign.sent_at.desc()).limit(6).all()
     
     return render_template('lux_agent.html', recent_campaigns=recent_campaigns)
+
+@main_bp.route('/lux/generate-image', methods=['POST'])
+@login_required
+def lux_generate_image():
+    """LUX AI agent - Generate campaign images with DALL-E"""
+    try:
+        from ai_agent import lux_agent
+        
+        data = request.get_json() or {}
+        description = data.get('description', 'Professional marketing campaign')
+        style = data.get('style', 'professional marketing')
+        
+        result = lux_agent.generate_campaign_image(description, style)
+        
+        if result:
+            return jsonify({
+                'success': True,
+                'image': result,
+                'message': 'Campaign image generated successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Unable to generate image. Please check your OpenAI configuration.'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"LUX generate image error: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
+@main_bp.route('/lux/product-campaign', methods=['POST'])
+@login_required
+def lux_product_campaign():
+    """LUX AI agent - Create WooCommerce product campaign"""
+    try:
+        from ai_agent import lux_agent
+        
+        data = request.get_json() or {}
+        
+        # WooCommerce configuration
+        woocommerce_config = {
+            'url': data.get('woocommerce_url', ''),
+            'consumer_key': data.get('consumer_key', ''),
+            'consumer_secret': data.get('consumer_secret', ''),
+            'product_limit': data.get('product_limit', 6)
+        }
+        
+        # Validate required WooCommerce fields
+        if not all([woocommerce_config['url'], woocommerce_config['consumer_key'], woocommerce_config['consumer_secret']]):
+            return jsonify({
+                'success': False,
+                'message': 'WooCommerce URL, Consumer Key, and Consumer Secret are required'
+            }), 400
+        
+        campaign_objective = data.get('objective', 'Promote our latest products')
+        product_filter = data.get('product_filter')  # Category filter
+        include_images = data.get('include_images', True)
+        
+        result = lux_agent.create_product_campaign(
+            woocommerce_config, 
+            campaign_objective, 
+            product_filter, 
+            include_images
+        )
+        
+        if result:
+            # Create email template with product content
+            template = EmailTemplate(
+                name=f"LUX Product Campaign - {result['campaign_name']}",
+                subject=result['subject'],
+                html_content=result['html_content']
+            )
+            db.session.add(template)
+            db.session.flush()
+            
+            # Create campaign
+            campaign = Campaign(
+                name=result['campaign_name'],
+                subject=result['subject'],
+                template_id=template.id,
+                status='draft'
+            )
+            db.session.add(campaign)
+            db.session.flush()
+            
+            # Add recipients
+            contacts = Contact.query.filter_by(is_active=True).all()
+            for contact in contacts:
+                recipient = CampaignRecipient(
+                    campaign_id=campaign.id,
+                    contact_id=contact.id
+                )
+                db.session.add(recipient)
+            
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'campaign': {
+                    'id': campaign.id,
+                    'name': campaign.name,
+                    'subject': campaign.subject,
+                    'product_count': result['product_count'],
+                    'featured_products': result['featured_products'],
+                    'campaign_image': result['campaign_image'],
+                    'recipients_count': len(contacts)
+                },
+                'message': f'Product campaign created with {result["product_count"]} products'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Unable to create product campaign. Please check your WooCommerce API credentials.'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"LUX product campaign error: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
+@main_bp.route('/lux/test-woocommerce', methods=['POST'])
+@login_required
+def lux_test_woocommerce():
+    """Test WooCommerce API connection"""
+    try:
+        from ai_agent import lux_agent
+        
+        data = request.get_json() or {}
+        
+        # Test connection by fetching a few products
+        products = lux_agent.fetch_woocommerce_products(
+            data.get('woocommerce_url', ''),
+            data.get('consumer_key', ''),
+            data.get('consumer_secret', ''),
+            product_limit=3
+        )
+        
+        if products:
+            return jsonify({
+                'success': True,
+                'message': f'Connected successfully! Found {len(products)} products.',
+                'sample_products': products[:3]
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Unable to connect to WooCommerce. Please check your API credentials and URL.'
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"WooCommerce test error: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Connection failed: {str(e)}'
+        }), 500

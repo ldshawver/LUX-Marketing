@@ -10,6 +10,9 @@ from openai import OpenAI
 from models import Campaign, Contact, EmailTemplate, CampaignRecipient, db
 from email_service import EmailService
 from tracking import get_campaign_analytics
+import base64
+import requests
+from urllib.parse import urljoin
 
 logger = logging.getLogger(__name__)
 
@@ -385,6 +388,173 @@ class LUXAgent:
             
         except Exception as e:
             logger.error(f"LUX error getting recommendations: {e}")
+            return None
+    
+    def generate_campaign_image(self, campaign_description, style="professional marketing"):
+        """Generate marketing images using DALL-E"""
+        try:
+            prompt = f"""
+            Create a professional marketing image for: {campaign_description}
+            
+            Style: {style}
+            Requirements:
+            - High-quality, professional marketing design
+            - Suitable for email marketing campaigns
+            - Clear, engaging visual that supports the campaign message
+            - Modern, clean aesthetic
+            - Brand-friendly colors and composition
+            """
+            
+            response = self.client.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                n=1,
+                size="1024x1024",
+                quality="standard"
+            )
+            
+            image_url = response.data[0].url
+            logger.info(f"LUX generated campaign image: {campaign_description[:50]}...")
+            
+            return {
+                'image_url': image_url,
+                'prompt_used': prompt,
+                'campaign_description': campaign_description
+            }
+            
+        except Exception as e:
+            logger.error(f"LUX error generating image: {e}")
+            return None
+    
+    def fetch_woocommerce_products(self, woocommerce_url, consumer_key, consumer_secret, 
+                                  product_limit=10, category_filter=None):
+        """Fetch products from WooCommerce API"""
+        try:
+            # Construct API endpoint
+            api_url = urljoin(woocommerce_url, '/wp-json/wc/v3/products')
+            
+            # Set up authentication and parameters
+            auth = (consumer_key, consumer_secret)
+            params = {
+                'per_page': product_limit,
+                'status': 'publish',
+                'stock_status': 'instock'
+            }
+            
+            if category_filter:
+                params['category'] = category_filter
+            
+            response = requests.get(api_url, auth=auth, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                products = response.json()
+                
+                # Process products for email use
+                processed_products = []
+                for product in products:
+                    processed_product = {
+                        'id': product.get('id'),
+                        'name': product.get('name', ''),
+                        'price': product.get('price', '0'),
+                        'regular_price': product.get('regular_price', '0'),
+                        'sale_price': product.get('sale_price', ''),
+                        'description': product.get('short_description', ''),
+                        'image_url': product.get('images', [{}])[0].get('src', '') if product.get('images') else '',
+                        'permalink': product.get('permalink', ''),
+                        'categories': [cat.get('name', '') for cat in product.get('categories', [])],
+                        'tags': [tag.get('name', '') for tag in product.get('tags', [])],
+                        'in_stock': product.get('stock_status') == 'instock',
+                        'featured': product.get('featured', False)
+                    }
+                    processed_products.append(processed_product)
+                
+                logger.info(f"LUX fetched {len(processed_products)} WooCommerce products")
+                return processed_products
+            else:
+                logger.error(f"WooCommerce API error: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"LUX error fetching WooCommerce products: {e}")
+            return None
+    
+    def create_product_campaign(self, woocommerce_config, campaign_objective, 
+                               product_filter=None, include_images=True):
+        """Create a product-focused email campaign with WooCommerce integration"""
+        try:
+            # Fetch products from WooCommerce
+            products = self.fetch_woocommerce_products(
+                woocommerce_config['url'],
+                woocommerce_config['consumer_key'],
+                woocommerce_config['consumer_secret'],
+                product_limit=woocommerce_config.get('product_limit', 6),
+                category_filter=product_filter
+            )
+            
+            if not products:
+                return None
+            
+            # Generate campaign image if requested
+            campaign_image = None
+            if include_images:
+                image_description = f"Product showcase for {campaign_objective} featuring {len(products)} products"
+                campaign_image = self.generate_campaign_image(image_description, "e-commerce product showcase")
+            
+            # Create product-focused campaign content
+            prompt = f"""
+            As LUX, create a high-converting product email campaign.
+            
+            Campaign Objective: {campaign_objective}
+            Products to Feature: {json.dumps(products[:3])}  # Top 3 products for context
+            Total Products Available: {len(products)}
+            Campaign Image: {'Available' if campaign_image else 'Not generated'}
+            
+            Create an HTML email that:
+            1. Features the products prominently with images and prices
+            2. Includes compelling product descriptions
+            3. Has clear call-to-action buttons for each product
+            4. Uses professional e-commerce email styling
+            5. Includes the campaign image if available
+            6. Has a compelling subject line focused on the products
+            
+            Respond in JSON format with:
+            {
+                "subject": "product-focused subject line",
+                "html_content": "complete HTML email with product showcase",
+                "campaign_name": "descriptive campaign name",
+                "featured_products": ["list of product names featured"],
+                "recommendations": "optimization tips for product campaigns"
+            }
+            
+            Make it conversion-focused with clear pricing and purchase buttons.
+            """
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": self.agent_personality},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.7
+            )
+            
+            campaign_content = json.loads(response.choices[0].message.content)
+            
+            # Add product and image data to response
+            result = {
+                **campaign_content,
+                'products': products,
+                'campaign_image': campaign_image,
+                'product_count': len(products),
+                'woocommerce_integration': True
+            }
+            
+            logger.info(f"LUX created product campaign with {len(products)} products")
+            return result
+            
+        except Exception as e:
+            logger.error(f"LUX error creating product campaign: {e}")
             return None
 
 # Global LUX agent instance

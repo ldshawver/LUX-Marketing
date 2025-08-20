@@ -37,7 +37,7 @@ db.init_app(app)
 # Setup Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'auth.login'
+login_manager.login_view = 'auth.login'  # type: ignore
 login_manager.login_message = 'Please log in to access this page.'
 
 @login_manager.user_loader
@@ -63,11 +63,10 @@ with app.app_context():
     
     admin = User.query.filter_by(username='admin').first()
     if not admin:
-        admin_user = User(
-            username='admin',
-            email='admin@example.com',
-            password_hash=generate_password_hash('admin123')
-        )
+        admin_user = User()  # type: ignore
+        admin_user.username = 'admin'
+        admin_user.email = 'admin@example.com'
+        admin_user.password_hash = generate_password_hash('admin123')
         db.session.add(admin_user)
         db.session.commit()
         logging.info("Created default admin user: admin/admin123")

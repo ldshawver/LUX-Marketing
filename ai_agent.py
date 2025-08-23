@@ -104,18 +104,18 @@ class LUXAgent:
             - Optimal messaging strategies
             
             Respond in JSON format with:
-            {
+            {{
                 "segments": [
-                    {
+                    {{
                         "name": "segment name",
                         "description": "who this segment includes",
                         "size_estimate": "percentage of audience",
                         "messaging_strategy": "how to communicate with this segment",
                         "recommended_tags": ["tag1", "tag2"]
-                    }
+                    }}
                 ],
                 "insights": "key findings about the audience"
-            }
+            }}
             """
             
             response = self.client.chat.completions.create(

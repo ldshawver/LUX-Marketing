@@ -12,6 +12,8 @@ from utils import validate_email
 from tracking import decode_tracking_data, record_email_event
 import logging
 
+logger = logging.getLogger(__name__)
+
 main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
@@ -83,14 +85,13 @@ def add_contact():
         flash('Contact with this email already exists', 'error')
         return redirect(url_for('main.contacts'))
     
-    contact = Contact(
-        email=email,
-        first_name=first_name,
-        last_name=last_name,
-        company=company,
-        phone=phone,
-        tags=tags
-    )
+    contact = Contact()
+    contact.email = email
+    contact.first_name = first_name
+    contact.last_name = last_name
+    contact.company = company
+    contact.phone = phone
+    contact.tags = tags
     
     db.session.add(contact)
     db.session.commit()
@@ -111,7 +112,7 @@ def import_contacts():
         flash('No file selected', 'error')
         return redirect(url_for('main.contacts'))
     
-    if not file.filename.endswith('.csv'):
+    if not file.filename or not file.filename.endswith('.csv'):
         flash('Please upload a CSV file', 'error')
         return redirect(url_for('main.contacts'))
     
@@ -134,14 +135,13 @@ def import_contacts():
             if existing:
                 continue
             
-            contact = Contact(
-                email=email,
-                first_name=row.get('first_name', '').strip(),
-                last_name=row.get('last_name', '').strip(),
-                company=row.get('company', '').strip(),
-                phone=row.get('phone', '').strip(),
-                tags=row.get('tags', '').strip()
-            )
+            contact = Contact()
+            contact.email = email
+            contact.first_name = row.get('first_name', '').strip()
+            contact.last_name = row.get('last_name', '').strip()
+            contact.company = row.get('company', '').strip()
+            contact.phone = row.get('phone', '').strip()
+            contact.tags = row.get('tags', '').strip()
             
             db.session.add(contact)
             imported_count += 1
@@ -233,12 +233,11 @@ def create_campaign():
             return redirect(url_for('main.create_campaign'))
         
         # Create campaign
-        campaign = Campaign(
-            name=name,
-            subject=subject,
-            template_id=template_id,
-            status='draft'
-        )
+        campaign = Campaign()
+        campaign.name = name
+        campaign.subject = subject
+        campaign.template_id = template_id
+        campaign.status = 'draft'
         
         if scheduled_at:
             try:
@@ -265,10 +264,9 @@ def create_campaign():
         contacts = contacts_query.all()
         
         for contact in contacts:
-            recipient = CampaignRecipient(
-                campaign_id=campaign.id,
-                contact_id=contact.id
-            )
+            recipient = CampaignRecipient()
+            recipient.campaign_id = campaign.id
+            recipient.contact_id = contact.id
             db.session.add(recipient)
         
         db.session.commit()
@@ -340,11 +338,10 @@ def create_template():
             flash('All fields are required', 'error')
             return redirect(url_for('main.create_template'))
         
-        template = EmailTemplate(
-            name=name,
-            subject=subject,
-            html_content=html_content
-        )
+        template = EmailTemplate()
+        template.name = name
+        template.subject = subject
+        template.html_content = html_content
         
         db.session.add(template)
         db.session.commit()
@@ -755,31 +752,28 @@ def lux_product_campaign():
         
         if result:
             # Create email template with product content
-            template = EmailTemplate(
-                name=f"LUX Product Campaign - {result['campaign_name']}",
-                subject=result['subject'],
-                html_content=result['html_content']
-            )
+            template = EmailTemplate()
+            template.name = f"LUX Product Campaign - {result['campaign_name']}"
+            template.subject = result['subject']
+            template.html_content = result['html_content']
             db.session.add(template)
             db.session.flush()
             
             # Create campaign
-            campaign = Campaign(
-                name=result['campaign_name'],
-                subject=result['subject'],
-                template_id=template.id,
-                status='draft'
-            )
+            campaign = Campaign()
+            campaign.name = result['campaign_name']
+            campaign.subject = result['subject']
+            campaign.template_id = template.id
+            campaign.status = 'draft'
             db.session.add(campaign)
             db.session.flush()
             
             # Add recipients
             contacts = Contact.query.filter_by(is_active=True).all()
             for contact in contacts:
-                recipient = CampaignRecipient(
-                    campaign_id=campaign.id,
-                    contact_id=contact.id
-                )
+                recipient = CampaignRecipient()
+                recipient.campaign_id = campaign.id
+                recipient.contact_id = contact.id
                 db.session.add(recipient)
             
             db.session.commit()

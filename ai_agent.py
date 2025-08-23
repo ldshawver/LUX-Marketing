@@ -358,18 +358,18 @@ class LUXAgent:
             - Industry best practices
             
             Respond in JSON format with:
-            {
+            {{
                 "recommended_campaigns": [
-                    {
+                    {{
                         "campaign_type": "type of campaign",
-                        "objective": "primary goal",
+                        "objective": "primary goal", 
                         "timing": "when to send",
                         "expected_results": "predicted performance",
                         "priority": "high/medium/low"
-                    }
+                    }}
                 ],
                 "strategic_insights": "key observations and next steps"
-            }
+            }}
             """
             
             response = self.client.chat.completions.create(

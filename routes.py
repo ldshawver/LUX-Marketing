@@ -346,24 +346,34 @@ def templates():
 def create_template():
     """Create a new email template"""
     if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        subject = request.form.get('subject', '').strip()
-        html_content = request.form.get('html_content', '').strip()
-        
-        if not name or not subject or not html_content:
-            flash('All fields are required', 'error')
+        try:
+            name = request.form.get('name', '').strip()
+            subject = request.form.get('subject', '').strip()
+            html_content = request.form.get('html_content', '').strip()
+            
+            logging.debug(f"Template creation attempt: name='{name}', subject='{subject}', content_length={len(html_content)}")
+            
+            if not name or not subject or not html_content:
+                flash('All fields are required', 'error')
+                return redirect(url_for('main.create_template'))
+            
+            template = EmailTemplate()
+            template.name = name
+            template.subject = subject
+            template.html_content = html_content
+            
+            db.session.add(template)
+            db.session.commit()
+            
+            logging.info(f"Template '{name}' created successfully")
+            flash('Template created successfully', 'success')
+            return redirect(url_for('main.templates'))
+            
+        except Exception as e:
+            logging.error(f"Error creating template: {str(e)}")
+            db.session.rollback()
+            flash('Error creating template. Please try again.', 'error')
             return redirect(url_for('main.create_template'))
-        
-        template = EmailTemplate()
-        template.name = name
-        template.subject = subject
-        template.html_content = html_content
-        
-        db.session.add(template)
-        db.session.commit()
-        
-        flash('Template created successfully', 'success')
-        return redirect(url_for('main.templates'))
     
     return render_template('template_create.html')
 

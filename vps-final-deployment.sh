@@ -68,9 +68,8 @@ ssh $VPS_USER@$VPS_IP << EOF
     tar -xzf /tmp/lux-email-app-final.tar.gz
     
     echo "Setting up environment variables..."
-    # Create or update environment file
+    # Create or update environment file with SQLite configuration
     cat > /root/lux-email-bot/.env << 'ENVEOF'
-DATABASE_URL=postgresql://lux_user:lux_password@localhost/lux_email_db
 SESSION_SECRET=\$(openssl rand -hex 32)
 OPENAI_API_KEY=$OPENAI_API_KEY
 MS_CLIENT_ID=

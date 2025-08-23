@@ -707,10 +707,13 @@ function showLoading(show) {
 }
 
 function showOptimization() {
-    const optimizationEl = document.querySelector('[href="#optimization"]');
-    if (optimizationEl) {
-        optimizationEl.scrollIntoView({ behavior: 'smooth' });
-    }
+    // Show a coming soon message for optimization feature
+    showResult('Campaign Optimization', `
+        <div class="alert alert-info">
+            <i data-feather="info"></i> <strong>Coming Soon!</strong><br>
+            Campaign optimization features are being developed. This will provide AI-powered recommendations to improve your campaign performance based on analytics data.
+        </div>
+    `);
 }
 
 function showProductCampaign() {

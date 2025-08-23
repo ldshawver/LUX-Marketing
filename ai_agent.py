@@ -67,7 +67,11 @@ class LUXAgent:
                 temperature=0.7
             )
             
-            result = json.loads(response.choices[0].message.content)
+            content = response.choices[0].message.content
+            if not content:
+                logger.error("LUX received empty response from OpenAI")
+                return None
+            result = json.loads(content)
             logger.info(f"LUX generated campaign content: {result['campaign_name']}")
             return result
             

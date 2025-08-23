@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i data-feather="user"></i> User Profile</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Account Information</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td><strong>Username:</strong></td>
+                        <td>{{ user.username }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Email:</strong></td>
+                        <td>{{ user.email }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Role:</strong></td>
+                        <td>
+                            {% if user.is_admin %}
+                                <span class="badge bg-primary">Administrator</span>
+                            {% else %}
+                                <span class="badge bg-secondary">User</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Member Since:</strong></td>
+                        <td>{{ user.created_at.strftime('%B %d, %Y') }}</td>
+                    </tr>
+                </table>
+                
+                <div class="d-grid gap-2 d-md-block">
+                    <a href="{{ url_for('user.change_password') }}" class="btn btn-primary">
+                        <i data-feather="key"></i> Change Password
+                    </a>
+                    {% if user.is_admin %}
+                    <a href="{{ url_for('user.manage_users') }}" class="btn btn-outline-secondary">
+                        <i data-feather="users"></i> Manage Users
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('main.contacts') }}" class="list-group-item list-group-item-action">
+                        <i data-feather="users"></i> View Contacts
+                    </a>
+                    <a href="{{ url_for('main.campaigns') }}" class="list-group-item list-group-item-action">
+                        <i data-feather="mail"></i> View Campaigns
+                    </a>
+                    <a href="{{ url_for('main.templates') }}" class="list-group-item list-group-item-action">
+                        <i data-feather="file-text"></i> Email Templates
+                    </a>
+                    <a href="{{ url_for('main.analytics') }}" class="list-group-item list-group-item-action">
+                        <i data-feather="bar-chart-2"></i> Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

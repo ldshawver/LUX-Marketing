@@ -19,8 +19,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# Configure the database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///email_marketing.db")
+# Configure the database - Force SQLite for development
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///email_marketing.db"
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
@@ -48,9 +48,11 @@ def load_user(user_id):
 # Register blueprints
 from routes import main_bp
 from auth import auth_bp
+from user_management import user_bp
 
 app.register_blueprint(main_bp)
 app.register_blueprint(auth_bp, url_prefix='/auth')
+app.register_blueprint(user_bp, url_prefix='/user')
 
 with app.app_context():
     # Import models to ensure tables are created
@@ -67,6 +69,7 @@ with app.app_context():
         admin_user.username = 'admin'
         admin_user.email = 'admin@example.com'
         admin_user.password_hash = generate_password_hash('admin123')
+        admin_user.is_admin = True
         db.session.add(admin_user)
         db.session.commit()
         logging.info("Created default admin user: admin/admin123")

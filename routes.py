@@ -117,9 +117,25 @@ def import_contacts():
         return redirect(url_for('main.contacts'))
     
     try:
-        # Read CSV file
-        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-        csv_input = csv.DictReader(stream)
+        # Read CSV file with better error handling
+        try:
+            content = file.stream.read()
+            # Try different encodings
+            for encoding in ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252']:
+                try:
+                    decoded_content = content.decode(encoding)
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                flash('Unable to decode file. Please ensure it is saved in UTF-8 format.', 'error')
+                return redirect(url_for('main.contacts'))
+            
+            stream = io.StringIO(decoded_content, newline=None)
+            csv_input = csv.DictReader(stream)
+        except Exception as e:
+            flash(f'Error reading CSV file: {str(e)}', 'error')
+            return redirect(url_for('main.contacts'))
         
         imported_count = 0
         error_count = 0

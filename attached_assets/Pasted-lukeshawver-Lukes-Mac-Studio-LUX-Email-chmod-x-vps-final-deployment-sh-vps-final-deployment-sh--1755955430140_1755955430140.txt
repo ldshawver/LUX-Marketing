@@ -1,0 +1,146 @@
+lukeshawver@Lukes-Mac-Studio LUX_Email % chmod +x vps-final-deployment.sh
+./vps-final-deployment.sh
+🚀 LUX Email Marketing Bot - Final Deployment
+==================================
+Target VPS: 194.195.92.52
+Domain: lux.lucifercruz.com
+App Directory: /root/lux-email-bot/LUX-Email-Marketing-Bot
+
+🤖 OpenAI API Key Setup
+Your LUX AI agent needs an OpenAI API key to function.
+Please enter your OpenAI API key (starts with 'sk-'):
+✅ API key accepted
+
+📁 Uploading final application files...
+root@194.195.92.52's password: 
+Permission denied, please try again.
+root@194.195.92.52's password: 
+Permission denied, please try again.
+root@194.195.92.52's password: 
+lux-email-app-final.tar.gz                    100%   22MB 678.3KB/s   00:32    
+🔧 Connecting to VPS and deploying...
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+root@194.195.92.52's password: 
+Linux lux 6.1.0-30-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.124-1 (2025-01-12) x86_64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+Stopping LUX service...
+Creating backup of current installation...
+Extracting final application files...
+Setting up environment variables...
+Setting correct permissions...
+Activating virtual environment and installing dependencies...
+Installing from deploy_requirements.txt...
+Requirement already satisfied: Flask==3.0.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 1)) (3.0.0)
+Requirement already satisfied: Flask-SQLAlchemy==3.1.1 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 2)) (3.1.1)
+Requirement already satisfied: Flask-Login==0.6.3 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 3)) (0.6.3)
+Requirement already satisfied: Werkzeug==3.0.1 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 4)) (3.0.1)
+Requirement already satisfied: Jinja2==3.1.2 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 5)) (3.1.2)
+Requirement already satisfied: APScheduler==3.10.4 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 6)) (3.10.4)
+Requirement already satisfied: msal==1.24.1 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 7)) (1.24.1)
+Requirement already satisfied: openai==1.3.7 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 8)) (1.3.7)
+Requirement already satisfied: requests==2.31.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 9)) (2.31.0)
+Requirement already satisfied: email-validator==2.1.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 10)) (2.1.0)
+Requirement already satisfied: psycopg2-binary==2.9.9 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 11)) (2.9.9)
+Requirement already satisfied: gunicorn==21.2.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 12)) (21.2.0)
+Requirement already satisfied: SQLAlchemy==2.0.23 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from -r deploy_requirements.txt (line 13)) (2.0.23)
+Requirement already satisfied: itsdangerous>=2.1.2 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from Flask==3.0.0->-r deploy_requirements.txt (line 1)) (2.2.0)
+Requirement already satisfied: click>=8.1.3 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from Flask==3.0.0->-r deploy_requirements.txt (line 1)) (8.2.1)
+Requirement already satisfied: blinker>=1.6.2 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from Flask==3.0.0->-r deploy_requirements.txt (line 1)) (1.9.0)
+Requirement already satisfied: MarkupSafe>=2.1.1 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from Werkzeug==3.0.1->-r deploy_requirements.txt (line 4)) (3.0.2)
+Requirement already satisfied: six>=1.4.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from APScheduler==3.10.4->-r deploy_requirements.txt (line 6)) (1.17.0)
+Requirement already satisfied: pytz in /root/lux-email-bot/venv/lib/python3.11/site-packages (from APScheduler==3.10.4->-r deploy_requirements.txt (line 6)) (2025.2)
+Requirement already satisfied: tzlocal!=3.*,>=2.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from APScheduler==3.10.4->-r deploy_requirements.txt (line 6)) (5.3.1)
+Requirement already satisfied: PyJWT[crypto]<3,>=1.0.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from msal==1.24.1->-r deploy_requirements.txt (line 7)) (2.10.1)
+Requirement already satisfied: cryptography<44,>=0.6 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from msal==1.24.1->-r deploy_requirements.txt (line 7)) (43.0.3)
+Requirement already satisfied: anyio<4,>=3.5.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from openai==1.3.7->-r deploy_requirements.txt (line 8)) (3.7.1)
+Requirement already satisfied: distro<2,>=1.7.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from openai==1.3.7->-r deploy_requirements.txt (line 8)) (1.9.0)
+Requirement already satisfied: httpx<1,>=0.23.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from openai==1.3.7->-r deploy_requirements.txt (line 8)) (0.28.1)
+Requirement already satisfied: pydantic<3,>=1.9.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from openai==1.3.7->-r deploy_requirements.txt (line 8)) (2.11.7)
+Requirement already satisfied: sniffio in /root/lux-email-bot/venv/lib/python3.11/site-packages (from openai==1.3.7->-r deploy_requirements.txt (line 8)) (1.3.1)
+Requirement already satisfied: tqdm>4 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from openai==1.3.7->-r deploy_requirements.txt (line 8)) (4.67.1)
+Requirement already satisfied: typing-extensions<5,>=4.5 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from openai==1.3.7->-r deploy_requirements.txt (line 8)) (4.14.1)
+Requirement already satisfied: charset-normalizer<4,>=2 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from requests==2.31.0->-r deploy_requirements.txt (line 9)) (3.4.2)
+Requirement already satisfied: idna<4,>=2.5 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from requests==2.31.0->-r deploy_requirements.txt (line 9)) (3.10)
+Requirement already satisfied: urllib3<3,>=1.21.1 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from requests==2.31.0->-r deploy_requirements.txt (line 9)) (2.5.0)
+Requirement already satisfied: certifi>=2017.4.17 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from requests==2.31.0->-r deploy_requirements.txt (line 9)) (2025.8.3)
+Requirement already satisfied: dnspython>=2.0.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from email-validator==2.1.0->-r deploy_requirements.txt (line 10)) (2.7.0)
+Requirement already satisfied: packaging in /root/lux-email-bot/venv/lib/python3.11/site-packages (from gunicorn==21.2.0->-r deploy_requirements.txt (line 12)) (25.0)
+Requirement already satisfied: greenlet!=0.4.17 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from SQLAlchemy==2.0.23->-r deploy_requirements.txt (line 13)) (3.2.3)
+Requirement already satisfied: cffi>=1.12 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from cryptography<44,>=0.6->msal==1.24.1->-r deploy_requirements.txt (line 7)) (1.17.1)
+Requirement already satisfied: httpcore==1.* in /root/lux-email-bot/venv/lib/python3.11/site-packages (from httpx<1,>=0.23.0->openai==1.3.7->-r deploy_requirements.txt (line 8)) (1.0.9)
+Requirement already satisfied: h11>=0.16 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from httpcore==1.*->httpx<1,>=0.23.0->openai==1.3.7->-r deploy_requirements.txt (line 8)) (0.16.0)
+Requirement already satisfied: annotated-types>=0.6.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from pydantic<3,>=1.9.0->openai==1.3.7->-r deploy_requirements.txt (line 8)) (0.7.0)
+Requirement already satisfied: pydantic-core==2.33.2 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from pydantic<3,>=1.9.0->openai==1.3.7->-r deploy_requirements.txt (line 8)) (2.33.2)
+Requirement already satisfied: typing-inspection>=0.4.0 in /root/lux-email-bot/venv/lib/python3.11/site-packages (from pydantic<3,>=1.9.0->openai==1.3.7->-r deploy_requirements.txt (line 8)) (0.4.1)
+Requirement already satisfied: pycparser in /root/lux-email-bot/venv/lib/python3.11/site-packages (from cffi>=1.12->cryptography<44,>=0.6->msal==1.24.1->-r deploy_requirements.txt (line 7)) (2.22)
+Updating systemd service to use environment file...
+Reloading systemd and resetting failed attempts...
+Starting LUX service...
+Enabling service for auto-start...
+Waiting for service to start...
+Checking service status...
+● lux.service - Gunicorn instance for LUX Email Bot
+     Loaded: loaded (/etc/systemd/system/lux.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Sat 2025-08-23 13:20:15 UTC; 3s ago
+    Process: 90200 ExecStart=/root/lux-email-bot/venv/bin/gunicorn --config gunicorn.conf.py wsgi:app (code=exited, status=1/FAILURE)
+   Main PID: 90200 (code=exited, status=1/FAILURE)
+        CPU: 586ms
+Testing application...
+Testing backend health...
+❌ Backend not responding, checking logs...
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2430, in _handle_dbapi_exception_noconnection
+Aug 23 13:20:15 lux gunicorn[90200]:     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 145, in __init__
+Aug 23 13:20:15 lux gunicorn[90200]:     self._dbapi_connection = engine.raw_connection()
+Aug 23 13:20:15 lux gunicorn[90200]:                              ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3292, in raw_connection
+Aug 23 13:20:15 lux gunicorn[90200]:     return self.pool.connect()
+Aug 23 13:20:15 lux gunicorn[90200]:            ^^^^^^^^^^^^^^^^^^^
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 452, in connect
+Aug 23 13:20:15 lux gunicorn[90200]:     return _ConnectionFairy._checkout(self)
+Aug 23 13:20:15 lux gunicorn[90200]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 1269, in _checkout
+Aug 23 13:20:15 lux gunicorn[90200]:     fairy = _ConnectionRecord.checkout(pool)
+Aug 23 13:20:15 lux gunicorn[90200]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 716, in checkout
+Aug 23 13:20:15 lux gunicorn[90200]:     rec = pool._do_get()
+Aug 23 13:20:15 lux gunicorn[90200]:           ^^^^^^^^^^^^^^
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 169, in _do_get
+Aug 23 13:20:15 lux gunicorn[90200]:     with util.safe_reraise():
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+Aug 23 13:20:15 lux gunicorn[90200]:     raise exc_value.with_traceback(exc_tb)
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 167, in _do_get
+Aug 23 13:20:15 lux gunicorn[90200]:     return self._create_connection()
+Aug 23 13:20:15 lux gunicorn[90200]:            ^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 393, in _create_connection
+Aug 23 13:20:15 lux gunicorn[90200]:     return _ConnectionRecord(self)
+Aug 23 13:20:15 lux gunicorn[90200]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 678, in __init__
+Aug 23 13:20:15 lux gunicorn[90200]:     self.__connect()
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 902, in __connect
+Aug 23 13:20:15 lux gunicorn[90200]:     with util.safe_reraise():
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+Aug 23 13:20:15 lux gunicorn[90200]:     raise exc_value.with_traceback(exc_tb)
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 898, in __connect
+Aug 23 13:20:15 lux gunicorn[90200]:     self.dbapi_connection = connection = pool._invoke_creator(self)
+Aug 23 13:20:15 lux gunicorn[90200]:                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/engine/create.py", line 637, in connect
+Aug 23 13:20:15 lux gunicorn[90200]:     return dialect.connect(*cargs, **cparams)
+Aug 23 13:20:15 lux gunicorn[90200]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 616, in connect
+Aug 23 13:20:15 lux gunicorn[90200]:     return self.loaded_dbapi.connect(*cargs, **cparams)
+Aug 23 13:20:15 lux gunicorn[90200]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 23 13:20:15 lux gunicorn[90200]:   File "/root/lux-email-bot/venv/lib/python3.11/site-packages/psycopg2/__init__.py", line 122, in connect
+Aug 23 13:20:15 lux gunicorn[90200]:     conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+Aug 23 13:20:15 lux gunicorn[90200]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aug 23 13:20:15 lux gunicorn[90200]: sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "lux_user"
+Aug 23 13:20:15 lux gunicorn[90200]: connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "lux_user"
+Aug 23 13:20:15 lux gunicorn[90200]: (Background on this error at: https://sqlalche.me/e/20/e3q8)
+Aug 23 13:20:15 lux systemd[1]: lux.service: Main process exited, code=exited, status=1/FAILURE
+Aug 23 13:20:15 lux systemd[1]: lux.service: Failed with result 'exit-code'.

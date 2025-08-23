@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i data-feather="edit"></i> Edit User: {{ user.username }}</h1>
+    <a href="{{ url_for('user.manage_users') }}" class="btn btn-outline-secondary">
+        <i data-feather="arrow-left"></i> Back to Users
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">New Password (Optional)</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password">
+                        <div class="form-text">Leave blank to keep current password. If changing, must be at least 6 characters.</div>
+                    </div>
+                    
+                    {% if user.id != current_user.id %}
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin" value="1" 
+                               {% if user.is_admin %}checked{% endif %}>
+                        <label class="form-check-label" for="is_admin">
+                            Administrator privileges
+                        </label>
+                        <div class="form-text">Administrators can manage users and access all features.</div>
+                    </div>
+                    {% else %}
+                    <div class="mb-3">
+                        <div class="alert alert-info">
+                            <i data-feather="info"></i> You cannot modify your own admin status.
+                        </div>
+                        <input type="hidden" name="is_admin" value="{% if user.is_admin %}1{% else %}0{% endif %}">
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i data-feather="save"></i> Update User
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

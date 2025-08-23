@@ -84,7 +84,7 @@
     <div class="col-md-2">
         <div class="card h-100">
             <div class="card-body text-center">
-                <i data-feather="lightbulb" class="text-dark mb-3" style="width: 3rem; height: 3rem;"></i>
+                <i data-feather="info" class="text-dark mb-3" style="width: 3rem; height: 3rem;"></i>
                 <h5>Smart Recommendations</h5>
                 <p class="card-text text-muted">Get strategic campaign suggestions from LUX</p>
                 <button class="btn btn-dark" onclick="getRecommendations()">
@@ -638,7 +638,7 @@ function getRecommendations() {
     .then(data => {
         showLoading(false);
         
-        if (data.success) {
+        if (data.success && data.recommendations && data.recommendations.recommended_campaigns) {
             let campaignsHtml = '';
             data.recommendations.recommended_campaigns.forEach(campaign => {
                 const priorityClass = campaign.priority === 'high' ? 'danger' : 
@@ -667,7 +667,7 @@ function getRecommendations() {
             
             showResult('Strategic Recommendations', `
                 <div class="alert alert-info">
-                    <h6><i data-feather="lightbulb"></i> Strategic Insights</h6>
+                    <h6><i data-feather="info"></i> Strategic Insights</h6>
                     <p>${data.recommendations.strategic_insights}</p>
                 </div>
                 <h6>Recommended Campaigns:</h6>
@@ -696,7 +696,10 @@ function showResult(title, content) {
     feather.replace();
     
     // Scroll to results
-    document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
+    const resultsEl = document.getElementById('resultsArea');
+    if (resultsEl) {
+        resultsEl.scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 function showLoading(show) {
@@ -704,7 +707,10 @@ function showLoading(show) {
 }
 
 function showOptimization() {
-    document.querySelector('[href="#optimization"]').scrollIntoView({ behavior: 'smooth' });
+    const optimizationEl = document.querySelector('[href="#optimization"]');
+    if (optimizationEl) {
+        optimizationEl.scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 function showProductCampaign() {

@@ -860,8 +860,20 @@ def lux_test_woocommerce():
             }), 400
             
     except Exception as e:
+        error_msg = str(e)
         logger.error(f"WooCommerce test error: {e}")
+        
+        # Handle specific error types
+        if "proxies" in error_msg:
+            error_msg = "Invalid WooCommerce library configuration. Using built-in requests instead."
+        elif "timeout" in error_msg.lower():
+            error_msg = "Connection timeout. Please check your WooCommerce store URL."
+        elif "404" in error_msg:
+            error_msg = "WooCommerce API not found. Please check your store URL and ensure WooCommerce REST API is enabled."
+        elif "401" in error_msg or "unauthorized" in error_msg.lower():
+            error_msg = "Invalid consumer key or secret. Please check your WooCommerce API credentials."
+        
         return jsonify({
             'success': False,
-            'message': f'Connection failed: {str(e)}'
+            'message': f'Connection failed: {error_msg}'
         }), 500

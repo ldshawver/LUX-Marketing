@@ -864,8 +864,8 @@ def lux_test_woocommerce():
         logger.error(f"WooCommerce test error: {e}")
         
         # Handle specific error types
-        if "proxies" in error_msg:
-            error_msg = "Invalid WooCommerce library configuration. Using built-in requests instead."
+        if "proxies" in error_msg or "Client.__init__()" in error_msg:
+            error_msg = "WooCommerce library conflict detected. Please ensure your VPS environment uses the built-in requests implementation."
         elif "timeout" in error_msg.lower():
             error_msg = "Connection timeout. Please check your WooCommerce store URL."
         elif "404" in error_msg:

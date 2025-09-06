@@ -438,6 +438,7 @@ class LUXAgent:
                                   product_limit=10, category_filter=None):
         """Fetch products from WooCommerce API"""
         try:
+            # Always use requests library directly to avoid WooCommerce library conflicts
             # Construct API endpoint
             api_url = urljoin(woocommerce_url, '/wp-json/wc/v3/products')
             
@@ -452,6 +453,7 @@ class LUXAgent:
             if category_filter:
                 params['category'] = category_filter
             
+            # Use requests directly to avoid any WooCommerce client library issues
             response = requests.get(api_url, auth=auth, params=params, timeout=10)
             
             if response.status_code == 200:

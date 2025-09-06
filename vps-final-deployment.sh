@@ -87,14 +87,20 @@ ENVEOF
     source venv/bin/activate
     cd LUX-Email-Marketing-Bot
     
-    # Install dependencies
+    # Install dependencies (avoiding WooCommerce libraries)
+    echo "Uninstalling any existing WooCommerce libraries..."
+    pip uninstall -y woocommerce WooCommerce python-woocommerce || true
+    
     if [ -f "deploy_requirements.txt" ]; then
         echo "Installing from deploy_requirements.txt..."
         pip install -r deploy_requirements.txt
     else
         echo "Installing core dependencies..."
-        pip install Flask==3.0.0 Flask-SQLAlchemy==3.1.1 Flask-Login==0.6.3 gunicorn==21.2.0 psycopg2-binary==2.9.9 APScheduler==3.10.4 msal==1.24.1 openai==1.3.7 requests==2.31.0 email-validator==2.1.0
+        pip install Flask==3.0.0 Flask-SQLAlchemy==3.1.1 Flask-Login==0.6.3 gunicorn==21.2.0 psycopg2-binary==2.9.9 APScheduler==3.10.4 msal==1.24.1 openai==1.3.7 requests==2.31.0 email-validator==2.1.0 Jinja2==3.1.2 werkzeug==3.0.1
     fi
+    
+    echo "Ensuring no WooCommerce libraries are installed..."
+    pip list | grep -i woo || echo "No WooCommerce libraries found - good!"
     
     echo "Updating systemd service to use environment file..."
     # Update the systemd service file to include environment file

@@ -746,6 +746,16 @@ def lux_generate_image():
 def lux_product_campaign():
     """LUX AI agent - Create WooCommerce product campaign"""
     try:
+        # Ensure no WooCommerce library conflicts
+        import sys
+        woo_modules = [mod for mod in sys.modules.keys() if 'woocommerce' in mod.lower()]
+        if woo_modules:
+            logging.warning(f"Detected WooCommerce modules: {woo_modules}")
+            # Remove any problematic WooCommerce modules
+            for mod in woo_modules:
+                if mod in sys.modules:
+                    del sys.modules[mod]
+        
         from ai_agent import lux_agent
         
         data = request.get_json() or {}
@@ -864,8 +874,8 @@ def lux_test_woocommerce():
         logger.error(f"WooCommerce test error: {e}")
         
         # Handle specific error types
-        if "proxies" in error_msg or "Client.__init__()" in error_msg:
-            error_msg = "WooCommerce library conflict detected. Please ensure your VPS environment uses the built-in requests implementation."
+        if "proxies" in error_msg or "Client.__init__()" in error_msg or "woocommerce" in error_msg.lower():
+            error_msg = "WooCommerce library conflict detected. The system will use pure requests implementation instead. Please try again."
         elif "timeout" in error_msg.lower():
             error_msg = "Connection timeout. Please check your WooCommerce store URL."
         elif "404" in error_msg:

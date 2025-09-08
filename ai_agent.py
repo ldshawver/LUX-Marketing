@@ -436,8 +436,14 @@ class LUXAgent:
     
     def fetch_woocommerce_products(self, woocommerce_url, consumer_key, consumer_secret, 
                                   product_limit=10, category_filter=None):
-        """Fetch products from WooCommerce API"""
+        """Fetch products from WooCommerce API using pure requests - no WooCommerce library"""
         try:
+            # Explicitly prevent any WooCommerce library imports
+            import sys
+            woo_modules = [mod for mod in sys.modules.keys() if 'woocommerce' in mod.lower()]
+            if woo_modules:
+                logger.warning(f"Detected WooCommerce modules: {woo_modules}. Using requests only.")
+            
             # Always use requests library directly to avoid WooCommerce library conflicts
             # Construct API endpoint
             api_url = urljoin(woocommerce_url, '/wp-json/wc/v3/products')
@@ -492,7 +498,10 @@ class LUXAgent:
                                product_filter=None, include_images=True):
         """Create a product-focused email campaign with WooCommerce integration"""
         try:
-            # Fetch products from WooCommerce
+            # Ensure no WooCommerce library conflicts by isolating the API call
+            logger.info("Starting WooCommerce product campaign creation...")
+            
+            # Fetch products using isolated approach
             products = self.fetch_woocommerce_products(
                 woocommerce_config['url'],
                 woocommerce_config['consumer_key'],

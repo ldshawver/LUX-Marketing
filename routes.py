@@ -341,6 +341,83 @@ def templates():
     templates = EmailTemplate.query.filter_by(is_active=True).order_by(EmailTemplate.created_at.desc()).all()
     return render_template('templates_manage.html', templates=templates)
 
+@main_bp.route('/templates/gallery')
+@login_required
+def template_gallery():
+    """Branded template gallery"""
+    # Define branded template options
+    branded_templates = [
+        {
+            'id': 'modern_newsletter',
+            'name': 'Modern Newsletter',
+            'description': 'Clean, modern design perfect for newsletters and announcements',
+            'preview_image': '/static/images/templates/modern_newsletter.png',
+            'category': 'Newsletter',
+            'features': ['Responsive Design', 'Hero Image', 'Call-to-Action Button', 'Social Links']
+        },
+        {
+            'id': 'promotional_sale',
+            'name': 'Promotional Sale',
+            'description': 'Eye-catching design for sales promotions and special offers',
+            'preview_image': '/static/images/templates/promotional_sale.png',
+            'category': 'Promotional',
+            'features': ['Bold Headlines', 'Product Showcase', 'Urgency Elements', 'Discount Highlights']
+        },
+        {
+            'id': 'welcome_series',
+            'name': 'Welcome Email',
+            'description': 'Professional welcome email for new subscribers',
+            'preview_image': '/static/images/templates/welcome_series.png',
+            'category': 'Welcome',
+            'features': ['Personal Touch', 'Brand Introduction', 'Next Steps', 'Contact Information']
+        },
+        {
+            'id': 'event_invitation',
+            'name': 'Event Invitation',
+            'description': 'Elegant design for event invitations and announcements',
+            'preview_image': '/static/images/templates/event_invitation.png',
+            'category': 'Events',
+            'features': ['Event Details', 'RSVP Button', 'Location Map', 'Calendar Integration']
+        },
+        {
+            'id': 'product_update',
+            'name': 'Product Update',
+            'description': 'Professional layout for product announcements and updates',
+            'preview_image': '/static/images/templates/product_update.png',
+            'category': 'Product',
+            'features': ['Feature Highlights', 'Screenshots', 'Learn More Links', 'Feedback Request']
+        },
+        {
+            'id': 'minimal_corporate',
+            'name': 'Minimal Corporate',
+            'description': 'Clean, minimalist design for corporate communications',
+            'preview_image': '/static/images/templates/minimal_corporate.png',
+            'category': 'Corporate',
+            'features': ['Professional Layout', 'Typography Focus', 'Brand Colors', 'Simple CTA']
+        }
+    ]
+    
+    return render_template('template_gallery.html', branded_templates=branded_templates)
+
+@main_bp.route('/templates/use-branded/<template_id>')
+@login_required
+def use_branded_template(template_id):
+    """Use a branded template to create a new custom template"""
+    # Get the branded template HTML
+    template_html = get_branded_template_html(template_id)
+    
+    if not template_html:
+        flash('Template not found', 'error')
+        return redirect(url_for('main.template_gallery'))
+    
+    # Get template info
+    template_info = get_branded_template_info(template_id)
+    
+    return render_template('template_create.html', 
+                         branded_template=template_info,
+                         default_html=template_html['html'],
+                         default_subject=template_html['subject'])
+
 @main_bp.route('/templates/create', methods=['GET', 'POST'])
 @login_required
 def create_template():
@@ -469,6 +546,232 @@ def preview_template_live():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+def get_branded_template_html(template_id):
+    """Get HTML content for branded templates"""
+    templates = {
+        'modern_newsletter': {
+            'subject': 'Latest Updates from {{campaign.name}}',
+            'html': '''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{campaign.subject}}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Arial', sans-serif; background-color: #f8f9fa;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Your Company</h1>
+                            <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Newsletter</p>
+                        </td>
+                    </tr>
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px;">Hello {{contact.first_name}}!</h2>
+                            <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                                We're excited to share the latest updates and insights with you. Here's what's new:
+                            </p>
+                            
+                            <!-- Feature Section -->
+                            <div style="background-color: #f8f9fa; padding: 25px; border-radius: 6px; margin: 25px 0;">
+                                <h3 style="margin: 0 0 15px 0; color: #333333; font-size: 20px;">Featured Content</h3>
+                                <p style="margin: 0 0 15px 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                                    Add your featured content here. This section is perfect for highlighting your most important news or updates.
+                                </p>
+                                <a href="#" style="display: inline-block; background-color: #667eea; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold;">
+                                    Learn More
+                                </a>
+                            </div>
+                            
+                            <p style="margin: 20px 0 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                                Thank you for being part of our community, {{contact.first_name}}!
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0 0 10px 0; color: #999999; font-size: 14px;">
+                                You're receiving this email because you subscribed to our newsletter.
+                            </p>
+                            <p style="margin: 0; color: #999999; font-size: 14px;">
+                                <a href="{{unsubscribe_url}}" style="color: #667eea; text-decoration: none;">Unsubscribe</a> | 
+                                <a href="#" style="color: #667eea; text-decoration: none;">Update Preferences</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>'''
+        },
+        'promotional_sale': {
+            'subject': '🔥 Special Offer Just for You, {{contact.first_name}}!',
+            'html': '''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{campaign.subject}}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Arial', sans-serif; background-color: #f8f9fa;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">MEGA SALE</h1>
+                            <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 18px; font-weight: bold;">UP TO 50% OFF</p>
+                        </td>
+                    </tr>
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 40px 30px; text-align: center;">
+                            <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px;">Hey {{contact.first_name}}, Don't Miss Out!</h2>
+                            <p style="margin: 0 0 30px 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                                Our biggest sale of the year is here! Save up to 50% on everything. Limited time only!
+                            </p>
+                            
+                            <!-- Offer Box -->
+                            <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); color: #ffffff; padding: 30px; border-radius: 8px; margin: 30px 0;">
+                                <h3 style="margin: 0 0 10px 0; font-size: 28px; font-weight: bold;">50% OFF</h3>
+                                <p style="margin: 0 0 20px 0; font-size: 16px;">Use code: SAVE50</p>
+                                <a href="#" style="display: inline-block; background-color: #ffffff; color: #ee5a24; text-decoration: none; padding: 15px 30px; border-radius: 4px; font-weight: bold; font-size: 16px;">
+                                    SHOP NOW
+                                </a>
+                            </div>
+                            
+                            <p style="margin: 20px 0 0 0; color: #ff6b6b; font-size: 14px; font-weight: bold;">
+                                ⏰ Hurry! Sale ends in 48 hours
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0 0 10px 0; color: #999999; font-size: 14px;">
+                                You're receiving this email because you're a valued customer.
+                            </p>
+                            <p style="margin: 0; color: #999999; font-size: 14px;">
+                                <a href="{{unsubscribe_url}}" style="color: #ff6b6b; text-decoration: none;">Unsubscribe</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>'''
+        },
+        'welcome_series': {
+            'subject': 'Welcome to our community, {{contact.first_name}}!',
+            'html': '''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{campaign.subject}}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Arial', sans-serif; background-color: #f8f9fa;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">Welcome!</h1>
+                            <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">We're thrilled to have you join us</p>
+                        </td>
+                    </tr>
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px;">Hi {{contact.first_name}}, Welcome aboard! 🎉</h2>
+                            <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                                Thank you for joining our community! We're excited to have you with us and can't wait to share amazing content, updates, and exclusive offers.
+                            </p>
+                            
+                            <!-- Getting Started Section -->
+                            <div style="background-color: #f8f9fa; padding: 25px; border-radius: 6px; margin: 25px 0;">
+                                <h3 style="margin: 0 0 15px 0; color: #333333; font-size: 20px;">🚀 Getting Started</h3>
+                                <ul style="margin: 0; padding-left: 20px; color: #666666; font-size: 16px; line-height: 1.8;">
+                                    <li>Explore our latest content and resources</li>
+                                    <li>Follow us on social media for daily updates</li>
+                                    <li>Join our community discussions</li>
+                                    <li>Don't forget to add us to your contacts</li>
+                                </ul>
+                            </div>
+                            
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="#" style="display: inline-block; background-color: #2ecc71; color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 4px; font-weight: bold; font-size: 16px;">
+                                    Get Started
+                                </a>
+                            </div>
+                            
+                            <p style="margin: 20px 0 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                                If you have any questions, feel free to reply to this email. We're here to help!
+                            </p>
+                            
+                            <p style="margin: 20px 0 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                                Best regards,<br>
+                                <strong>The Team</strong>
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0 0 10px 0; color: #999999; font-size: 14px;">
+                                You're receiving this email because you recently signed up.
+                            </p>
+                            <p style="margin: 0; color: #999999; font-size: 14px;">
+                                <a href="{{unsubscribe_url}}" style="color: #2ecc71; text-decoration: none;">Unsubscribe</a> | 
+                                <a href="#" style="color: #2ecc71; text-decoration: none;">Contact Us</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>'''
+        }
+    }
+    
+    return templates.get(template_id)
+
+def get_branded_template_info(template_id):
+    """Get template information"""
+    template_info = {
+        'modern_newsletter': {
+            'name': 'Modern Newsletter',
+            'description': 'Clean, modern design perfect for newsletters and announcements'
+        },
+        'promotional_sale': {
+            'name': 'Promotional Sale',
+            'description': 'Eye-catching design for sales promotions and special offers'
+        },
+        'welcome_series': {
+            'name': 'Welcome Email',
+            'description': 'Professional welcome email for new subscribers'
+        }
+    }
+    
+    return template_info.get(template_id, {'name': 'Unknown Template', 'description': ''})
 
 @main_bp.route('/analytics')
 @login_required

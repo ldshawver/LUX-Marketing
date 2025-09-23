@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Template Gallery - LUX Email Marketing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i data-feather="layout"></i>
+                Branded Template Gallery
+            </h2>
+            <div>
+                <a href="{{ url_for('main.create_template') }}" class="btn btn-outline-primary">
+                    <i data-feather="plus"></i>
+                    Create Custom Template
+                </a>
+                <a href="{{ url_for('main.templates') }}" class="btn btn-primary">
+                    <i data-feather="file-text"></i>
+                    My Templates
+                </a>
+            </div>
+        </div>
+        
+        <div class="alert alert-info">
+            <i data-feather="info"></i>
+            <strong>Professional Email Templates</strong><br>
+            Choose from our collection of branded templates designed for maximum engagement. 
+            All templates are mobile-responsive and optimized for deliverability.
+        </div>
+        
+        <!-- Template Categories Filter -->
+        <div class="mb-4">
+            <div class="btn-group" role="group" aria-label="Template categories">
+                <button type="button" class="btn btn-outline-secondary active" data-filter="all">
+                    All Templates
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-filter="Newsletter">
+                    Newsletter
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-filter="Promotional">
+                    Promotional
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-filter="Welcome">
+                    Welcome
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-filter="Events">
+                    Events
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-filter="Corporate">
+                    Corporate
+                </button>
+            </div>
+        </div>
+        
+        <!-- Template Grid -->
+        <div class="row" id="template-grid">
+            {% for template in branded_templates %}
+            <div class="col-lg-4 col-md-6 mb-4 template-card" data-category="{{ template.category }}">
+                <div class="card h-100">
+                    <div class="template-preview" style="height: 200px; background: linear-gradient(45deg, #667eea 0%, #764ba2 100%); position: relative; overflow: hidden;">
+                        <!-- Template Preview Placeholder -->
+                        <div class="d-flex align-items-center justify-content-center h-100 text-white">
+                            <div class="text-center">
+                                <i data-feather="mail" style="width: 48px; height: 48px;"></i>
+                                <div class="mt-2">{{ template.name }}</div>
+                            </div>
+                        </div>
+                        <!-- Preview Overlay -->
+                        <div class="template-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" 
+                             style="background: rgba(0,0,0,0.7); opacity: 0; transition: opacity 0.3s;">
+                            <button class="btn btn-light btn-sm" onclick="previewBrandedTemplate('{{ template.id }}')">
+                                <i data-feather="eye"></i> Preview
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">{{ template.name }}</h5>
+                            <span class="badge bg-primary">{{ template.category }}</span>
+                        </div>
+                        
+                        <p class="card-text text-muted">{{ template.description }}</p>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted">Features:</small>
+                            <div class="mt-1">
+                                {% for feature in template.features %}
+                                <span class="badge bg-light text-dark me-1 mb-1">{{ feature }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer bg-transparent">
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('main.use_branded_template', template_id=template.id) }}" 
+                               class="btn btn-primary">
+                                <i data-feather="plus"></i>
+                                Use This Template
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Template gallery functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Category filtering
+    const filterButtons = document.querySelectorAll('[data-filter]');
+    const templateCards = document.querySelectorAll('.template-card');
+    
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active button
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Filter templates
+            const filter = this.dataset.filter;
+            templateCards.forEach(card => {
+                if (filter === 'all' || card.dataset.category === filter) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+    
+    // Template preview hover effect
+    const templatePreviews = document.querySelectorAll('.template-preview');
+    templatePreviews.forEach(preview => {
+        const overlay = preview.querySelector('.template-overlay');
+        
+        preview.addEventListener('mouseenter', function() {
+            overlay.style.opacity = '1';
+        });
+        
+        preview.addEventListener('mouseleave', function() {
+            overlay.style.opacity = '0';
+        });
+    });
+});
+
+function previewBrandedTemplate(templateId) {
+    // Open preview in new window (you can enhance this to show actual template preview)
+    const previewWindow = window.open(`/templates/branded-preview/${templateId}`, '_blank', 'width=800,height=600,scrollbars=yes');
+}
+</script>
+
+<style>
+.template-card:hover {
+    transform: translateY(-5px);
+    transition: transform 0.3s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.template-preview {
+    cursor: pointer;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}

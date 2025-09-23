@@ -709,6 +709,70 @@ def lux_agent_dashboard():
     
     return render_template('lux_agent.html', recent_campaigns=recent_campaigns)
 
+@main_bp.route('/test-email', methods=['GET', 'POST'])
+@login_required
+def test_email():
+    """Test email sending functionality"""
+    if request.method == 'POST':
+        test_email_address = request.form.get('test_email', '').strip()
+        
+        if not test_email_address:
+            flash('Please enter a test email address', 'error')
+            return render_template('test_email.html')
+        
+        try:
+            from email_service import EmailService
+            email_service = EmailService()
+            
+            # Send test email
+            subject = "LUX Email Marketing - Test Email"
+            html_content = """
+            <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">✅ LUX Email Marketing</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">Email Test Successful!</p>
+                </div>
+                <div style="padding: 30px; background: #f8f9fa;">
+                    <h2 style="color: #333;">Email System Working</h2>
+                    <p style="color: #666; line-height: 1.6;">
+                        Congratulations! Your LUX Email Marketing system is properly configured 
+                        and able to send emails. This means:
+                    </p>
+                    <ul style="color: #666; line-height: 1.8;">
+                        <li>✅ Microsoft Graph API connection is working</li>
+                        <li>✅ Email templates can be processed</li>
+                        <li>✅ Campaign emails will be delivered</li>
+                        <li>✅ Password reset emails will work</li>
+                    </ul>
+                    <p style="color: #666; line-height: 1.6;">
+                        You can now confidently create and send email marketing campaigns!
+                    </p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                    <p style="color: #999; font-size: 12px; text-align: center;">
+                        LUX Email Marketing Platform - Test Email
+                    </p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            result = email_service.send_email(
+                to_email=test_email_address,
+                subject=subject,
+                html_content=html_content
+            )
+            
+            if result:
+                flash(f'✅ Test email sent successfully to {test_email_address}!', 'success')
+            else:
+                flash('❌ Failed to send test email. Please check your email configuration.', 'error')
+                
+        except Exception as e:
+            flash(f'❌ Error testing email: {str(e)}', 'error')
+    
+    return render_template('test_email.html')
+
 @main_bp.route('/lux/generate-image', methods=['POST'])
 @login_required
 def lux_generate_image():

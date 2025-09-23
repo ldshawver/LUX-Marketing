@@ -377,6 +377,99 @@ def create_template():
     
     return render_template('template_create.html')
 
+@main_bp.route('/templates/<int:template_id>/preview')
+@login_required
+def preview_template(template_id):
+    """Preview email template"""
+    template = EmailTemplate.query.get_or_404(template_id)
+    
+    # Get sample contact for preview
+    sample_contact = Contact.query.filter_by(is_active=True).first()
+    
+    if not sample_contact:
+        # Create a sample contact for preview if none exists
+        sample_contact = type('SampleContact', (), {
+            'first_name': 'John',
+            'last_name': 'Doe',
+            'full_name': 'John Doe',
+            'email': 'john.doe@example.com',
+            'company': 'Example Company',
+            'phone': '+1 (555) 123-4567'
+        })()
+    
+    # Create a sample campaign for preview
+    sample_campaign = type('SampleCampaign', (), {
+        'name': 'Sample Campaign',
+        'subject': template.subject,
+        'id': 0
+    })()
+    
+    try:
+        from email_service import EmailService
+        email_service = EmailService()
+        
+        # Render the template with sample data
+        rendered_html = email_service.render_template(
+            template.html_content,
+            sample_contact,
+            sample_campaign
+        )
+        
+        return render_template('preview_template.html', 
+                             template=template, 
+                             rendered_html=rendered_html,
+                             sample_contact=sample_contact)
+                             
+    except Exception as e:
+        flash(f'Error rendering template preview: {str(e)}', 'error')
+        return redirect(url_for('main.templates'))
+
+@main_bp.route('/templates/preview-live', methods=['POST'])
+@login_required
+def preview_template_live():
+    """Live preview of template during creation/editing"""
+    try:
+        html_content = request.form.get('html_content', '')
+        subject = request.form.get('subject', 'Preview Subject')
+        
+        if not html_content:
+            return jsonify({'error': 'No HTML content provided'}), 400
+        
+        # Create sample data for preview
+        sample_contact = type('SampleContact', (), {
+            'first_name': 'John',
+            'last_name': 'Doe',
+            'full_name': 'John Doe',
+            'email': 'john.doe@example.com',
+            'company': 'Example Company',
+            'phone': '+1 (555) 123-4567'
+        })()
+        
+        sample_campaign = type('SampleCampaign', (), {
+            'name': 'Sample Campaign',
+            'subject': subject,
+            'id': 0
+        })()
+        
+        # Render the template
+        from email_service import EmailService
+        email_service = EmailService()
+        
+        rendered_html = email_service.render_template(
+            html_content,
+            sample_contact,
+            sample_campaign
+        )
+        
+        return jsonify({
+            'success': True,
+            'rendered_html': rendered_html,
+            'subject': subject
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @main_bp.route('/analytics')
 @login_required
 def analytics():

@@ -209,6 +209,55 @@ function previewCampaign(campaignId) {
 }
 
 /**
+ * Preview template functionality
+ */
+function previewTemplate(templateId) {
+    if (templateId) {
+        // Preview existing template
+        window.location.href = `/templates/${templateId}/preview`;
+    } else {
+        // Live preview during creation/editing
+        const subject = document.getElementById('subject')?.value || 'Preview Subject';
+        const htmlContent = document.getElementById('html_content')?.value || '';
+        
+        if (!htmlContent.trim()) {
+            alert('Please enter some HTML content to preview');
+            return;
+        }
+        
+        // Create a new window for preview
+        const previewWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
+        previewWindow.document.write(`
+            <html>
+            <head>
+                <title>Template Preview</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
+                    .email-preview { max-width: 600px; margin: 0 auto; background: white; border: 1px solid #ddd; }
+                    .email-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
+                    .email-content { padding: 0; }
+                </style>
+            </head>
+            <body>
+                <h2>Email Template Preview</h2>
+                <div class="email-preview">
+                    <div class="email-header">
+                        <strong>Subject:</strong> ${subject}<br>
+                        <strong>To:</strong> john.doe@example.com<br>
+                        <strong>From:</strong> noreply@yourdomain.com
+                    </div>
+                    <div class="email-content">
+                        ${htmlContent}
+                    </div>
+                </div>
+            </body>
+            </html>
+        `);
+        previewWindow.document.close();
+    }
+}
+
+/**
  * Initialize contact management features
  */
 function initializeContactManagement() {

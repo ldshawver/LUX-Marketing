@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Test Email - LUX Email Marketing{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i data-feather="mail"></i>
+                    Test Email Configuration
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i data-feather="info"></i>
+                    <strong>Test your email setup</strong><br>
+                    Send a test email to verify that your O365/Microsoft Graph API integration is working correctly. 
+                    This will also test password reset functionality.
+                </div>
+                
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="test_email" class="form-label">Test Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i data-feather="at-sign"></i>
+                            </span>
+                            <input type="email" 
+                                   class="form-control" 
+                                   id="test_email" 
+                                   name="test_email" 
+                                   placeholder="Enter email address to test"
+                                   required>
+                        </div>
+                        <small class="form-text text-muted">
+                            We'll send a test message to this address to verify email delivery
+                        </small>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="send"></i>
+                        Send Test Email
+                    </button>
+                    
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary ms-2">
+                        <i data-feather="arrow-left"></i>
+                        Back to Dashboard
+                    </a>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="alert alert-secondary">
+                    <h6><i data-feather="settings"></i> Email Configuration Status</h6>
+                    <ul class="mb-0">
+                        <li><strong>Microsoft Graph API:</strong> 
+                            {% if config.get('MS_CLIENT_ID') %}
+                                <span class="text-success">✅ Configured</span>
+                            {% else %}
+                                <span class="text-warning">⚠️ Not configured</span>
+                            {% endif %}
+                        </li>
+                        <li><strong>From Email:</strong> 
+                            {{ config.get('MS_FROM_EMAIL', 'noreply@yourdomain.com') }}
+                        </li>
+                        <li><strong>SMTP Fallback:</strong> 
+                            {% if config.get('SMTP_SERVER') %}
+                                <span class="text-success">✅ Available</span>
+                            {% else %}
+                                <span class="text-muted">Not configured</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

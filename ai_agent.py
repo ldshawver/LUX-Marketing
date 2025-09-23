@@ -20,15 +20,26 @@ class LUXAgent:
     """LUX - Automated Email Marketing AI Agent"""
     
     def __init__(self):
-        self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-        self.model = "gpt-4o"  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-        self.agent_name = "LUX"
-        self.agent_personality = """
-        You are LUX, an expert email marketing automation agent. You are professional, data-driven, 
-        and focused on creating high-converting email campaigns. You understand marketing psychology, 
-        audience segmentation, and email best practices. You always aim to maximize engagement rates 
-        and conversions while maintaining brand consistency.
-        """
+        try:
+            # Ensure clean OpenAI client initialization without conflicting parameters
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY environment variable is required")
+            
+            # Initialize OpenAI client with minimal parameters to avoid conflicts
+            self.client = OpenAI(api_key=api_key)
+            self.model = "gpt-4o"  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+            self.agent_name = "LUX"
+            self.agent_personality = """
+            You are LUX, an expert email marketing automation agent. You are professional, data-driven, 
+            and focused on creating high-converting email campaigns. You understand marketing psychology, 
+            audience segmentation, and email best practices. You always aim to maximize engagement rates 
+            and conversions while maintaining brand consistency.
+            """
+            logger.info("LUX AI Agent initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize LUX AI Agent: {e}")
+            raise
     
     def generate_campaign_content(self, campaign_objective, target_audience, brand_info=None):
         """Generate email campaign content based on objectives and audience"""
@@ -401,6 +412,10 @@ class LUXAgent:
     def generate_campaign_image(self, campaign_description, style="professional marketing"):
         """Generate marketing images using DALL-E"""
         try:
+            if not self.client:
+                logger.error("OpenAI client not initialized for image generation")
+                return None
+                
             prompt = f"""
             Create a professional marketing image for: {campaign_description}
             
@@ -413,6 +428,7 @@ class LUXAgent:
             - Brand-friendly colors and composition
             """
             
+            # Use explicit parameters to avoid any conflicts
             response = self.client.images.generate(
                 model="dall-e-3",
                 prompt=prompt,

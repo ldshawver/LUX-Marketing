@@ -45,8 +45,15 @@
                 </form>
                 
                 <div class="text-center mt-3">
+                    <a href="{{ url_for('auth.forgot_password') }}" class="text-decoration-none">
+                        <small>Forgot your password?</small>
+                    </a>
+                </div>
+                
+                <div class="text-center mt-2">
                     <small class="text-muted">
-                        Default credentials: admin / admin123
+                        Need to create an admin account? 
+                        <a href="{{ url_for('auth.register') }}" class="text-decoration-none">Register here</a>
                     </small>
                 </div>
             </div>

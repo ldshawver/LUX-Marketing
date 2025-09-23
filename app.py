@@ -3,6 +3,7 @@ import logging
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -16,11 +17,11 @@ db = SQLAlchemy(model_class=Base)
 
 # Create the app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
+app.secret_key = os.environ.get("SESSION_SECRET")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# Configure the database - Force SQLite for development
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///email_marketing.db"
+# Configure the database
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///email_marketing.db")
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
@@ -33,6 +34,9 @@ app.config["MS_TENANT_ID"] = os.environ.get("MS_TENANT_ID", "")
 
 # Initialize extensions
 db.init_app(app)
+
+# Setup CSRF Protection
+csrf = CSRFProtect(app)
 
 # Setup Flask-Login
 login_manager = LoginManager()
@@ -58,21 +62,6 @@ with app.app_context():
     # Import models to ensure tables are created
     import models
     db.create_all()
-    
-    # Create default admin user if it doesn't exist
-    from models import User
-    from werkzeug.security import generate_password_hash
-    
-    admin = User.query.filter_by(username='admin').first()
-    if not admin:
-        admin_user = User()  # type: ignore
-        admin_user.username = 'admin'
-        admin_user.email = 'admin@example.com'
-        admin_user.password_hash = generate_password_hash('admin123')
-        admin_user.is_admin = True
-        db.session.add(admin_user)
-        db.session.commit()
-        logging.info("Created default admin user: admin/admin123")
 
 # Add Jinja2 filters
 @app.template_filter('campaign_status_color')

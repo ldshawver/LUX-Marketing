@@ -6,11 +6,17 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from sqlalchemy import or_
 from app import db
-from models import Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTracking
+from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTracking, 
+                    BrandKit, EmailComponent, Poll, PollResponse, ABTest, Automation, 
+                    AutomationStep, SMSCampaign, SMSRecipient, SocialPost, Segment, 
+                    SegmentMember, WebForm, FormSubmission, Event, EventRegistration, 
+                    Product, Order, CalendarEvent)
 from email_service import EmailService
 from utils import validate_email
 from tracking import decode_tracking_data, record_email_event
 import logging
+import json
+from ai_agent import lux_agent
 
 logger = logging.getLogger(__name__)
 
@@ -1363,3 +1369,285 @@ def lux_test_woocommerce():
             'success': False,
             'message': f'Connection failed: {error_msg}'
         }), 500
+
+# Drag & Drop Email Editor Routes
+@main_bp.route('/editor')
+@login_required
+def drag_drop_editor():
+    """Drag and drop email editor"""
+    brandkits = BrandKit.query.filter_by(is_default=True).first()
+    return render_template('drag_drop_editor.html', brandkit=brandkits)
+
+@main_bp.route('/editor/save', methods=['POST'])
+@login_required  
+def save_drag_drop_template():
+    """Save template from drag and drop editor"""
+    try:
+        name = request.form.get('name')
+        subject = request.form.get('subject')
+        html_content = request.form.get('html_content')
+        template_type = request.form.get('template_type', 'custom')
+        
+        if not name or not subject or not html_content:
+            return jsonify({'success': False, 'message': 'Missing required fields'})
+            
+        # Create new template
+        template = EmailTemplate()
+        template.name = name
+        template.subject = subject
+        template.html_content = html_content
+        template.template_type = template_type
+        
+        db.session.add(template)
+        db.session.commit()
+        
+        logger.info(f"Template '{name}' saved successfully by user {current_user.username}")
+        return jsonify({'success': True, 'template_id': template.id})
+        
+    except Exception as e:
+        logger.error(f"Error saving template: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+# AI Content Generation Routes
+@main_bp.route('/ai/generate-content', methods=['POST'])
+@login_required
+def generate_ai_content():
+    """Generate AI content for emails"""
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', '')
+        content_type = data.get('content_type', 'email_content')
+        
+        if not prompt:
+            return jsonify({'success': False, 'message': 'Prompt is required'})
+            
+        # Generate content using LUX AI agent
+        content_options = lux_agent.generate_email_content(prompt, content_type)
+        
+        return jsonify({'success': True, 'content': content_options})
+        
+    except Exception as e:
+        logger.error(f"Error generating AI content: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@main_bp.route('/ai/generate-subject-lines', methods=['POST'])
+@login_required
+def generate_subject_lines():
+    """Generate AI subject line suggestions"""
+    try:
+        data = request.get_json()
+        campaign_type = data.get('campaign_type', '')
+        audience = data.get('audience', '')
+        
+        subject_lines = lux_agent.generate_subject_lines(campaign_type, audience)
+        
+        return jsonify({'success': True, 'subject_lines': subject_lines})
+        
+    except Exception as e:
+        logger.error(f"Error generating subject lines: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+# BrandKit Management Routes
+@main_bp.route('/brandkit')
+@login_required
+def brandkit_management():
+    """BrandKit management page"""
+    brandkits = BrandKit.query.all()
+    return render_template('brandkit.html', brandkits=brandkits)
+
+@main_bp.route('/brandkit/create', methods=['POST'])
+@login_required
+def create_brandkit():
+    """Create new BrandKit"""
+    try:
+        name = request.form.get('name')
+        logo_url = request.form.get('logo_url')
+        primary_color = request.form.get('primary_color')
+        secondary_color = request.form.get('secondary_color')
+        accent_color = request.form.get('accent_color')
+        primary_font = request.form.get('primary_font')
+        secondary_font = request.form.get('secondary_font')
+        
+        brandkit = BrandKit()
+        brandkit.name = name
+        brandkit.logo_url = logo_url
+        brandkit.primary_color = primary_color
+        brandkit.secondary_color = secondary_color
+        brandkit.accent_color = accent_color
+        brandkit.primary_font = primary_font
+        brandkit.secondary_font = secondary_font
+        
+        db.session.add(brandkit)
+        db.session.commit()
+        
+        flash('BrandKit created successfully!', 'success')
+        return redirect(url_for('main.brandkit_management'))
+        
+    except Exception as e:
+        logger.error(f"Error creating BrandKit: {e}")
+        flash('Error creating BrandKit', 'error')
+        return redirect(url_for('main.brandkit_management'))
+
+# Poll and Survey Routes
+@main_bp.route('/polls')
+@login_required
+def polls_management():
+    """Polls and surveys management"""
+    polls = Poll.query.filter_by(is_active=True).all()
+    return render_template('polls.html', polls=polls)
+
+@main_bp.route('/polls/create', methods=['POST'])
+@login_required
+def create_poll():
+    """Create new poll"""
+    try:
+        question = request.form.get('question')
+        poll_type = request.form.get('poll_type', 'multiple_choice')
+        options = request.form.getlist('options[]')
+        
+        poll = Poll()
+        poll.question = question
+        poll.poll_type = poll_type
+        poll.options = options
+        
+        db.session.add(poll)
+        db.session.commit()
+        
+        flash('Poll created successfully!', 'success')
+        return redirect(url_for('main.polls_management'))
+        
+    except Exception as e:
+        logger.error(f"Error creating poll: {e}")
+        flash('Error creating poll', 'error')
+        return redirect(url_for('main.polls_management'))
+
+@main_bp.route('/polls/<int:poll_id>/respond', methods=['POST'])
+def respond_to_poll(poll_id):
+    """Submit poll response (public endpoint)"""
+    try:
+        poll = Poll.query.get_or_404(poll_id)
+        contact_id = request.form.get('contact_id')
+        response_data = request.form.get('response_data')
+        
+        if contact_id and response_data:
+            poll_response = PollResponse()
+            poll_response.poll_id = poll_id
+            poll_response.contact_id = contact_id
+            poll_response.response_data = json.loads(response_data)
+            
+            db.session.add(poll_response)
+            db.session.commit()
+            
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Error submitting poll response: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+# A/B Testing Routes
+@main_bp.route('/ab-tests')
+@login_required
+def ab_tests():
+    """A/B testing management"""
+    tests = ABTest.query.all()
+    return render_template('ab_tests.html', tests=tests)
+
+@main_bp.route('/ab-tests/create', methods=['POST'])
+@login_required
+def create_ab_test():
+    """Create new A/B test"""
+    try:
+        campaign_id = request.form.get('campaign_id')
+        test_type = request.form.get('test_type', 'subject_line')
+        variant_a = request.form.get('variant_a')
+        variant_b = request.form.get('variant_b')
+        split_ratio = float(request.form.get('split_ratio', 0.5))
+        
+        ab_test = ABTest()
+        ab_test.campaign_id = campaign_id
+        ab_test.test_type = test_type
+        ab_test.variant_a = variant_a
+        ab_test.variant_b = variant_b
+        ab_test.split_ratio = split_ratio
+        
+        db.session.add(ab_test)
+        db.session.commit()
+        
+        flash('A/B test created successfully!', 'success')
+        return redirect(url_for('main.ab_tests'))
+        
+    except Exception as e:
+        logger.error(f"Error creating A/B test: {e}")
+        flash('Error creating A/B test', 'error')
+        return redirect(url_for('main.ab_tests'))
+
+# Contact Segmentation Routes
+@main_bp.route('/segments')
+@login_required
+def segments():
+    """Contact segmentation management"""
+    segments = Segment.query.all()
+    return render_template('segments.html', segments=segments)
+
+@main_bp.route('/segments/create', methods=['POST'])
+@login_required
+def create_segment():
+    """Create new contact segment"""
+    try:
+        name = request.form.get('name')
+        description = request.form.get('description')
+        segment_type = request.form.get('segment_type', 'behavioral')
+        conditions = request.form.get('conditions')
+        is_dynamic = request.form.get('is_dynamic') == 'on'
+        
+        segment = Segment()
+        segment.name = name
+        segment.description = description
+        segment.segment_type = segment_type
+        segment.conditions = json.loads(conditions) if conditions else {}
+        segment.is_dynamic = is_dynamic
+        
+        db.session.add(segment)
+        db.session.commit()
+        
+        flash('Segment created successfully!', 'success')
+        return redirect(url_for('main.segments'))
+        
+    except Exception as e:
+        logger.error(f"Error creating segment: {e}")
+        flash('Error creating segment', 'error')
+        return redirect(url_for('main.segments'))
+
+# Social Media Management Routes
+@main_bp.route('/social')
+@login_required
+def social_media():
+    """Social media management dashboard"""
+    posts = SocialPost.query.order_by(SocialPost.created_at.desc()).limit(20).all()
+    return render_template('social_media.html', posts=posts)
+
+@main_bp.route('/social/create', methods=['POST'])
+@login_required
+def create_social_post():
+    """Create new social media post"""
+    try:
+        content = request.form.get('content')
+        platforms = request.form.getlist('platforms[]')
+        scheduled_at = request.form.get('scheduled_at')
+        
+        post = SocialPost()
+        post.content = content
+        post.platforms = platforms
+        post.scheduled_at = datetime.fromisoformat(scheduled_at) if scheduled_at else None
+        
+        db.session.add(post)
+        db.session.commit()
+        
+        flash('Social media post created successfully!', 'success')
+        return redirect(url_for('main.social_media'))
+        
+    except Exception as e:
+        logger.error(f"Error creating social post: {e}")
+        flash('Error creating social post', 'error')
+        return redirect(url_for('main.social_media'))

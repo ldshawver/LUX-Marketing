@@ -7,9 +7,8 @@ import json
 import logging
 from datetime import datetime, timedelta
 from openai import OpenAI
-from models import Campaign, Contact, EmailTemplate, CampaignRecipient, db
-from email_service import EmailService
-from tracking import get_campaign_analytics
+# Import only what we need at module level to avoid circular imports
+# Model imports will be done within functions where needed
 import base64
 import requests
 from urllib.parse import urljoin
@@ -154,6 +153,9 @@ class LUXAgent:
     def optimize_campaign_performance(self, campaign_id):
         """Analyze campaign performance and provide optimization recommendations"""
         try:
+            # Import here to avoid circular imports
+            from tracking import get_campaign_analytics
+            
             # Get campaign analytics
             analytics = get_campaign_analytics(campaign_id)
             if not analytics:
@@ -217,6 +219,10 @@ class LUXAgent:
     def create_automated_campaign(self, campaign_brief, template_id=None):
         """Automatically create and schedule a complete email campaign"""
         try:
+            # Import here to avoid circular imports
+            from models import Campaign, EmailTemplate, Contact, CampaignRecipient, db
+            from email_service import EmailService
+            
             # Generate campaign content
             content = self.generate_campaign_content(
                 campaign_brief.get('objective', 'Engage audience'),

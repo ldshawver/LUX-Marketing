@@ -350,27 +350,12 @@ class LUXAgent:
             logger.error(f"LUX error generating subject lines: {e}")
             return None
     
-    def get_campaign_recommendations(self):
-        """Get AI-powered recommendations for new campaigns based on current data"""
+    def get_campaign_recommendations(self, campaign_data=None, total_contacts=0):
+        """Get AI-powered recommendations for new campaigns based on provided data"""
         try:
-            # Import here to avoid circular imports
-            from models import Campaign, Contact
-            from tracking import get_campaign_analytics
-            
-            # Get recent campaign data
-            recent_campaigns = Campaign.query.order_by(Campaign.created_at.desc()).limit(5).all()
-            total_contacts = Contact.query.filter_by(is_active=True).count()
-            
-            campaign_data = []
-            for campaign in recent_campaigns:
-                analytics = get_campaign_analytics(campaign.id)
-                if analytics:
-                    campaign_data.append({
-                        'name': campaign.name,
-                        'open_rate': analytics['open_rate'],
-                        'click_rate': analytics['click_rate'],
-                        'created_at': campaign.created_at.strftime('%Y-%m-%d') if campaign.created_at else ''
-                    })
+            # Accept data as parameters to avoid circular imports
+            if campaign_data is None:
+                campaign_data = []
             
             prompt = f"""
             As LUX, analyze the current email marketing situation and recommend new campaign strategies.

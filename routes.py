@@ -1075,8 +1075,24 @@ def lux_recommendations():
     """LUX AI agent - Get campaign recommendations"""
     try:
         from ai_agent import lux_agent
+        from tracking import get_campaign_analytics
         
-        recommendations = lux_agent.get_campaign_recommendations()
+        # Gather data to pass to LUX agent (avoiding circular imports)
+        recent_campaigns = Campaign.query.order_by(Campaign.created_at.desc()).limit(5).all()
+        total_contacts = Contact.query.filter_by(is_active=True).count()
+        
+        campaign_data = []
+        for campaign in recent_campaigns:
+            analytics = get_campaign_analytics(campaign.id)
+            if analytics:
+                campaign_data.append({
+                    'name': campaign.name,
+                    'open_rate': analytics['open_rate'],
+                    'click_rate': analytics['click_rate'],
+                    'created_at': campaign.created_at.strftime('%Y-%m-%d') if campaign.created_at else ''
+                })
+        
+        recommendations = lux_agent.get_campaign_recommendations(campaign_data, total_contacts)
         
         if recommendations:
             return jsonify({

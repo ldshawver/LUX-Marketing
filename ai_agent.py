@@ -353,6 +353,10 @@ class LUXAgent:
     def get_campaign_recommendations(self):
         """Get AI-powered recommendations for new campaigns based on current data"""
         try:
+            # Import here to avoid circular imports
+            from models import Campaign, Contact
+            from tracking import get_campaign_analytics
+            
             # Get recent campaign data
             recent_campaigns = Campaign.query.order_by(Campaign.created_at.desc()).limit(5).all()
             total_contacts = Contact.query.filter_by(is_active=True).count()

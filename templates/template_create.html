@@ -15,21 +15,31 @@
             
             <form method="POST">
                 <div class="card-body">
+                    {% if branded_template %}
+                    <div class="alert alert-info">
+                        <i data-feather="layout"></i>
+                        <strong>Using Branded Template:</strong> {{ branded_template.name }}<br>
+                        <small>{{ branded_template.description }}</small>
+                    </div>
+                    {% endif %}
+                    
                     <div class="mb-4">
                         <label for="name" class="form-label">Template Name *</label>
-                        <input type="text" class="form-control" id="name" name="name" required>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{% if branded_template %}{{ branded_template.name }}{% endif %}" required>
                         <div class="form-text">A descriptive name for your template</div>
                     </div>
                     
                     <div class="mb-4">
                         <label for="subject" class="form-label">Default Subject *</label>
-                        <input type="text" class="form-control" id="subject" name="subject" required>
+                        <input type="text" class="form-control" id="subject" name="subject" 
+                               value="{{ default_subject or '' }}" required>
                         <div class="form-text">Default subject line (can be overridden in campaigns)</div>
                     </div>
                     
                     <div class="mb-4">
                         <label for="html_content" class="form-label">HTML Content *</label>
-                        <textarea class="form-control" id="html_content" name="html_content" rows="20" required></textarea>
+                        <textarea class="form-control" id="html_content" name="html_content" rows="20" required>{{ default_html or '' }}</textarea>
                         <div class="form-text">
                             HTML content for your email template. You can use template variables like {{ "{{contact.first_name}}" }}, {{ "{{contact.full_name}}" }}, {{ "{{contact.email}}" }}, {{ "{{contact.company}}" }}
                         </div>
@@ -42,6 +52,9 @@
                             <i data-feather="arrow-left"></i> Cancel
                         </a>
                         <div>
+                            <a href="{{ url_for('main.template_gallery') }}" class="btn btn-outline-secondary me-2">
+                                <i data-feather="layout"></i> Browse Templates
+                            </a>
                             <button type="button" class="btn btn-outline-info me-2" onclick="previewTemplate()">
                                 <i data-feather="eye"></i> Preview
                             </button>

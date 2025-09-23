@@ -37,9 +37,5 @@ externalPort = 80
 localPort = 32941
 externalPort = 3001
 
-[[ports]]
-localPort = 33751
-externalPort = 3000
-
 [agent]
 integrations = ["twilio_send_message:1.0.0", "flask_stripe:1.0.0"]

@@ -1,0 +1,935 @@
+{% extends "base.html" %}
+
+{% block title %}Drag & Drop Email Editor - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i data-feather="edit"></i> Drag & Drop Email Editor</h1>
+            <div>
+                <button id="preview-btn" class="btn btn-outline-primary me-2">
+                    <i data-feather="eye"></i> Preview
+                </button>
+                <button id="save-template-btn" class="btn btn-primary">
+                    <i data-feather="save"></i> Save Template
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Component Sidebar -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="layers"></i> Components</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="component-palette">
+                    <!-- Text Components -->
+                    <div class="component-category">
+                        <h6 class="p-3 mb-0 bg-secondary text-white">Text Elements</h6>
+                        <div class="p-3">
+                            <div class="draggable-component mb-2" data-type="heading">
+                                <div class="component-preview">
+                                    <i data-feather="type"></i>
+                                    <span>Heading</span>
+                                </div>
+                            </div>
+                            <div class="draggable-component mb-2" data-type="paragraph">
+                                <div class="component-preview">
+                                    <i data-feather="align-left"></i>
+                                    <span>Paragraph</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Media Components -->
+                    <div class="component-category">
+                        <h6 class="p-3 mb-0 bg-secondary text-white">Media</h6>
+                        <div class="p-3">
+                            <div class="draggable-component mb-2" data-type="image">
+                                <div class="component-preview">
+                                    <i data-feather="image"></i>
+                                    <span>Image</span>
+                                </div>
+                            </div>
+                            <div class="draggable-component mb-2" data-type="video">
+                                <div class="component-preview">
+                                    <i data-feather="play-circle"></i>
+                                    <span>Video</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Interactive Components -->
+                    <div class="component-category">
+                        <h6 class="p-3 mb-0 bg-secondary text-white">Interactive</h6>
+                        <div class="p-3">
+                            <div class="draggable-component mb-2" data-type="button">
+                                <div class="component-preview">
+                                    <i data-feather="square"></i>
+                                    <span>Button</span>
+                                </div>
+                            </div>
+                            <div class="draggable-component mb-2" data-type="poll">
+                                <div class="component-preview">
+                                    <i data-feather="bar-chart"></i>
+                                    <span>Poll</span>
+                                </div>
+                            </div>
+                            <div class="draggable-component mb-2" data-type="survey">
+                                <div class="component-preview">
+                                    <i data-feather="help-circle"></i>
+                                    <span>Survey</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Layout Components -->
+                    <div class="component-category">
+                        <h6 class="p-3 mb-0 bg-secondary text-white">Layout</h6>
+                        <div class="p-3">
+                            <div class="draggable-component mb-2" data-type="divider">
+                                <div class="component-preview">
+                                    <i data-feather="minus"></i>
+                                    <span>Divider</span>
+                                </div>
+                            </div>
+                            <div class="draggable-component mb-2" data-type="spacer">
+                                <div class="component-preview">
+                                    <i data-feather="more-horizontal"></i>
+                                    <span>Spacer</span>
+                                </div>
+                            </div>
+                            <div class="draggable-component mb-2" data-type="columns">
+                                <div class="component-preview">
+                                    <i data-feather="columns"></i>
+                                    <span>2 Columns</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Social Components -->
+                    <div class="component-category">
+                        <h6 class="p-3 mb-0 bg-secondary text-white">Social</h6>
+                        <div class="p-3">
+                            <div class="draggable-component mb-2" data-type="social-icons">
+                                <div class="component-preview">
+                                    <i data-feather="share-2"></i>
+                                    <span>Social Icons</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AI Content Assistant -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="cpu"></i> AI Assistant</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-outline-primary w-100 mb-2" onclick="generateContent('headline')">
+                    <i data-feather="zap"></i> Generate Headlines
+                </button>
+                <button class="btn btn-outline-primary w-100 mb-2" onclick="generateContent('paragraph')">
+                    <i data-feather="edit-3"></i> Generate Copy
+                </button>
+                <button class="btn btn-outline-primary w-100" onclick="generateContent('cta')">
+                    <i data-feather="mouse-pointer"></i> Generate CTA
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Email Canvas -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i data-feather="monitor"></i> Email Canvas</h5>
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="preview-mode" id="desktop" checked>
+                        <label class="btn btn-outline-secondary btn-sm" for="desktop">
+                            <i data-feather="monitor"></i>
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="preview-mode" id="mobile">
+                        <label class="btn btn-outline-secondary btn-sm" for="mobile">
+                            <i data-feather="smartphone"></i>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="email-canvas" class="email-canvas">
+                    <div class="canvas-wrapper">
+                        <div class="email-preview" id="email-preview">
+                            <div class="drop-zone" id="main-drop-zone">
+                                <div class="drop-zone-placeholder">
+                                    <i data-feather="plus"></i>
+                                    <p>Drag components here to start building your email</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Properties Panel -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="settings"></i> Properties</h5>
+            </div>
+            <div class="card-body">
+                <div id="properties-panel">
+                    <div class="text-center text-muted">
+                        <i data-feather="mouse-pointer"></i>
+                        <p>Select a component to edit its properties</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BrandKit Panel -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="palette"></i> BrandKit</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Brand Colors</label>
+                    <div class="color-palette">
+                        <div class="color-swatch" data-color="#013220" style="background-color: #013220;"></div>
+                        <div class="color-swatch" data-color="#301934" style="background-color: #301934;"></div>
+                        <div class="color-swatch" data-color="#C0C0C0" style="background-color: #C0C0C0;"></div>
+                        <div class="color-swatch" data-color="#F5F5F5" style="background-color: #F5F5F5;"></div>
+                        <div class="color-swatch" data-color="#000000" style="background-color: #000000;"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Fonts</label>
+                    <select class="form-select form-select-sm mb-2" id="primary-font">
+                        <option>Arial</option>
+                        <option>Helvetica</option>
+                        <option>Georgia</option>
+                        <option>Times New Roman</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template Save Modal -->
+<div class="modal fade" id="saveTemplateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Save Email Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="save-template-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-3">
+                        <label for="template-name" class="form-label">Template Name</label>
+                        <input type="text" class="form-control" id="template-name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="template-subject" class="form-label">Subject Line</label>
+                        <input type="text" class="form-control" id="template-subject" name="subject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Template Type</label>
+                        <select class="form-select" name="template_type">
+                            <option value="custom">Custom Template</option>
+                            <option value="automation">Automation Template</option>
+                            <option value="branded">Branded Template</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveTemplate()">Save Template</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Content Modal -->
+<div class="modal fade" id="aiContentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">AI Content Generator</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="content-prompt" class="form-label">Describe what content you need:</label>
+                    <textarea class="form-control" id="content-prompt" rows="3" placeholder="e.g., 'A compelling headline for a summer sale campaign'"></textarea>
+                </div>
+                <div id="generated-content-area" style="display: none;">
+                    <label class="form-label">Generated Content Options:</label>
+                    <div id="generated-options"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="generateAIContent()">Generate Content</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.email-canvas {
+    height: 600px;
+    overflow-y: auto;
+    background: #f8f9fa;
+    border: 1px solid var(--bs-border-color);
+}
+
+.canvas-wrapper {
+    min-height: 100%;
+    padding: 20px;
+}
+
+.email-preview {
+    background: white;
+    max-width: 600px;
+    margin: 0 auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.drop-zone {
+    min-height: 500px;
+    position: relative;
+}
+
+.drop-zone-placeholder {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--lux-polished-silver);
+    opacity: 0.7;
+}
+
+.drop-zone-placeholder i {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.draggable-component {
+    padding: 8px 12px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 6px;
+    cursor: grab;
+    transition: all 0.3s ease;
+    background: rgba(1, 50, 32, 0.05);
+}
+
+.draggable-component:hover {
+    background: rgba(1, 50, 32, 0.1);
+    border-color: var(--lux-emerald-abyss);
+    transform: translateY(-1px);
+}
+
+.component-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.component-preview i {
+    width: 16px;
+    height: 16px;
+    color: var(--lux-emerald-abyss);
+}
+
+.email-component {
+    margin: 10px 0;
+    padding: 15px;
+    border: 2px dashed transparent;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.email-component:hover {
+    border-color: var(--lux-emerald-abyss);
+    background: rgba(1, 50, 32, 0.05);
+}
+
+.email-component.selected {
+    border-color: var(--lux-emerald-abyss);
+    background: rgba(1, 50, 32, 0.1);
+}
+
+.component-toolbar {
+    position: absolute;
+    top: -30px;
+    right: 0;
+    display: none;
+    background: var(--lux-emerald-abyss);
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.email-component:hover .component-toolbar,
+.email-component.selected .component-toolbar {
+    display: flex;
+}
+
+.color-palette {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid var(--bs-border-color);
+    transition: all 0.3s ease;
+}
+
+.color-swatch:hover {
+    border-color: var(--lux-emerald-abyss);
+    transform: scale(1.1);
+}
+
+/* Mobile Preview Mode */
+.email-preview.mobile-mode {
+    max-width: 375px;
+}
+
+/* Drag and Drop States */
+.drop-zone.drag-over {
+    border: 2px dashed var(--lux-emerald-abyss);
+    background: rgba(1, 50, 32, 0.05);
+}
+
+.draggable-component.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+</style>
+
+<script>
+// Drag and Drop Functionality
+let draggedComponent = null;
+let selectedComponent = null;
+let componentCounter = 0;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDragAndDrop();
+    initializeComponentSelection();
+    feather.replace();
+});
+
+function initializeDragAndDrop() {
+    // Make components draggable
+    const draggableComponents = document.querySelectorAll('.draggable-component');
+    draggableComponents.forEach(component => {
+        component.draggable = true;
+        component.addEventListener('dragstart', handleDragStart);
+        component.addEventListener('dragend', handleDragEnd);
+    });
+    
+    // Set up drop zones
+    const dropZone = document.getElementById('main-drop-zone');
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('drop', handleDrop);
+    dropZone.addEventListener('dragenter', handleDragEnter);
+    dropZone.addEventListener('dragleave', handleDragLeave);
+}
+
+function handleDragStart(e) {
+    draggedComponent = e.target.closest('.draggable-component');
+    draggedComponent.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'copy';
+}
+
+function handleDragEnd(e) {
+    if (draggedComponent) {
+        draggedComponent.classList.remove('dragging');
+        draggedComponent = null;
+    }
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+}
+
+function handleDragEnter(e) {
+    e.preventDefault();
+    e.target.closest('.drop-zone').classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+    if (!e.target.closest('.drop-zone').contains(e.relatedTarget)) {
+        e.target.closest('.drop-zone').classList.remove('drag-over');
+    }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    const dropZone = e.target.closest('.drop-zone');
+    dropZone.classList.remove('drag-over');
+    
+    if (draggedComponent) {
+        const componentType = draggedComponent.dataset.type;
+        createEmailComponent(componentType, dropZone);
+        
+        // Hide placeholder if this is the first component
+        const placeholder = dropZone.querySelector('.drop-zone-placeholder');
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+    }
+}
+
+function createEmailComponent(type, container) {
+    componentCounter++;
+    const componentId = `component-${componentCounter}`;
+    
+    let componentHTML = '';
+    
+    switch(type) {
+        case 'heading':
+            componentHTML = `
+                <div class="email-component" data-type="heading" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editComponent('${componentId}')">
+                            <i data-feather="edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')">
+                            <i data-feather="trash"></i>
+                        </button>
+                    </div>
+                    <h2 contenteditable="true" style="color: #013220; margin: 0;">Your Heading Here</h2>
+                </div>
+            `;
+            break;
+        case 'paragraph':
+            componentHTML = `
+                <div class="email-component" data-type="paragraph" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editComponent('${componentId}')">
+                            <i data-feather="edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')">
+                            <i data-feather="trash"></i>
+                        </button>
+                    </div>
+                    <p contenteditable="true" style="color: #333; margin: 0; line-height: 1.6;">Add your paragraph text here. You can edit this directly or use the AI assistant to generate content.</p>
+                </div>
+            `;
+            break;
+        case 'image':
+            componentHTML = `
+                <div class="email-component" data-type="image" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editComponent('${componentId}')">
+                            <i data-feather="edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')">
+                            <i data-feather="trash"></i>
+                        </button>
+                    </div>
+                    <div class="image-placeholder" style="background: #f0f0f0; border: 2px dashed #ccc; padding: 40px; text-align: center; border-radius: 4px;">
+                        <i data-feather="image" style="width: 48px; height: 48px; color: #999;"></i>
+                        <p style="color: #666; margin: 10px 0 0 0;">Click to upload image or drag here</p>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'button':
+            componentHTML = `
+                <div class="email-component" data-type="button" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editComponent('${componentId}')">
+                            <i data-feather="edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')">
+                            <i data-feather="trash"></i>
+                        </button>
+                    </div>
+                    <div style="text-align: center;">
+                        <a href="#" style="background: #013220; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Call to Action</a>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'poll':
+            componentHTML = `
+                <div class="email-component" data-type="poll" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editComponent('${componentId}')">
+                            <i data-feather="edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')">
+                            <i data-feather="trash"></i>
+                        </button>
+                    </div>
+                    <div style="border: 1px solid #ddd; padding: 20px; border-radius: 6px; background: #f9f9f9;">
+                        <h4 style="margin: 0 0 15px 0; color: #013220;">Quick Poll</h4>
+                        <p style="margin: 0 0 15px 0; color: #333;">What's your favorite feature?</p>
+                        <div class="poll-options">
+                            <div style="margin: 8px 0;"><input type="radio" name="poll-${componentId}"> Option 1</div>
+                            <div style="margin: 8px 0;"><input type="radio" name="poll-${componentId}"> Option 2</div>
+                            <div style="margin: 8px 0;"><input type="radio" name="poll-${componentId}"> Option 3</div>
+                        </div>
+                        <button style="background: #301934; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 10px;">Submit</button>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'divider':
+            componentHTML = `
+                <div class="email-component" data-type="divider" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editComponent('${componentId}')">
+                            <i data-feather="edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')">
+                            <i data-feather="trash"></i>
+                        </button>
+                    </div>
+                    <hr style="border: none; height: 2px; background: #C0C0C0; margin: 20px 0;">
+                </div>
+            `;
+            break;
+        case 'social-icons':
+            componentHTML = `
+                <div class="email-component" data-type="social-icons" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editComponent('${componentId}')">
+                            <i data-feather="edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')">
+                            <i data-feather="trash"></i>
+                        </button>
+                    </div>
+                    <div style="text-align: center;">
+                        <a href="#" style="display: inline-block; margin: 0 10px; padding: 10px; background: #013220; color: white; border-radius: 50%; text-decoration: none;">f</a>
+                        <a href="#" style="display: inline-block; margin: 0 10px; padding: 10px; background: #301934; color: white; border-radius: 50%; text-decoration: none;">t</a>
+                        <a href="#" style="display: inline-block; margin: 0 10px; padding: 10px; background: #C0C0C0; color: white; border-radius: 50%; text-decoration: none;">in</a>
+                    </div>
+                </div>
+            `;
+            break;
+    }
+    
+    container.insertAdjacentHTML('beforeend', componentHTML);
+    feather.replace();
+}
+
+function initializeComponentSelection() {
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.email-component')) {
+            selectComponent(e.target.closest('.email-component'));
+        }
+    });
+}
+
+function selectComponent(component) {
+    // Remove previous selection
+    document.querySelectorAll('.email-component.selected').forEach(el => {
+        el.classList.remove('selected');
+    });
+    
+    // Select new component
+    component.classList.add('selected');
+    selectedComponent = component;
+    
+    // Update properties panel
+    updatePropertiesPanel(component);
+}
+
+function updatePropertiesPanel(component) {
+    const propertiesPanel = document.getElementById('properties-panel');
+    const componentType = component.dataset.type;
+    const componentId = component.dataset.id;
+    
+    let propertiesHTML = `<h6>Editing: ${componentType.charAt(0).toUpperCase() + componentType.slice(1)}</h6>`;
+    
+    switch(componentType) {
+        case 'heading':
+        case 'paragraph':
+            propertiesHTML += `
+                <div class="mb-3">
+                    <label class="form-label">Text Color</label>
+                    <input type="color" class="form-control form-control-color" onchange="updateComponentStyle('${componentId}', 'color', this.value)">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Font Size</label>
+                    <input type="range" class="form-range" min="12" max="48" onchange="updateComponentStyle('${componentId}', 'fontSize', this.value + 'px')">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Text Alignment</label>
+                    <select class="form-select" onchange="updateComponentStyle('${componentId}', 'textAlign', this.value)">
+                        <option value="left">Left</option>
+                        <option value="center">Center</option>
+                        <option value="right">Right</option>
+                    </select>
+                </div>
+            `;
+            break;
+        case 'button':
+            propertiesHTML += `
+                <div class="mb-3">
+                    <label class="form-label">Button Text</label>
+                    <input type="text" class="form-control" placeholder="Button Text" onchange="updateButtonText('${componentId}', this.value)">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Link URL</label>
+                    <input type="url" class="form-control" placeholder="https://example.com" onchange="updateButtonLink('${componentId}', this.value)">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Button Color</label>
+                    <input type="color" class="form-control form-control-color" value="#013220" onchange="updateButtonStyle('${componentId}', 'background', this.value)">
+                </div>
+            `;
+            break;
+    }
+    
+    propertiesPanel.innerHTML = propertiesHTML;
+}
+
+function updateComponentStyle(componentId, property, value) {
+    const component = document.querySelector(`[data-id="${componentId}"]`);
+    const editableElement = component.querySelector('[contenteditable="true"], h2, p, span');
+    if (editableElement) {
+        editableElement.style[property] = value;
+    }
+}
+
+function updateButtonText(componentId, text) {
+    const component = document.querySelector(`[data-id="${componentId}"]`);
+    const button = component.querySelector('a');
+    if (button) {
+        button.textContent = text;
+    }
+}
+
+function updateButtonLink(componentId, url) {
+    const component = document.querySelector(`[data-id="${componentId}"]`);
+    const button = component.querySelector('a');
+    if (button) {
+        button.href = url;
+    }
+}
+
+function updateButtonStyle(componentId, property, value) {
+    const component = document.querySelector(`[data-id="${componentId}"]`);
+    const button = component.querySelector('a');
+    if (button) {
+        button.style[property] = value;
+    }
+}
+
+function editComponent(componentId) {
+    const component = document.querySelector(`[data-id="${componentId}"]`);
+    selectComponent(component);
+}
+
+function deleteComponent(componentId) {
+    if (confirm('Are you sure you want to delete this component?')) {
+        const component = document.querySelector(`[data-id="${componentId}"]`);
+        component.remove();
+        
+        // Show placeholder if no components left
+        const dropZone = document.getElementById('main-drop-zone');
+        if (!dropZone.querySelector('.email-component')) {
+            const placeholder = dropZone.querySelector('.drop-zone-placeholder');
+            if (placeholder) {
+                placeholder.style.display = 'block';
+            }
+        }
+    }
+}
+
+// Preview Toggle
+document.getElementById('preview-btn').addEventListener('click', function() {
+    // Implementation for email preview
+    alert('Email preview functionality will be implemented');
+});
+
+// Mobile/Desktop Toggle
+document.querySelectorAll('input[name="preview-mode"]').forEach(input => {
+    input.addEventListener('change', function() {
+        const emailPreview = document.getElementById('email-preview');
+        if (this.id === 'mobile') {
+            emailPreview.classList.add('mobile-mode');
+        } else {
+            emailPreview.classList.remove('mobile-mode');
+        }
+    });
+});
+
+// Save Template
+document.getElementById('save-template-btn').addEventListener('click', function() {
+    const modal = new bootstrap.Modal(document.getElementById('saveTemplateModal'));
+    modal.show();
+});
+
+function saveTemplate() {
+    const form = document.getElementById('save-template-form');
+    const formData = new FormData(form);
+    
+    // Get the HTML content of the email
+    const emailContent = document.getElementById('email-preview').innerHTML;
+    formData.append('html_content', emailContent);
+    
+    fetch('/templates/save', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('saveTemplateModal'));
+            modal.hide();
+            
+            // Show success message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i data-feather="check-circle"></i> Template saved successfully!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.col-12').prepend(alertDiv);
+            feather.replace();
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                if (alertDiv) alertDiv.remove();
+            }, 3000);
+        } else {
+            alert('Error saving template: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving template');
+    });
+}
+
+// AI Content Generation
+function generateContent(type) {
+    const modal = new bootstrap.Modal(document.getElementById('aiContentModal'));
+    document.getElementById('content-prompt').value = '';
+    document.getElementById('generated-content-area').style.display = 'none';
+    modal.show();
+}
+
+function generateAIContent() {
+    const prompt = document.getElementById('content-prompt').value;
+    if (!prompt.trim()) {
+        alert('Please describe what content you need');
+        return;
+    }
+    
+    // Show loading state
+    const generateBtn = event.target;
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = '<i data-feather="loader"></i> Generating...';
+    
+    fetch('/ai/generate-content', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            prompt: prompt,
+            content_type: 'email_content'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = 'Generate Content';
+        
+        if (data.success) {
+            displayGeneratedContent(data.content);
+        } else {
+            alert('Error generating content: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = 'Generate Content';
+        alert('Error generating content');
+    });
+}
+
+function displayGeneratedContent(contentOptions) {
+    const contentArea = document.getElementById('generated-content-area');
+    const optionsContainer = document.getElementById('generated-options');
+    
+    let optionsHTML = '';
+    contentOptions.forEach((option, index) => {
+        optionsHTML += `
+            <div class="card mb-2">
+                <div class="card-body">
+                    <p class="card-text">${option}</p>
+                    <button class="btn btn-sm btn-primary" onclick="useGeneratedContent('${option.replace(/'/g, '\\\'').replace(/"/g, '\\"')}')">
+                        Use This Content
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    optionsContainer.innerHTML = optionsHTML;
+    contentArea.style.display = 'block';
+}
+
+function useGeneratedContent(content) {
+    if (selectedComponent) {
+        const editableElement = selectedComponent.querySelector('[contenteditable="true"]');
+        if (editableElement) {
+            editableElement.textContent = content;
+        }
+    }
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('aiContentModal'));
+    modal.hide();
+}
+
+// Color Palette Integration
+document.querySelectorAll('.color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', function() {
+        const color = this.dataset.color;
+        if (selectedComponent) {
+            updateComponentStyle(selectedComponent.dataset.id, 'color', color);
+        }
+    });
+});
+</script>
+
+{% endblock %}

@@ -19,4 +19,5 @@ dependencies = [
     "openai>=1.98.0",
     "flask-wtf>=1.2.2",
     "itsdangerous>=2.2.0",
+    "twilio>=9.8.1",
 ]

@@ -404,6 +404,89 @@ class LUXAgent:
             logger.error(f"LUX error getting recommendations: {e}")
             return None
     
+    def generate_email_content(self, prompt, content_type="email_content"):
+        """Generate email content using OpenAI"""
+        try:
+            system_prompt = f"""
+            You are LUX, an expert email marketing content generator. Generate compelling {content_type} 
+            based on the user's requirements. Always provide 3-5 different options that are:
+            - Engaging and professional
+            - Action-oriented when appropriate
+            - Brand-consistent
+            - Optimized for email marketing
+            """
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Generate {content_type} for: {prompt}"}
+                ],
+                max_tokens=1000,
+                temperature=0.8
+            )
+            
+            content = response.choices[0].message.content.strip()
+            
+            # Split into multiple options
+            if "1." in content or "Option 1" in content:
+                options = [opt.strip() for opt in content.split('\n') if opt.strip() and any(c.isalnum() for c in opt)]
+                return options[:5]
+            else:
+                # If not formatted as list, create variations
+                return [
+                    content,
+                    content.replace(".", "!"),
+                    content + " Act now!",
+                    content.replace("your", "our") if "your" in content else content + " Don't miss out!"
+                ]
+                
+        except Exception as e:
+            logger.error(f"Error generating email content: {e}")
+            return ["Error generating content. Please try again."]
+    
+    def generate_subject_lines(self, campaign_type, audience=""):
+        """Generate email subject line suggestions"""
+        try:
+            system_prompt = """
+            You are LUX, an expert email marketing strategist. Generate compelling email subject lines 
+            that maximize open rates. Focus on:
+            - Creating urgency and curiosity
+            - Keeping under 50 characters when possible
+            - Using action words
+            - Avoiding spam trigger words
+            - Personalizing when appropriate
+            """
+            
+            audience_context = f" for {audience}" if audience else ""
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Generate 8 compelling subject lines for a {campaign_type} campaign{audience_context}"}
+                ],
+                max_tokens=500,
+                temperature=0.9
+            )
+            
+            content = response.choices[0].message.content.strip()
+            
+            # Extract subject lines
+            lines = [line.strip() for line in content.split('\n') if line.strip() and len(line.strip()) > 5]
+            # Clean up formatting (remove numbers, bullets, etc.)
+            cleaned_lines = []
+            for line in lines:
+                cleaned = line.split('. ', 1)[-1].split('- ', 1)[-1].strip(' "\'')
+                if len(cleaned) > 5:
+                    cleaned_lines.append(cleaned)
+                    
+            return cleaned_lines[:8]
+            
+        except Exception as e:
+            logger.error(f"Error generating subject lines: {e}")
+            return ["Error generating subject lines. Please try again."]
+    
     def generate_campaign_image(self, campaign_description, style="professional marketing"):
         """Generate marketing images using DALL-E"""
         try:

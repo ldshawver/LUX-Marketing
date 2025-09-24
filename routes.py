@@ -1,7 +1,7 @@
 import csv
 import io
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response
 from flask_login import login_required, current_user
 from sqlalchemy import or_
@@ -10,7 +10,8 @@ from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTr
                     BrandKit, EmailComponent, Poll, PollResponse, ABTest, Automation, 
                     AutomationStep, SMSCampaign, SMSRecipient, SocialPost, Segment, 
                     SegmentMember, WebForm, FormSubmission, Event, EventRegistration, 
-                    Product, Order, CalendarEvent)
+                    Product, Order, CalendarEvent, AutomationTemplate, AutomationExecution,
+                    AutomationAction, LandingPage, NewsletterArchive, NonOpenerResend)
 from email_service import EmailService
 from utils import validate_email
 from tracking import decode_tracking_data, record_email_event

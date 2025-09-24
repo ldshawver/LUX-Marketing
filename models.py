@@ -138,6 +138,103 @@ class BrandKit(db.Model):
     def __repr__(self):
         return f'<BrandKit {self.name}>'
 
+# Automation Templates & Advanced Features
+class AutomationTemplate(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(Text)
+    category = db.Column(db.String(50))  # welcome, ecommerce, engagement, nurture
+    template_data = db.Column(JSON)  # Complete automation workflow template
+    is_predefined = db.Column(db.Boolean, default=False)  # System templates vs user-created
+    usage_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AutomationTemplate {self.name}>'
+
+class AutomationExecution(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    automation_id = db.Column(db.Integer, db.ForeignKey('automation.id'), nullable=False)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    current_step = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(20), default='active')  # active, completed, paused, failed
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    next_action_at = db.Column(db.DateTime)
+    
+    def __repr__(self):
+        return f'<AutomationExecution {self.automation_id}:{self.contact_id}>'
+
+class AutomationAction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    execution_id = db.Column(db.Integer, db.ForeignKey('automation_execution.id'), nullable=False)
+    step_id = db.Column(db.Integer, db.ForeignKey('automation_step.id'), nullable=False)
+    action_type = db.Column(db.String(50))  # email_sent, sms_sent, wait_completed, condition_met
+    status = db.Column(db.String(20), default='pending')  # pending, completed, failed, skipped
+    executed_at = db.Column(db.DateTime)
+    result_data = db.Column(JSON)
+    error_message = db.Column(Text)
+    
+    def __repr__(self):
+        return f'<AutomationAction {self.action_type}>'
+
+# Landing Pages & Enhanced Web Forms  
+class LandingPage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    title = db.Column(db.String(200))
+    slug = db.Column(db.String(100), unique=True)  # URL-friendly name
+    html_content = db.Column(Text)
+    css_styles = db.Column(Text)
+    meta_description = db.Column(db.String(160))
+    form_id = db.Column(db.Integer, db.ForeignKey('web_form.id'))
+    is_published = db.Column(db.Boolean, default=False)
+    page_views = db.Column(db.Integer, default=0)
+    conversions = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    published_at = db.Column(db.DateTime)
+    
+    # Relationships
+    form = db.relationship('WebForm', backref='landing_pages')
+    
+    def __repr__(self):
+        return f'<LandingPage {self.name}>'
+
+class NewsletterArchive(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('campaign.id'), nullable=False)
+    title = db.Column(db.String(200))
+    slug = db.Column(db.String(100), unique=True)
+    html_content = db.Column(Text)
+    published_at = db.Column(db.DateTime, default=datetime.utcnow)
+    view_count = db.Column(db.Integer, default=0)
+    is_public = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    campaign = db.relationship('Campaign', backref='archive_entry')
+    
+    def __repr__(self):
+        return f'<NewsletterArchive {self.title}>'
+
+# Enhanced Email Automation Features
+class NonOpenerResend(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    original_campaign_id = db.Column(db.Integer, db.ForeignKey('campaign.id'), nullable=False)
+    resend_campaign_id = db.Column(db.Integer, db.ForeignKey('campaign.id'))
+    hours_after_original = db.Column(db.Integer, default=24)
+    new_subject_line = db.Column(db.String(255))
+    status = db.Column(db.String(20), default='scheduled')  # scheduled, sent, cancelled
+    scheduled_at = db.Column(db.DateTime)
+    sent_at = db.Column(db.DateTime)
+    recipient_count = db.Column(db.Integer, default=0)
+    
+    # Relationships
+    original_campaign = db.relationship('Campaign', foreign_keys=[original_campaign_id], backref='non_opener_resends')
+    resend_campaign = db.relationship('Campaign', foreign_keys=[resend_campaign_id])
+    
+    def __repr__(self):
+        return f'<NonOpenerResend {self.original_campaign_id}>'
+
 # Drag & Drop Email Builder
 class EmailComponent(db.Model):
     id = db.Column(db.Integer, primary_key=True)

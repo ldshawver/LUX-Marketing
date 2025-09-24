@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # LUX Marketing VPS Deployment Script
-# This script safely uploads and deploys your LUX Marketing app to your VPS
+# Deploy to your VPS at 194.195.92.52 with domain lux.lucifercruz.com
 
 set -e  # Exit on any error
 
 # Configuration
-LOCAL_PATH="/Users/lukeshawver/Downloads/lux-marketing"
 VPS_HOST="194.195.92.52"
-VPS_USER="deploy"  # Recommended: create dedicated user (not root)
+VPS_USER="root"
 VPS_PATH="/var/www/lux-marketing"
 BACKUP_PATH="/var/backups/lux-marketing-$(date +%Y%m%d_%H%M%S)"
+DOMAIN="lux.lucifercruz.com"
 
 # Colors for output
 RED='\033[0;31m'
@@ -21,18 +21,11 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}🚀 LUX Marketing VPS Deployment Script${NC}"
 echo "=================================================="
 
-# Verify local files exist
-if [ ! -d "$LOCAL_PATH" ]; then
-    echo -e "${RED}❌ Error: Local path $LOCAL_PATH not found${NC}"
-    echo "Please ensure your LUX Marketing files are in: $LOCAL_PATH"
-    exit 1
-fi
-
 echo -e "${YELLOW}📋 Deployment Configuration:${NC}"
-echo "  Local Path: $LOCAL_PATH"
 echo "  VPS Host: $VPS_HOST"
-echo "  VPS User: $VPS_USER"
+echo "  VPS User: $VPS_USER" 
 echo "  VPS Path: $VPS_PATH"
+echo "  Domain: $DOMAIN"
 echo ""
 
 # Ask for confirmation
@@ -73,89 +66,183 @@ ssh $VPS_USER@$VPS_HOST "
 "
 
 echo -e "${YELLOW}📤 Uploading files to VPS...${NC}"
-# Exclude certain files/directories that shouldn't be deployed
+# Upload current directory (LUX Marketing platform) to VPS
 rsync -avz --progress \
-    --exclude='.git' \
+    --exclude='.git*' \
     --exclude='__pycache__' \
     --exclude='*.pyc' \
     --exclude='.DS_Store' \
     --exclude='node_modules' \
-    --exclude='venv' \
-    --exclude='.env' \
+    --exclude='venv*' \
+    --exclude='.env*' \
     --exclude='instance' \
     --exclude='*.log' \
-    $LOCAL_PATH/ $VPS_USER@$VPS_HOST:$VPS_PATH/
+    --exclude='tmp' \
+    ./ $VPS_USER@$VPS_HOST:$VPS_PATH/
 
 echo -e "${YELLOW}🔧 Setting up deployment environment...${NC}"
 ssh $VPS_USER@$VPS_HOST "
     cd $VPS_PATH
     
+    # Update system and install dependencies
+    apt update
+    apt install -y python3 python3-pip python3-venv nginx postgresql postgresql-contrib
+    
+    # Create application user (if not exists)
+    useradd -m -s /bin/bash luxapp || echo 'User luxapp already exists'
+    
     # Set proper permissions
-    sudo chown -R $VPS_USER:www-data $VPS_PATH
-    sudo chmod -R 755 $VPS_PATH
-    sudo chmod -R 664 $VPS_PATH/*.py 2>/dev/null || true
+    chown -R luxapp:www-data $VPS_PATH
+    chmod -R 755 $VPS_PATH
     
     # Create necessary directories
-    mkdir -p logs static/uploads instance
+    mkdir -p logs static/uploads instance /var/log/lux-marketing
+    chown luxapp:www-data /var/log/lux-marketing
     
-    # Install Python dependencies (if requirements.txt exists)
-    if [ -f 'requirements.txt' ]; then
-        echo 'Installing Python dependencies...'
-        python3 -m venv venv 2>/dev/null || true
-        source venv/bin/activate 2>/dev/null || true
-        pip install -r requirements.txt || echo 'Note: Install dependencies manually if needed'
-    fi
+    # Create Python virtual environment
+    echo 'Creating Python virtual environment...'
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip
     
-    echo 'Deployment files copied successfully'
+    # Install application dependencies
+    pip install flask gunicorn flask-sqlalchemy flask-login flask-wtf
+    pip install psycopg2-binary msal openai requests twilio apscheduler
+    pip install email-validator itsdangerous werkzeug jinja2
+    
+    echo 'Virtual environment created and dependencies installed'
 "
 
-echo -e "${YELLOW}⚙️  Post-deployment setup...${NC}"
+echo -e "${YELLOW}⚙️  Setting up production services...${NC}"
 ssh $VPS_USER@$VPS_HOST "
     cd $VPS_PATH
     
-    # Create systemd service file (optional)
-    sudo tee /etc/systemd/system/lux-marketing.service > /dev/null << 'EOF'
+    # Setup PostgreSQL database
+    sudo -u postgres psql -c \"CREATE DATABASE lux_marketing;\" 2>/dev/null || echo 'Database may already exist'
+    sudo -u postgres psql -c \"CREATE USER luxuser WITH PASSWORD 'luxpass123';\" 2>/dev/null || echo 'User may already exist'  
+    sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE lux_marketing TO luxuser;\" 2>/dev/null || true
+    
+    # Create environment file
+    cat > /etc/environment << 'EOF'
+DATABASE_URL=postgresql://luxuser:luxpass123@localhost/lux_marketing
+SESSION_SECRET=lux-super-secret-key-production-2024
+OPENAI_API_KEY=your-openai-key-here
+FLASK_ENV=production
+FLASK_DEBUG=False
+EOF
+    
+    # Create systemd service
+    tee /etc/systemd/system/lux-marketing.service > /dev/null << 'EOF'
 [Unit]
 Description=LUX Marketing Flask Application
-After=network.target
+After=network.target postgresql.service
+Requires=postgresql.service
 
 [Service]
-User=deploy
+User=luxapp
 Group=www-data
-WorkingDirectory=$VPS_PATH
-Environment=PATH=$VPS_PATH/venv/bin
-ExecStart=$VPS_PATH/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 main:app
+WorkingDirectory=/var/www/lux-marketing
+Environment=PATH=/var/www/lux-marketing/venv/bin
+EnvironmentFile=/etc/environment
+ExecStart=/var/www/lux-marketing/venv/bin/gunicorn --config gunicorn.conf.py main:app
+ExecReload=/bin/kill -s HUP \$MAINPID
 Restart=always
-RestartSec=3
+RestartSec=5
+StandardOutput=append:/var/log/lux-marketing/access.log
+StandardError=append:/var/log/lux-marketing/error.log
 
 [Install]
 WantedBy=multi-user.target
 EOF
     
-    # Reload systemd and enable service
-    sudo systemctl daemon-reload
-    sudo systemctl enable lux-marketing 2>/dev/null || true
+    # Create Gunicorn configuration
+    tee gunicorn.conf.py > /dev/null << 'EOF'
+import multiprocessing
+
+bind = \"127.0.0.1:8000\"
+workers = multiprocessing.cpu_count() * 2 + 1
+worker_class = \"sync\"
+timeout = 30
+keepalive = 2
+max_requests = 1000
+max_requests_jitter = 50
+user = \"luxapp\"
+group = \"www-data\"
+tmp_upload_dir = None
+EOF
     
-    echo 'Service configuration created'
+    systemctl daemon-reload
+    systemctl enable lux-marketing
+    
+    echo 'System services configured'
+"
+
+echo -e "${YELLOW}🌐 Configuring Nginx reverse proxy...${NC}"
+ssh $VPS_USER@$VPS_HOST "
+    # Create Nginx configuration
+    tee /etc/nginx/sites-available/lux-marketing > /dev/null << 'EOF'
+server {
+    listen 80;
+    server_name lux.lucifercruz.com www.lux.lucifercruz.com;
+    
+    client_max_body_size 10M;
+    
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_redirect off;
+    }
+    
+    location /static {
+        alias /var/www/lux-marketing/static;
+        expires 1y;
+        add_header Cache-Control \"public, immutable\";
+    }
+    
+    # Security headers
+    add_header X-Frame-Options \"SAMEORIGIN\" always;
+    add_header X-XSS-Protection \"1; mode=block\" always;
+    add_header X-Content-Type-Options \"nosniff\" always;
+}
+EOF
+    
+    # Enable site
+    ln -sf /etc/nginx/sites-available/lux-marketing /etc/nginx/sites-enabled/
+    rm -f /etc/nginx/sites-enabled/default
+    
+    # Test and restart nginx
+    nginx -t
+    systemctl restart nginx
+    systemctl enable nginx
+    
+    echo 'Nginx configured and started'
 "
 
 echo -e "${GREEN}🎉 Deployment completed successfully!${NC}"
 echo ""
-echo -e "${YELLOW}📋 Next steps:${NC}"
-echo "  1. Set up environment variables on VPS:"
-echo "     sudo nano /etc/environment"
-echo "     Add: DATABASE_URL, OPENAI_API_KEY, SESSION_SECRET, etc."
+echo -e "${YELLOW}📋 Next steps to complete setup:${NC}"
 echo ""
-echo "  2. Configure web server (nginx/apache) to proxy to port 5000"
-echo ""
-echo "  3. Start the application:"
+echo "  1. Update environment variables (if needed):"
 echo "     ssh $VPS_USER@$VPS_HOST"
-echo "     sudo systemctl start lux-marketing"
-echo "     sudo systemctl status lux-marketing"
+echo "     nano /etc/environment"
+echo "     # Add your actual API keys"
 echo ""
-echo "  4. Set up SSL certificate for lux.lucifercruz.com"
+echo "  2. Start the LUX Marketing application:"
+echo "     ssh $VPS_USER@$VPS_HOST"
+echo "     systemctl start lux-marketing"
+echo "     systemctl status lux-marketing"
 echo ""
-echo -e "${GREEN}✅ Your LUX Marketing app is ready for production!${NC}"
+echo "  3. Setup SSL certificate for production:"
+echo "     ssh $VPS_USER@$VPS_HOST"
+echo "     apt install certbot python3-certbot-nginx"
+echo "     certbot --nginx -d lux.lucifercruz.com -d www.lux.lucifercruz.com"
+echo ""
+echo "  4. Your site will be available at: http://lux.lucifercruz.com"
+echo ""
+echo -e "${GREEN}✅ Your LUX Marketing platform is ready for production!${NC}"
 
 # Optional: Test the deployment
 read -p "Would you like to test the deployment now? (y/N): " -n 1 -r

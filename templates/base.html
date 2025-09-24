@@ -45,18 +45,27 @@
                             <li><a class="dropdown-item" href="{{ url_for('main.templates') }}"><i data-feather="file-text"></i> Templates</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.drag_drop_editor') }}"><i data-feather="edit-3"></i> Drag & Drop Editor</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.ab_tests') }}"><i data-feather="shuffle"></i> A/B Testing</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.automation_dashboard') }}"><i data-feather="zap"></i> Automation</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.automation_templates') }}"><i data-feather="layers"></i> Templates</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.automation_analytics') }}"><i data-feather="trending-up"></i> Analytics</a></li>
                         </ul>
                     </li>
                     
-                    <!-- Contacts & Segmentation -->
+                    <!-- Contacts & Forms -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="contactsDropdown" role="button" data-bs-toggle="dropdown">
-                            <i data-feather="users"></i> Contacts
+                            <i data-feather="users"></i> Contacts & Forms
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ url_for('main.contacts') }}"><i data-feather="users"></i> All Contacts</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.segments') }}"><i data-feather="filter"></i> Segmentation</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.forms_dashboard') }}"><i data-feather="clipboard"></i> Web Forms</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.landing_pages') }}"><i data-feather="globe"></i> Landing Pages</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.polls_management') }}"><i data-feather="bar-chart"></i> Polls & Surveys</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.newsletter_archive') }}"><i data-feather="archive"></i> Newsletter Archive</a></li>
                         </ul>
                     </li>
                     

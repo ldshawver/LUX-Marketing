@@ -1651,3 +1651,366 @@ def create_social_post():
         logger.error(f"Error creating social post: {e}")
         flash('Error creating social post', 'error')
         return redirect(url_for('main.social_media'))
+
+# Advanced Automation Management Routes
+@main_bp.route('/automations')
+@login_required
+def automation_dashboard():
+    """Advanced automation management dashboard"""
+    automations = Automation.query.all()
+    templates = AutomationTemplate.query.filter_by(is_predefined=True).all()
+    active_executions = AutomationExecution.query.filter_by(status='active').count()
+    
+    return render_template('automation_dashboard.html', 
+                         automations=automations, 
+                         templates=templates,
+                         active_executions=active_executions)
+
+@main_bp.route('/automations/create', methods=['GET', 'POST'])
+@login_required
+def create_automation():
+    """Create new automation workflow"""
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name')
+            description = request.form.get('description')
+            trigger_type = request.form.get('trigger_type')
+            trigger_conditions = request.form.get('trigger_conditions')
+            
+            automation = Automation()
+            automation.name = name
+            automation.description = description
+            automation.trigger_type = trigger_type
+            automation.trigger_conditions = json.loads(trigger_conditions) if trigger_conditions else {}
+            
+            db.session.add(automation)
+            db.session.commit()
+            
+            flash('Automation workflow created successfully!', 'success')
+            return redirect(url_for('main.edit_automation', id=automation.id))
+            
+        except Exception as e:
+            logger.error(f"Error creating automation: {e}")
+            flash('Error creating automation workflow', 'error')
+            return redirect(url_for('main.automation_dashboard'))
+    
+    templates = AutomationTemplate.query.filter_by(is_predefined=True).all()
+    email_templates = EmailTemplate.query.all()
+    return render_template('create_automation.html', templates=templates, email_templates=email_templates)
+
+@main_bp.route('/automations/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_automation(id):
+    """Edit automation workflow with visual builder"""
+    automation = Automation.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        try:
+            # Update automation details
+            automation.name = request.form.get('name')
+            automation.description = request.form.get('description')
+            automation.trigger_type = request.form.get('trigger_type')
+            trigger_conditions = request.form.get('trigger_conditions')
+            automation.trigger_conditions = json.loads(trigger_conditions) if trigger_conditions else {}
+            
+            # Update steps from visual builder
+            steps_data = request.form.get('steps_data')
+            if steps_data:
+                steps = json.loads(steps_data)
+                
+                # Delete existing steps
+                AutomationStep.query.filter_by(automation_id=id).delete()
+                
+                # Create new steps
+                for i, step_data in enumerate(steps):
+                    step = AutomationStep()
+                    step.automation_id = id
+                    step.step_type = step_data.get('type')
+                    step.step_order = i
+                    step.template_id = step_data.get('template_id')
+                    step.delay_hours = step_data.get('delay_hours', 0)
+                    step.conditions = step_data.get('conditions', {})
+                    
+                    db.session.add(step)
+            
+            db.session.commit()
+            flash('Automation updated successfully!', 'success')
+            return redirect(url_for('main.automation_dashboard'))
+            
+        except Exception as e:
+            logger.error(f"Error updating automation: {e}")
+            db.session.rollback()
+            flash('Error updating automation', 'error')
+    
+    steps = AutomationStep.query.filter_by(automation_id=id).order_by(AutomationStep.step_order).all()
+    email_templates = EmailTemplate.query.all()
+    executions = AutomationExecution.query.filter_by(automation_id=id).limit(10).all()
+    
+    return render_template('edit_automation.html', 
+                         automation=automation, 
+                         steps=steps,
+                         email_templates=email_templates,
+                         executions=executions)
+
+@main_bp.route('/automations/<int:id>/toggle', methods=['POST'])
+@login_required
+def toggle_automation(id):
+    """Enable/disable automation workflow"""
+    try:
+        automation = Automation.query.get_or_404(id)
+        automation.is_active = not automation.is_active
+        db.session.commit()
+        
+        status = 'activated' if automation.is_active else 'deactivated'
+        flash(f'Automation {status} successfully!', 'success')
+        
+        return jsonify({'success': True, 'is_active': automation.is_active})
+    except Exception as e:
+        logger.error(f"Error toggling automation: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@main_bp.route('/automation-templates')
+@login_required
+def automation_templates():
+    """Automation template library"""
+    predefined = AutomationTemplate.query.filter_by(is_predefined=True).all()
+    custom = AutomationTemplate.query.filter_by(is_predefined=False).all()
+    
+    return render_template('automation_templates.html', 
+                         predefined_templates=predefined,
+                         custom_templates=custom)
+
+@main_bp.route('/automation-templates/create-from-template/<int:template_id>')
+@login_required
+def create_from_template(template_id):
+    """Create automation from predefined template"""
+    try:
+        template = AutomationTemplate.query.get_or_404(template_id)
+        template_data = template.template_data
+        
+        # Create automation from template
+        automation = Automation()
+        automation.name = f"{template.name} - Copy"
+        automation.description = template.description
+        automation.trigger_type = template_data.get('trigger_type', 'custom')
+        automation.trigger_conditions = template_data.get('trigger_conditions', {})
+        
+        db.session.add(automation)
+        db.session.flush()
+        
+        # Create steps from template
+        for i, step_data in enumerate(template_data.get('steps', [])):
+            step = AutomationStep()
+            step.automation_id = automation.id
+            step.step_type = step_data.get('type')
+            step.step_order = i
+            step.delay_hours = step_data.get('delay_hours', 0)
+            step.conditions = step_data.get('conditions', {})
+            
+            db.session.add(step)
+        
+        # Update usage count
+        template.usage_count += 1
+        
+        db.session.commit()
+        
+        flash(f'Created automation from template: {template.name}', 'success')
+        return redirect(url_for('main.edit_automation', id=automation.id))
+        
+    except Exception as e:
+        logger.error(f"Error creating from template: {e}")
+        flash('Error creating automation from template', 'error')
+        return redirect(url_for('main.automation_templates'))
+
+@main_bp.route('/automation-analytics')
+@login_required
+def automation_analytics():
+    """Automation performance analytics"""
+    total_automations = Automation.query.count()
+    active_automations = Automation.query.filter_by(is_active=True).count()
+    total_executions = AutomationExecution.query.count()
+    completed_executions = AutomationExecution.query.filter_by(status='completed').count()
+    
+    # Recent execution data
+    recent_executions = AutomationExecution.query.order_by(AutomationExecution.started_at.desc()).limit(20).all()
+    
+    # Performance by automation
+    automation_stats = []
+    for automation in Automation.query.all():
+        executions = AutomationExecution.query.filter_by(automation_id=automation.id)
+        total = executions.count()
+        completed = executions.filter_by(status='completed').count()
+        completion_rate = (completed / total * 100) if total > 0 else 0
+        
+        automation_stats.append({
+            'automation': automation,
+            'total_executions': total,
+            'completed': completed,
+            'completion_rate': completion_rate
+        })
+    
+    return render_template('automation_analytics.html',
+                         total_automations=total_automations,
+                         active_automations=active_automations,
+                         total_executions=total_executions,
+                         completed_executions=completed_executions,
+                         recent_executions=recent_executions,
+                         automation_stats=automation_stats)
+
+# Non-Opener Resend Feature
+@main_bp.route('/campaigns/<int:campaign_id>/resend-non-openers', methods=['GET', 'POST'])
+@login_required
+def setup_non_opener_resend(campaign_id):
+    """Set up automatic resend to non-openers"""
+    campaign = Campaign.query.get_or_404(campaign_id)
+    
+    if request.method == 'POST':
+        try:
+            hours_after = int(request.form.get('hours_after', 24))
+            new_subject = request.form.get('new_subject_line')
+            
+            resend = NonOpenerResend()
+            resend.original_campaign_id = campaign_id
+            resend.hours_after_original = hours_after
+            resend.new_subject_line = new_subject
+            resend.scheduled_at = campaign.sent_at + timedelta(hours=hours_after) if campaign.sent_at else None
+            
+            db.session.add(resend)
+            db.session.commit()
+            
+            flash('Non-opener resend scheduled successfully!', 'success')
+            return redirect(url_for('main.campaign_details', id=campaign_id))
+            
+        except Exception as e:
+            logger.error(f"Error setting up resend: {e}")
+            flash('Error setting up resend', 'error')
+    
+    return render_template('setup_non_opener_resend.html', campaign=campaign)
+
+# Web Forms & Landing Pages Routes
+@main_bp.route('/forms')
+@login_required
+def forms_dashboard():
+    """Web forms management dashboard"""
+    forms = WebForm.query.all()
+    total_submissions = FormSubmission.query.count()
+    
+    return render_template('forms_dashboard.html', forms=forms, total_submissions=total_submissions)
+
+@main_bp.route('/forms/create', methods=['GET', 'POST'])
+@login_required
+def create_web_form():
+    """Create new web signup form"""
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name')
+            title = request.form.get('title')
+            description = request.form.get('description')
+            fields_data = request.form.get('fields_data')
+            success_message = request.form.get('success_message')
+            redirect_url = request.form.get('redirect_url')
+            
+            form = WebForm()
+            form.name = name
+            form.title = title
+            form.description = description
+            form.fields = json.loads(fields_data) if fields_data else []
+            form.success_message = success_message
+            form.redirect_url = redirect_url
+            
+            db.session.add(form)
+            db.session.commit()
+            
+            flash('Web form created successfully!', 'success')
+            return redirect(url_for('main.forms_dashboard'))
+            
+        except Exception as e:
+            logger.error(f"Error creating form: {e}")
+            flash('Error creating web form', 'error')
+    
+    return render_template('create_web_form.html')
+
+@main_bp.route('/forms/<int:id>/embed-code')
+@login_required
+def form_embed_code(id):
+    """Get embed code for web form"""
+    form = WebForm.query.get_or_404(id)
+    
+    embed_html = f"""
+<div id="lux-form-{form.id}"></div>
+<script>
+(function() {{
+    var script = document.createElement('script');
+    script.src = '{request.url_root}static/js/form-embed.js';
+    script.onload = function() {{
+        LuxForm.render({form.id}, 'lux-form-{form.id}');
+    }};
+    document.head.appendChild(script);
+}})();
+</script>
+    """
+    
+    return jsonify({'embed_code': embed_html})
+
+@main_bp.route('/landing-pages')
+@login_required
+def landing_pages():
+    """Landing pages management"""
+    pages = LandingPage.query.all()
+    forms = WebForm.query.all()
+    
+    return render_template('landing_pages.html', pages=pages, forms=forms)
+
+@main_bp.route('/landing-pages/create', methods=['GET', 'POST'])
+@login_required
+def create_landing_page():
+    """Create new landing page"""
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name')
+            title = request.form.get('title')
+            slug = request.form.get('slug')
+            html_content = request.form.get('html_content')
+            css_styles = request.form.get('css_styles')
+            meta_description = request.form.get('meta_description')
+            form_id = request.form.get('form_id') or None
+            
+            page = LandingPage()
+            page.name = name
+            page.title = title
+            page.slug = slug
+            page.html_content = html_content
+            page.css_styles = css_styles
+            page.meta_description = meta_description
+            page.form_id = int(form_id) if form_id else None
+            
+            db.session.add(page)
+            db.session.commit()
+            
+            flash('Landing page created successfully!', 'success')
+            return redirect(url_for('main.landing_pages'))
+            
+        except Exception as e:
+            logger.error(f"Error creating landing page: {e}")
+            flash('Error creating landing page', 'error')
+    
+    forms = WebForm.query.all()
+    return render_template('create_landing_page.html', forms=forms)
+
+@main_bp.route('/newsletter-archive')
+def newsletter_archive():
+    """Public newsletter archive"""
+    newsletters = NewsletterArchive.query.filter_by(is_public=True).order_by(NewsletterArchive.published_at.desc()).all()
+    
+    return render_template('newsletter_archive_public.html', newsletters=newsletters)
+
+@main_bp.route('/newsletter-archive/<slug>')
+def view_newsletter(slug):
+    """View individual newsletter"""
+    newsletter = NewsletterArchive.query.filter_by(slug=slug, is_public=True).first_or_404()
+    
+    # Increment view count
+    newsletter.view_count += 1
+    db.session.commit()
+    
+    return render_template('newsletter_view.html', newsletter=newsletter)

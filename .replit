@@ -1,4 +1,4 @@
-modules = ["python-3.11", "python3", "postgresql-16"]
+modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
@@ -32,6 +32,3 @@ waitForPort = 5000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[agent]
-integrations = ["twilio_send_message:1.0.0", "flask_stripe:1.0.0"]

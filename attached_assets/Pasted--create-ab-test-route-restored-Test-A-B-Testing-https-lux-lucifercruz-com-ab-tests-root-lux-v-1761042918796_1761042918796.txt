@@ -1,0 +1,25 @@
+
+✅ create_ab_test route restored!
+Test A/B Testing: https://lux.lucifercruz.com/ab-tests
+root@lux:/var/www/lux-marketing# # On VPS - Check the latest A/B test creation error
+journalctl -u lux-marketing.service -n 20 --no-pager
+Oct 21 10:34:10 lux gunicorn[2867]:     self.environment.handle_exception()
+Oct 21 10:34:10 lux gunicorn[2867]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+Oct 21 10:34:10 lux gunicorn[2867]:     raise rewrite_traceback_stack(source=source)
+Oct 21 10:34:10 lux gunicorn[2867]:   File "/var/www/lux-marketing/templates/ab_tests.html", line 1, in top-level template code
+Oct 21 10:34:10 lux gunicorn[2867]:     {% extends "base.html" %}
+Oct 21 10:34:10 lux gunicorn[2867]:   File "/var/www/lux-marketing/templates/base.html", line 85, in top-level template code
+Oct 21 10:34:10 lux gunicorn[2867]:     {% block content %}{% endblock %}
+Oct 21 10:34:10 lux gunicorn[2867]:     ^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 10:34:10 lux gunicorn[2867]:   File "/var/www/lux-marketing/templates/ab_tests.html", line 33, in block 'content'
+Oct 21 10:34:10 lux gunicorn[2867]:     <a href="{{ url_for('main.preview_campaign', campaign_id=test.campaign_id) }}">
+Oct 21 10:34:10 lux gunicorn[2867]:     ^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 10:34:10 lux gunicorn[2867]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+Oct 21 10:34:10 lux gunicorn[2867]:     return self.handle_url_build_error(error, endpoint, values)
+Oct 21 10:34:10 lux gunicorn[2867]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 10:34:10 lux gunicorn[2867]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+Oct 21 10:34:10 lux gunicorn[2867]:     rv = url_adapter.build(  # type: ignore[union-attr]
+Oct 21 10:34:10 lux gunicorn[2867]:          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 10:34:10 lux gunicorn[2867]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+Oct 21 10:34:10 lux gunicorn[2867]:     raise BuildError(endpoint, values, method, self)
+Oct 21 10:34:10 lux gunicorn[2867]: werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'main.preview_campaign' with values ['campaign_id']. Did you mean 'main.create_campaign' instead?

@@ -79,3 +79,56 @@ Preferred communication style: Simple, everyday language.
 - **SQLAlchemy**: ORM supporting multiple database backends
 - **Default**: SQLite for development (easily configurable for PostgreSQL, MySQL)
 - **Features**: Connection pooling, health checks, and migration support
+
+## Production Deployment (October 21, 2025)
+
+### VPS Deployment Details
+- **Server**: Hostinger VPS at 194.195.92.52
+- **Domain**: https://lux.lucifercruz.com
+- **Application Path**: /var/www/lux-marketing
+- **System User**: luxapp:www-data
+- **Database**: PostgreSQL (luxuser@localhost/lux_marketing)
+
+### Production Stack
+- **Web Server**: Nginx 1.22.1 with SSL/TLS (Let's Encrypt)
+- **Application Server**: Gunicorn with 4 workers
+- **Process Manager**: systemd (lux-marketing.service)
+- **Python Environment**: Virtual environment at /var/www/lux-marketing/venv
+- **Log Location**: /var/log/lux-marketing/ and journalctl
+
+### Security Configuration
+- **Environment Variables**: /etc/lux/lux-marketing.env (640 permissions, root:luxapp)
+- **Systemd Hardening**: ProtectSystem=strict, ProtectHome=true, NoNewPrivileges=true
+- **SSL/TLS**: Full HTTPS with automatic HTTP→HTTPS redirect
+- **Admin Account**: Initial admin user (password must be changed on first deployment)
+
+### Service Management
+- **Start**: systemctl start lux-marketing.service
+- **Stop**: systemctl stop lux-marketing.service
+- **Restart**: systemctl restart lux-marketing.service
+- **Status**: systemctl status lux-marketing.service
+- **Logs**: journalctl -u lux-marketing.service -f
+
+### Database Schema
+All tables successfully created:
+- User (with admin authentication)
+- Contact (email marketing contacts)
+- EmailTemplate (reusable email templates)
+- Campaign (marketing campaigns)
+- CampaignRecipient (campaign delivery tracking)
+- EmailTracking (analytics events)
+- BrandKit (branding configurations)
+- Automation (workflow automation)
+- AutomationStep (workflow steps)
+- Segment (contact segments)
+- SegmentMember (segment membership)
+- ABTest (A/B testing campaigns)
+- EmailComponent (template components)
+
+### Recent Changes (October 21, 2025)
+- Fixed circular dependency between Campaign and ABTest models
+- Deployed complete application to production VPS
+- Configured systemd service with security hardening
+- Set up Nginx reverse proxy with SSL
+- Initialized PostgreSQL database with all schemas
+- Configured OpenAI API key for LUX AI agent

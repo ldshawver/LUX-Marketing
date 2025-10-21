@@ -136,6 +136,8 @@ All tables successfully created:
 - Added SMS Marketing feature with Twilio integration (campaigns, compliance, delivery tracking)
 - Added Social Media Marketing feature (Facebook, Instagram, LinkedIn, Twitter scheduling with AI captions)
 - Added SEO Tools feature (page analysis, meta optimization, content recommendations)
-- Added Events Management feature (registration tracking, Stripe payment support for paid events)
+- Added Events Management feature (registration tracking, free events only)
 - Fixed A/B Testing template error (preview_campaign link)
 - Verified Automations dashboard functionality
+- Configured Twilio credentials via environment secrets (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)
+- User declined Stripe integration (Events feature supports free events only, no paid registrations)

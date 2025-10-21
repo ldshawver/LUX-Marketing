@@ -2147,6 +2147,14 @@ def send_sms_campaign(campaign_id):
                 failed += 1
                 continue
             
+            # COMPLIANCE: Check opt-out and consent
+            if not contact.is_active:
+                recipient.status = 'failed'
+                recipient.error_message = 'Contact opted out or inactive'
+                failed += 1
+                logger.info(f"Skipped sending SMS to {contact.email} - opted out or inactive")
+                continue
+            
             result = sms_service.send_sms(contact.phone, campaign.message)
             
             if result['success']:

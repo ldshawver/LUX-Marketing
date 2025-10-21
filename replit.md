@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a comprehensive email marketing automation platform built with Flask. The system enables users to manage contacts, create email templates, design marketing campaigns, and track email performance analytics. It integrates with Microsoft Graph API for email delivery and provides a complete workflow from contact management to campaign execution and analytics.
+This is a comprehensive **multi-channel marketing automation platform** built with Flask. The system enables users to manage contacts, create email templates, design marketing campaigns, send SMS messages, schedule social media posts, manage events, and track performance analytics across all channels. It integrates with Microsoft Graph API for email delivery, Twilio for SMS, OpenAI for AI-powered content generation, and provides a complete workflow from contact management to campaign execution and analytics.
 
 ## User Preferences
 

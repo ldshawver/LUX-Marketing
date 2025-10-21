@@ -69,6 +69,7 @@ Preferred communication style: Simple, everyday language.
 - **Jinja2**: Template engine for email content personalization
 - **Werkzeug**: WSGI utilities and security functions
 - **OpenAI**: AI-powered content generation and optimization
+- **Twilio**: SMS marketing and communication platform
 
 ### Frontend Dependencies
 - **Bootstrap 5**: UI framework with dark theme support
@@ -132,3 +133,6 @@ All tables successfully created:
 - Set up Nginx reverse proxy with SSL
 - Initialized PostgreSQL database with all schemas
 - Configured OpenAI API key for LUX AI agent
+- Added SMS Marketing feature with Twilio integration (campaigns, compliance, delivery tracking)
+- Fixed A/B Testing template error (preview_campaign link)
+- Verified Automations dashboard functionality

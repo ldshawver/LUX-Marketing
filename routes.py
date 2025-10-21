@@ -2028,3 +2028,144 @@ def view_newsletter(slug):
     db.session.commit()
     
     return render_template('newsletter_view.html', newsletter=newsletter)
+
+# SMS Marketing Routes
+@main_bp.route('/sms')
+@login_required
+def sms_campaigns():
+    """SMS marketing campaigns dashboard"""
+    campaigns = SMSCampaign.query.order_by(SMSCampaign.created_at.desc()).all()
+    
+    from sms_service import SMSService
+    sms_service = SMSService()
+    
+    return render_template('sms_campaigns.html', 
+                         campaigns=campaigns,
+                         sms_enabled=sms_service.enabled)
+
+@main_bp.route('/sms/create', methods=['GET', 'POST'])
+@login_required
+def create_sms_campaign():
+    """Create new SMS campaign"""
+    if request.method == 'POST':
+        try:
+            from sms_service import SMSService
+            sms_service = SMSService()
+            
+            if not sms_service.enabled:
+                flash('SMS service not configured. Please add Twilio credentials.', 'error')
+                return redirect(url_for('main.sms_campaigns'))
+            
+            name = request.form.get('name')
+            message = request.form.get('message')
+            tags = request.form.get('tags', '').split(',')
+            tags = [t.strip() for t in tags if t.strip()]
+            
+            # Validate message length (160 chars for single SMS)
+            if len(message) > 160:
+                flash('Warning: Message exceeds 160 characters and will be sent as multiple SMS', 'warning')
+            
+            # Create campaign
+            campaign = SMSCampaign()
+            campaign.name = name
+            campaign.message = message[:160]  # Truncate to SMS limit
+            campaign.status = 'draft'
+            
+            db.session.add(campaign)
+            db.session.flush()
+            
+            # Add recipients based on tags
+            if tags:
+                if 'all' in tags:
+                    contacts = Contact.query.filter_by(is_active=True).filter(Contact.phone.isnot(None)).all()
+                else:
+                    contacts = Contact.query.filter_by(is_active=True).filter(Contact.phone.isnot(None)).all()
+                    contacts = [c for c in contacts if c.tags and any(tag in c.tags for tag in tags)]
+            else:
+                contacts = Contact.query.filter_by(is_active=True).filter(Contact.phone.isnot(None)).all()
+            
+            for contact in contacts:
+                if contact.phone and sms_service.validate_phone_number(contact.phone):
+                    recipient = SMSRecipient()
+                    recipient.campaign_id = campaign.id
+                    recipient.contact_id = contact.id
+                    recipient.status = 'pending'
+                    db.session.add(recipient)
+            
+            db.session.commit()
+            
+            flash(f'SMS campaign created with {len(contacts)} recipients!', 'success')
+            return redirect(url_for('main.sms_campaigns'))
+            
+        except Exception as e:
+            logger.error(f"Error creating SMS campaign: {e}")
+            db.session.rollback()
+            flash('Error creating SMS campaign', 'error')
+    
+    contacts_with_phone = Contact.query.filter_by(is_active=True).filter(Contact.phone.isnot(None)).count()
+    return render_template('create_sms_campaign.html', contacts_with_phone=contacts_with_phone)
+
+@main_bp.route('/sms/<int:campaign_id>/send', methods=['POST'])
+@login_required
+def send_sms_campaign(campaign_id):
+    """Send SMS campaign"""
+    try:
+        from sms_service import SMSService
+        from datetime import datetime
+        
+        campaign = SMSCampaign.query.get_or_404(campaign_id)
+        
+        if campaign.status not in ['draft', 'scheduled']:
+            flash('Campaign cannot be sent in current status', 'error')
+            return redirect(url_for('main.sms_campaigns'))
+        
+        sms_service = SMSService()
+        if not sms_service.enabled:
+            flash('SMS service not configured', 'error')
+            return redirect(url_for('main.sms_campaigns'))
+        
+        # Update campaign status
+        campaign.status = 'sending'
+        campaign.sent_at = datetime.utcnow()
+        db.session.commit()
+        
+        # Send to all pending recipients
+        recipients = SMSRecipient.query.filter_by(
+            campaign_id=campaign_id,
+            status='pending'
+        ).all()
+        
+        sent = 0
+        failed = 0
+        
+        for recipient in recipients:
+            contact = Contact.query.get(recipient.contact_id)
+            if not contact or not contact.phone:
+                recipient.status = 'failed'
+                recipient.error_message = 'No phone number'
+                failed += 1
+                continue
+            
+            result = sms_service.send_sms(contact.phone, campaign.message)
+            
+            if result['success']:
+                recipient.status = 'sent'
+                recipient.sent_at = datetime.utcnow()
+                sent += 1
+            else:
+                recipient.status = 'failed'
+                recipient.error_message = result.get('error', 'Unknown error')
+                failed += 1
+            
+            db.session.commit()
+        
+        campaign.status = 'sent'
+        db.session.commit()
+        
+        flash(f'SMS campaign sent! {sent} sent, {failed} failed', 'success' if failed == 0 else 'warning')
+        
+    except Exception as e:
+        logger.error(f"Error sending SMS campaign: {e}")
+        flash('Error sending SMS campaign', 'error')
+    
+    return redirect(url_for('main.sms_campaigns'))

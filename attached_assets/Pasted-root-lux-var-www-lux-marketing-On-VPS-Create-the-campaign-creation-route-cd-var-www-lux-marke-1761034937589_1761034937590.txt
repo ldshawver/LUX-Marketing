@@ -1,0 +1,50 @@
+root@lux:/var/www/lux-marketing# # On VPS - Create the campaign creation route
+cd /var/www/lux-marketing
+
+# Add the create_campaign route after the campaigns() function
+cat >> add_campaign_create.py << 'PYFIX'
+import re
+
+with open('routes.py', 'r') as f:
+    content = f.read()
+
+# Find where to insert (after campaigns function)
+campaign_create_route = '''
+@main_bp.route('/campaigns/create', methods=['GET', 'POST'])
+@login_required
+def create_campaign():
+    """Create new campaign"""
+    if request.method == 'POST':
+        try:
+            template_id = request.form.get('template_id')
+            campaign_name = request.form.get('name')
+            campaign_subject = request.form.get('subject')
+            recipient_type = request.form.get('recipient_type', 'all')
+            selected_contacts = request.form.getlist('contacts')
+            schedule_type = request.form.get('schedule_type', 'now')
+            scheduled_date = request.form.get('scheduled_date')
+            scheduled_time = request.form.get('scheduled_time')
+            
+            if not template_id or not campaign_name:
+                flash('Please select a template and enter campaign name', 'error')
+                return redirect(url_for('main.create_campaign'))
+            
+            # Get template
+            template = EmailTemplate.query.get_or_404(template_id)
+            
+            # Use template subject if not provided
+            if not campaign_subject:
+                campaign_subject = template.subject
+            
+            # Create campaign
+            campaign = Campaign(
+                name=campaign_name,
+                subject=campaign_subject,
+                template_id=template_id,
+                status='draft'
+            )
+            
+            # Handle scheduling
+            if schedule_type == 'later' and scheduled_date and scheduled_time:
+python3 add_campaign_create.py && rm add_campaign_create.pyoute + '\n' + content[insertion_point:]')%d %H:%M")
+✓ Campaign create route added

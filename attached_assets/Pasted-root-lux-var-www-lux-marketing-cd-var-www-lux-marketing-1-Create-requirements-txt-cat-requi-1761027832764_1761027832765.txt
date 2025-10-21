@@ -1,0 +1,152 @@
+root@lux:/var/www/lux-marketing# cd /var/www/lux-marketing
+
+# 1. Create requirements.txt
+cat > requirements.txt << 'EOF'
+gunicorn
+flask
+flask-sqlalchemy
+flask-login
+flask-wtf
+psycopg2-binary
+sqlalchemy
+werkzeug
+msal
+apscheduler
+openai
+requests
+twilio
+email-validator
+EOF
+
+# 2. Create main.py
+cat > main.py << 'EOF'
+from app import app
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
+EOF
+
+# 3. Create wsgi.py
+cat > wsgi.py << 'EOF'
+from app import app
+
+if __name__ == "__main__":
+    app.run()
+EOF
+
+# 4. Create gunicorn.conf.py
+cat > gunicorn.conf.py << 'EOF'
+bind = "0.0.0.0:5000"
+workers = 4
+worker_class = "sync"
+timeout = 30
+accesslog = "/var/log/lux-marketing/access.log"
+errorlog = "/var/log/lux-marketing/error.log"
+loglevel = "info"
+preload_app = True
+reload = False
+ls -la *.py *.txtig files created"
+✓ Core config files created
+-rw-r--r-- 1 root root 215 Oct 21 06:18 gunicorn.conf.py
+-rw-r--r-- 1 root root  99 Oct 21 06:18 main.py
+-rw-r--r-- 1 root root 146 Oct 21 06:18 requirements.txt
+-rw-r--r-- 1 root root  62 Oct 21 06:18 wsgi.py
+root@lux:/var/www/lux-marketing# cat > app.py << 'EOF'
+import os
+import logging
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
+from sqlalchemy.orm import DeclarativeBase
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+logging.basicConfig(level=logging.DEBUG)
+
+class Base(DeclarativeBase):
+    pass
+
+db = SQLAlchemy(model_class=Base)
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("SESSION_SECRET")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///email_marketing.db")
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+}
+
+app.config["MS_CLIENT_ID"] = os.environ.get("MS_CLIENT_ID", "")
+app.config["MS_CLIENT_SECRET"] = os.environ.get("MS_CLIENT_SECRET", "")
+app.config["MS_TENANT_ID"] = os.environ.get("MS_TENANT_ID", "")
+
+db.init_app(app)
+
+csrf = CSRFProtect(app)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'auth.login'
+login_manager.login_message = 'Please log in to access this page.'
+
+@login_manager.user_loader
+def load_user(user_id):
+    from models import User
+    return User.query.get(int(user_id))
+
+from routes import main_bp
+from auth import auth_bp
+echo "✓ app.py created"nit_scheduler 'secondary')')
+✓ app.py created
+root@lux:/var/www/lux-marketing# # This is a long file, so I'll split it into parts. Run these all together:
+
+cat > models.py << 'MODELS_EOF'
+from datetime import datetime
+from app import db
+from flask_login import UserMixin
+from sqlalchemy import JSON, Text
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256))
+    is_admin = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<User {self.username}>'
+
+class Contact(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False)
+    first_name = db.Column(db.String(64))
+    last_name = db.Column(db.String(64))
+    company = db.Column(db.String(120))
+    phone = db.Column(db.String(20))
+    tags = db.Column(db.String(255))
+    custom_fields = db.Column(JSON)
+    engagement_score = db.Column(db.Float, default=0.0)
+    last_activity = db.Column(db.DateTime)
+    source = db.Column(db.String(50))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    campaign_recipients = db.relationship('CampaignRecipient', backref='contact', lazy='dynamic')
+    segment_members = db.relationship('SegmentMember', backref='contact', lazy='dynamic')
+    
+    def __repr__(self):
+        return f'<Contact {self.email}>'
+    
+    @property
+    def full_name(self):
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        return self.first_name or self.last_name or self.email
+
+class EmailTemplate(db.Model):
+echo "✓ models.py created"ponent {self.component_type}>'mail_template.id'), nullable=False)all, delete-orphan')')phan')
+✓ models.py created

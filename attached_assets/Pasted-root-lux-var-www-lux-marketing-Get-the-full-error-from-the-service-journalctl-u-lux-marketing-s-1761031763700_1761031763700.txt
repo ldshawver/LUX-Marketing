@@ -1,0 +1,42 @@
+root@lux:/var/www/lux-marketing# # Get the full error from the service
+journalctl -u lux-marketing.service -n 50 --no-pager | tail -40
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+Oct 21 07:28:40 lux gunicorn[1215]:     return util.import_app(self.app_uri)
+Oct 21 07:28:40 lux gunicorn[1215]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/util.py", line 370, in import_app
+Oct 21 07:28:40 lux gunicorn[1215]:     mod = importlib.import_module(module)
+Oct 21 07:28:40 lux gunicorn[1215]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/usr/lib/python3.11/importlib/__init__.py", line 126, in import_module
+Oct 21 07:28:40 lux gunicorn[1215]:     return _bootstrap._gcd_import(name[level:], package, level)
+Oct 21 07:28:40 lux gunicorn[1215]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:28:40 lux gunicorn[1215]:   File "<frozen importlib._bootstrap>", line 1206, in _gcd_import
+Oct 21 07:28:40 lux gunicorn[1215]:   File "<frozen importlib._bootstrap>", line 1178, in _find_and_load
+Oct 21 07:28:40 lux gunicorn[1215]:   File "<frozen importlib._bootstrap>", line 1149, in _find_and_load_unlocked
+Oct 21 07:28:40 lux gunicorn[1215]:   File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+Oct 21 07:28:40 lux gunicorn[1215]:   File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+Oct 21 07:28:40 lux gunicorn[1215]:   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/var/www/lux-marketing/wsgi.py", line 1, in <module>
+Oct 21 07:28:40 lux gunicorn[1215]:     from app import app
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/var/www/lux-marketing/app.py", line 49, in <module>
+Oct 21 07:28:40 lux gunicorn[1215]:     app.register_blueprint(main_bp)
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/scaffold.py", line 47, in wrapper_func
+Oct 21 07:28:40 lux gunicorn[1215]:     return f(self, *args, **kwargs)
+Oct 21 07:28:40 lux gunicorn[1215]:            ^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/app.py", line 595, in register_blueprint
+Oct 21 07:28:40 lux gunicorn[1215]:     blueprint.register(self, options)
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/blueprints.py", line 335, in register
+Oct 21 07:28:40 lux gunicorn[1215]:     deferred(state)
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/blueprints.py", line 434, in <lambda>
+Oct 21 07:28:40 lux gunicorn[1215]:     lambda s: s.add_url_rule(
+Oct 21 07:28:40 lux gunicorn[1215]:               ^^^^^^^^^^^^^^^
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/blueprints.py", line 110, in add_url_rule
+Oct 21 07:28:40 lux gunicorn[1215]:     self.app.add_url_rule(
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/scaffold.py", line 47, in wrapper_func
+Oct 21 07:28:40 lux gunicorn[1215]:     return f(self, *args, **kwargs)
+Oct 21 07:28:40 lux gunicorn[1215]:            ^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:28:40 lux gunicorn[1215]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/app.py", line 657, in add_url_rule
+Oct 21 07:28:40 lux gunicorn[1215]:     raise AssertionError(
+Oct 21 07:28:40 lux gunicorn[1215]: AssertionError: View function mapping is overwriting an existing endpoint function: main.export_contacts
+Oct 21 07:28:40 lux systemd[1]: lux-marketing.service: Main process exited, code=exited, status=1/FAILURE
+Oct 21 07:28:40 lux systemd[1]: lux-marketing.service: Failed with result 'exit-code'.
+Oct 21 07:28:40 lux systemd[1]: lux-marketing.service: Consumed 1.142s CPU time.

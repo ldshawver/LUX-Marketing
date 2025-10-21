@@ -1,0 +1,87 @@
+cd /var/www/lux-marketing
+
+# Check service status
+systemctl status lux-marketing.service --no-pager -l
+
+# Check recent logs for errors
+journalctl -u lux-marketing.service -n 100 --no-pager | tail -50
+
+# Check if gunicorn is running
+ps aux | grep gunicorn
+
+# Try to start it if stopped
+systemctl start lux-marketing.service
+
+# Check status again
+systemctl status lux-marketing.service --no-pager | head -15
+● lux-marketing.service - LUX Marketing Automation Platform
+     Loaded: loaded (/etc/systemd/system/lux-marketing.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Tue 2025-10-21 09:06:58 UTC; 1s ago
+    Process: 2204 ExecStart=/var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app (code=exited, status=1/FAILURE)
+   Main PID: 2204 (code=exited, status=1/FAILURE)
+        CPU: 1.216s
+
+Oct 21 09:06:58 lux systemd[1]: lux-marketing.service: Failed with result 'exit-code'.
+Oct 21 09:06:58 lux systemd[1]: lux-marketing.service: Consumed 1.216s CPU time.
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/arbiter.py", line 57, in __init__
+Oct 21 09:06:58 lux gunicorn[2204]:     self.setup(app)
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/arbiter.py", line 117, in setup
+Oct 21 09:06:58 lux gunicorn[2204]:     self.app.wsgi()
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/app/base.py", line 66, in wsgi
+Oct 21 09:06:58 lux gunicorn[2204]:     self.callable = self.load()
+Oct 21 09:06:58 lux gunicorn[2204]:                     ^^^^^^^^^^^
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+Oct 21 09:06:58 lux gunicorn[2204]:     return self.load_wsgiapp()
+Oct 21 09:06:58 lux gunicorn[2204]:            ^^^^^^^^^^^^^^^^^^^
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+Oct 21 09:06:58 lux gunicorn[2204]:     return util.import_app(self.app_uri)
+Oct 21 09:06:58 lux gunicorn[2204]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/util.py", line 370, in import_app
+Oct 21 09:06:58 lux gunicorn[2204]:     mod = importlib.import_module(module)
+Oct 21 09:06:58 lux gunicorn[2204]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/usr/lib/python3.11/importlib/__init__.py", line 126, in import_module
+Oct 21 09:06:58 lux gunicorn[2204]:     return _bootstrap._gcd_import(name[level:], package, level)
+Oct 21 09:06:58 lux gunicorn[2204]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:06:58 lux gunicorn[2204]:   File "<frozen importlib._bootstrap>", line 1206, in _gcd_import
+Oct 21 09:06:58 lux gunicorn[2204]:   File "<frozen importlib._bootstrap>", line 1178, in _find_and_load
+Oct 21 09:06:58 lux gunicorn[2204]:   File "<frozen importlib._bootstrap>", line 1149, in _find_and_load_unlocked
+Oct 21 09:06:58 lux gunicorn[2204]:   File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+Oct 21 09:06:58 lux gunicorn[2204]:   File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+Oct 21 09:06:58 lux gunicorn[2204]:   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/wsgi.py", line 1, in <module>
+Oct 21 09:06:58 lux gunicorn[2204]:     from app import app
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/app.py", line 51, in <module>
+Oct 21 09:06:58 lux gunicorn[2204]:     app.register_blueprint(main_bp)
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/scaffold.py", line 47, in wrapper_func
+Oct 21 09:06:58 lux gunicorn[2204]:     return f(self, *args, **kwargs)
+Oct 21 09:06:58 lux gunicorn[2204]:            ^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/app.py", line 595, in register_blueprint
+Oct 21 09:06:58 lux gunicorn[2204]:     blueprint.register(self, options)
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/blueprints.py", line 335, in register
+Oct 21 09:06:58 lux gunicorn[2204]:     deferred(state)
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/blueprints.py", line 434, in <lambda>
+Oct 21 09:06:58 lux gunicorn[2204]:     lambda s: s.add_url_rule(
+Oct 21 09:06:58 lux gunicorn[2204]:               ^^^^^^^^^^^^^^^
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/blueprints.py", line 110, in add_url_rule
+Oct 21 09:06:58 lux gunicorn[2204]:     self.app.add_url_rule(
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/scaffold.py", line 47, in wrapper_func
+Oct 21 09:06:58 lux gunicorn[2204]:     return f(self, *args, **kwargs)
+Oct 21 09:06:58 lux gunicorn[2204]:            ^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:06:58 lux gunicorn[2204]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/sansio/app.py", line 657, in add_url_rule
+Oct 21 09:06:58 lux gunicorn[2204]:     raise AssertionError(
+Oct 21 09:06:58 lux gunicorn[2204]: AssertionError: View function mapping is overwriting an existing endpoint function: main.segments
+Oct 21 09:06:58 lux systemd[1]: lux-marketing.service: Main process exited, code=exited, status=1/FAILURE
+Oct 21 09:06:58 lux systemd[1]: lux-marketing.service: Failed with result 'exit-code'.
+Oct 21 09:06:58 lux systemd[1]: lux-marketing.service: Consumed 1.216s CPU time.
+root        2211  0.0  0.0   6416  1972 pts/0    S+   09:07   0:00 grep gunicorn
+● lux-marketing.service - LUX Marketing Automation Platform
+     Loaded: loaded (/etc/systemd/system/lux-marketing.service; enabled; preset: enabled)
+     Active: active (running) since Tue 2025-10-21 09:07:08 UTC; 10ms ago
+   Main PID: 2214 ((gunicorn))
+      Tasks: 1 (limit: 9517)
+     Memory: 316.0K
+        CPU: 5ms
+     CGroup: /system.slice/lux-marketing.service
+             └─2214 "(gunicorn)"
+
+Oct 21 09:07:08 lux systemd[1]: Started lux-marketing.service - LUX Marketing Automation Platform.

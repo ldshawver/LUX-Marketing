@@ -1,0 +1,45 @@
+root@lux:/var/www/lux-marketing# # Check the new error
+journalctl -u lux-marketing.service -n 30 --no-pager | tail -20
+
+# Also verify the routes.py file is valid Python
+cd /var/www/lux-marketing
+python3 -c "import routes" 2>&1 | head -20
+
+# Check the last few lines of routes.py to make sure it's complete
+tail -10 routes.py
+Oct 21 07:31:45 lux gunicorn[1299]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:31:45 lux gunicorn[1299]:   File "/usr/lib/python3.11/importlib/__init__.py", line 126, in import_module
+Oct 21 07:31:45 lux gunicorn[1299]:     return _bootstrap._gcd_import(name[level:], package, level)
+Oct 21 07:31:45 lux gunicorn[1299]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:31:45 lux gunicorn[1299]:   File "<frozen importlib._bootstrap>", line 1206, in _gcd_import
+Oct 21 07:31:45 lux gunicorn[1299]:   File "<frozen importlib._bootstrap>", line 1178, in _find_and_load
+Oct 21 07:31:45 lux gunicorn[1299]:   File "<frozen importlib._bootstrap>", line 1149, in _find_and_load_unlocked
+Oct 21 07:31:45 lux gunicorn[1299]:   File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+Oct 21 07:31:45 lux gunicorn[1299]:   File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+Oct 21 07:31:45 lux gunicorn[1299]:   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+Oct 21 07:31:45 lux gunicorn[1299]:   File "/var/www/lux-marketing/wsgi.py", line 1, in <module>
+Oct 21 07:31:45 lux gunicorn[1299]:     from app import app
+Oct 21 07:31:45 lux gunicorn[1299]:   File "/var/www/lux-marketing/app.py", line 45, in <module>
+Oct 21 07:31:45 lux gunicorn[1299]:     from routes import main_bp
+Oct 21 07:31:45 lux gunicorn[1299]:   File "/var/www/lux-marketing/routes.py", line 265
+Oct 21 07:31:45 lux gunicorn[1299]:     def export_contacts():
+Oct 21 07:31:45 lux gunicorn[1299]:                           ^
+Oct 21 07:31:45 lux gunicorn[1299]: IndentationError: expected an indented block after function definition on line 265
+Oct 21 07:31:46 lux systemd[1]: lux-marketing.service: Main process exited, code=exited, status=1/FAILURE
+Oct 21 07:31:46 lux systemd[1]: lux-marketing.service: Failed with result 'exit-code'.
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/var/www/lux-marketing/routes.py", line 265
+    def export_contacts():
+                          ^
+IndentationError: expected an indented block after function definition on line 265
+@main_bp.route('/automation/analytics')
+@login_required
+def automation_analytics():
+    """Automation analytics"""
+    flash('Automation analytics coming soon!', 'info')
+    return redirect(url_for('main.automation_dashboard'))
+
+@main_bp.route('/contacts/export')
+@login_required
+def export_contacts():

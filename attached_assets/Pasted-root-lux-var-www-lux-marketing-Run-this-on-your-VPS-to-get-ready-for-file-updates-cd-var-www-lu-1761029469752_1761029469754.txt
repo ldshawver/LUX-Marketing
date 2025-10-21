@@ -1,0 +1,53 @@
+root@lux:/var/www/lux-marketing# # Run this on your VPS to get ready for file updates
+cd /var/www/lux-marketing
+sudo systemctl stop lux-marketing.service
+root@lux:/var/www/lux-marketing# # On your VPS, run this to update to the complete application:
+
+cd /var/www/lux-marketing
+
+# Create the LUX AI Agent template
+cat > templates/lux_agent.html << 'LUX_TEMPLATE_EOF'
+{% extends "base.html" %}
+{% block title %}LUX AI Agent - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i data-feather="zap" style="color: gold;"></i> LUX AI Agent</h1>
+            <div>
+                <span class="badge bg-success">AI Powered</span>
+                <span class="badge bg-info">GPT-4o</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i data-feather="send"></i> Generate Campaign</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('main.lux_generate_campaign') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Campaign Objective</label>
+                        <textarea name="objective" class="form-control" rows="3" required placeholder="E.g., Promote our new product launch to existing customers"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Target Audience</label>
+                        <input type="text" name="audience" class="form-control" placeholder="E.g., Premium customers, Newsletter subscribers" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Brand Information</label>
+                        <input type="text" name="brand_info" class="form-control" placeholder="E.g., Tech startup, Luxury brand">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i data-feather="zap"></i> Generate with AI
+                    </button>
+                </form>
+echo "✓ LUX AI template created"Trend predictions</li>ons</li>ion</li>-success"></i> Analytics & Insights</h6>iasts, B2B clients">
+✓ LUX AI template created

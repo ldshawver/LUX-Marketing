@@ -1,0 +1,30 @@
+echo "=== Phase 7 Complete: Service Running ==="0
+✓ Systemd service file created
+Created symlink /etc/systemd/system/multi-user.target.wants/lux-marketing.service → /etc/systemd/system/lux-marketing.service.
+● lux-marketing.service - LUX Marketing Automation Platform
+     Loaded: loaded (/etc/systemd/system/lux-marketing.service; enabled; preset: enabled)
+     Active: active (running) since Tue 2025-10-21 06:32:38 UTC; 3s ago
+   Main PID: 1844 (gunicorn)
+     Status: "Gunicorn arbiter booted"
+      Tasks: 6 (limit: 9517)
+     Memory: 62.1M
+        CPU: 1.283s
+     CGroup: /system.slice/lux-marketing.service
+             ├─1844 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+             ├─1932 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+             ├─1933 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+             ├─1934 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+             └─1935 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+
+Oct 21 06:32:38 lux gunicorn[1844]: DEBUG:tzlocal:/etc/timezone found, contents:
+Oct 21 06:32:38 lux gunicorn[1844]:  Etc/UTC
+Oct 21 06:32:38 lux gunicorn[1844]: DEBUG:tzlocal:/etc/localtime found
+Oct 21 06:32:38 lux gunicorn[1844]: DEBUG:tzlocal:2 found:
+Oct 21 06:32:38 lux gunicorn[1844]:  {'/etc/timezone': 'Etc/UTC', '/etc/localtime is a symlink to': 'Etc/UTC'}
+Oct 21 06:32:38 lux gunicorn[1844]: INFO:apscheduler.scheduler:Scheduler started
+Oct 21 06:32:38 lux gunicorn[1844]: DEBUG:apscheduler.scheduler:Looking for jobs to run
+Oct 21 06:32:38 lux gunicorn[1844]: INFO:scheduler:Email scheduler initialized
+Oct 21 06:32:38 lux gunicorn[1844]: DEBUG:apscheduler.scheduler:No jobs; waiting until a job is added
+Oct 21 06:32:38 lux systemd[1]: Started lux-marketing.service - LUX Marketing Automation Platform.
+tcp        0      0 0.0.0.0:5000            0.0.0.0:*               LISTEN     
+=== Phase 7 Complete: Service Running ===

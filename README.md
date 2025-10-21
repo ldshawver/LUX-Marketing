@@ -321,3 +321,4 @@ For support, please contact the development team or refer to the internal docume
 ---
 
 Built with ❤️ using Flask, PostgreSQL, and modern web technologies.
+# LUX-Marketing

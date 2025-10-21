@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}SMS Marketing - LUX Marketing{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i data-feather="message-square"></i> SMS Marketing</h1>
+    <a href="{{ url_for('main.create_sms_campaign') }}" class="btn btn-primary">
+        <i data-feather="plus"></i> Create SMS Campaign
+    </a>
+</div>
+
+{% if not sms_enabled %}
+<div class="alert alert-warning">
+    <i data-feather="alert-triangle"></i>
+    <strong>SMS Not Configured</strong> - To use SMS marketing, add your Twilio credentials to environment variables:
+    <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>, <code>TWILIO_PHONE_NUMBER</code>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        {% if campaigns %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Campaign Name</th>
+                        <th>Message</th>
+                        <th>Recipients</th>
+                        <th>Status</th>
+                        <th>Sent</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for campaign in campaigns %}
+                    <tr>
+                        <td><strong>{{ campaign.name }}</strong></td>
+                        <td>
+                            <small class="text-muted">
+                                {{ campaign.message[:50] }}{% if campaign.message|length > 50 %}...{% endif %}
+                            </small>
+                        </td>
+                        <td>{{ campaign.recipients.count() }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if campaign.status == 'sent' else ('warning' if campaign.status == 'sending' else 'secondary') }}">
+                                {{ campaign.status }}
+                            </span>
+                        </td>
+                        <td>{{ campaign.sent_at.strftime('%Y-%m-%d %H:%M') if campaign.sent_at else '-' }}</td>
+                        <td>{{ campaign.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            {% if campaign.status == 'draft' %}
+                            <form method="POST" action="{{ url_for('main.send_sms_campaign', campaign_id=campaign.id) }}" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Send this SMS campaign to {{ campaign.recipients.count() }} recipients?')">
+                                    <i data-feather="send"></i> Send
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i data-feather="message-square" style="width: 64px; height: 64px;" class="text-muted mb-3"></i>
+            <h3>No SMS Campaigns Yet</h3>
+            <p class="text-muted">Create your first SMS campaign to reach your contacts via text message</p>
+            {% if sms_enabled %}
+            <a href="{{ url_for('main.create_sms_campaign') }}" class="btn btn-primary">
+                <i data-feather="plus"></i> Create Your First SMS Campaign
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-body">
+        <h5>SMS Marketing Best Practices</h5>
+        <ul>
+            <li><strong>Keep it short:</strong> SMS messages are limited to 160 characters</li>
+            <li><strong>Include opt-out:</strong> Always include "Reply STOP to unsubscribe"</li>
+            <li><strong>Timing matters:</strong> Send during business hours (9 AM - 8 PM)</li>
+            <li><strong>Personalize:</strong> Use contact names when possible</li>
+            <li><strong>Clear CTA:</strong> Include a clear call-to-action</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

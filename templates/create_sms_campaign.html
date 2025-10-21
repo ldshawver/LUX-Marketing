@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Create SMS Campaign - LUX Marketing{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1><i data-feather="message-square"></i> Create SMS Campaign</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Campaign Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="smsForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Campaign Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                               placeholder="e.g., Summer Sale Alert">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="message" class="form-label">
+                            SMS Message * 
+                            <span id="charCount" class="badge bg-secondary">0/160</span>
+                        </label>
+                        <textarea class="form-control" id="message" name="message" rows="4" required
+                                  maxlength="160" placeholder="Keep it short and sweet..."></textarea>
+                        <small class="text-muted">
+                            SMS messages are limited to 160 characters. Include "Reply STOP to unsubscribe" for compliance.
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tags" class="form-label">Target Contacts</label>
+                        <input type="text" class="form-control" id="tags" name="tags" 
+                               placeholder="all, vip, customers (comma-separated)">
+                        <small class="text-muted">
+                            Leave empty to send to all contacts with phone numbers ({{ contacts_with_phone }} contacts)
+                        </small>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i data-feather="info"></i>
+                        <strong>Preview:</strong> Your message will be sent to contacts who have phone numbers and match the selected tags.
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.sms_campaigns') }}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i data-feather="check"></i> Create Campaign
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">SMS Tips</h5>
+            </div>
+            <div class="card-body">
+                <h6>Message Guidelines:</h6>
+                <ul class="small">
+                    <li>Keep it under 160 characters</li>
+                    <li>Use clear, concise language</li>
+                    <li>Include a call-to-action</li>
+                    <li>Add opt-out instructions</li>
+                </ul>
+                
+                <h6>Example Message:</h6>
+                <div class="alert alert-light">
+                    <small>
+                        "🎉 Summer Sale! Get 30% off all items. Shop now: bit.ly/summer30 Reply STOP to opt-out"
+                    </small>
+                </div>
+                
+                <h6>Compliance:</h6>
+                <ul class="small">
+                    <li>Always include unsubscribe option</li>
+                    <li>Send during business hours</li>
+                    <li>Respect opt-outs immediately</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const messageInput = document.getElementById('message');
+    const charCount = document.getElementById('charCount');
+    
+    messageInput.addEventListener('input', function() {
+        const length = this.value.length;
+        charCount.textContent = length + '/160';
+        
+        if (length > 140) {
+            charCount.classList.remove('bg-secondary');
+            charCount.classList.add('bg-warning');
+        } else {
+            charCount.classList.remove('bg-warning');
+            charCount.classList.add('bg-secondary');
+        }
+    });
+});
+</script>
+{% endblock %}

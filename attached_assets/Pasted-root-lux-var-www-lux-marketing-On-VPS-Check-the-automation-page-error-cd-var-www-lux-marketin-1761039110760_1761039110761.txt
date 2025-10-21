@@ -1,0 +1,61 @@
+root@lux:/var/www/lux-marketing# # On VPS - Check the automation page error
+cd /var/www/lux-marketing
+
+# Check recent errors
+journalctl -u lux-marketing.service -n 50 --no-pager | grep -A 10 "automations\|ERROR"
+
+# Or show last 30 lines of logs
+journalctl -u lux-marketing.service -n 30 --no-pager
+Oct 21 09:30:57 lux gunicorn[2479]: ERROR:app:Exception on /automation [GET]
+Oct 21 09:30:57 lux gunicorn[2479]: Traceback (most recent call last):
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+Oct 21 09:30:57 lux gunicorn[2479]:     response = self.full_dispatch_request()
+Oct 21 09:30:57 lux gunicorn[2479]:                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+Oct 21 09:30:57 lux gunicorn[2479]:     rv = self.handle_user_exception(e)
+Oct 21 09:30:57 lux gunicorn[2479]:          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+Oct 21 09:30:57 lux gunicorn[2479]:     rv = self.dispatch_request()
+Oct 21 09:30:57 lux gunicorn[2479]:          ^^^^^^^^^^^^^^^^^^^^^^^
+--
+Oct 21 09:30:57 lux gunicorn[2479]:     return render_template('automation_dashboard.html', automations=automations)
+Oct 21 09:30:57 lux gunicorn[2479]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/templating.py", line 149, in render_template
+Oct 21 09:30:57 lux gunicorn[2479]:     template = app.jinja_env.get_or_select_template(template_name_or_list)
+Oct 21 09:30:57 lux gunicorn[2479]:                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+Oct 21 09:30:57 lux gunicorn[2479]:     return self.get_template(template_name_or_list, parent, globals)
+Oct 21 09:30:57 lux gunicorn[2479]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1016, in get_template
+Oct 21 09:30:57 lux gunicorn[2479]:     return self._load_template(name, globals)
+Oct 21 09:30:57 lux gunicorn[2479]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+Oct 21 09:30:57 lux gunicorn[2479]:     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+Oct 21 09:30:57 lux gunicorn[2479]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+Oct 21 09:30:57 lux gunicorn[2479]:     return current_app.ensure_sync(func)(*args, **kwargs)
+Oct 21 09:30:57 lux gunicorn[2479]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/routes.py", line 283, in automation_dashboard
+Oct 21 09:30:57 lux gunicorn[2479]:     return render_template('automation_dashboard.html', automations=automations)
+Oct 21 09:30:57 lux gunicorn[2479]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/templating.py", line 149, in render_template
+Oct 21 09:30:57 lux gunicorn[2479]:     template = app.jinja_env.get_or_select_template(template_name_or_list)
+Oct 21 09:30:57 lux gunicorn[2479]:                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+Oct 21 09:30:57 lux gunicorn[2479]:     return self.get_template(template_name_or_list, parent, globals)
+Oct 21 09:30:57 lux gunicorn[2479]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1016, in get_template
+Oct 21 09:30:57 lux gunicorn[2479]:     return self._load_template(name, globals)
+Oct 21 09:30:57 lux gunicorn[2479]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/jinja2/environment.py", line 975, in _load_template
+Oct 21 09:30:57 lux gunicorn[2479]:     template = self.loader.load(self, name, self.make_globals(globals))
+Oct 21 09:30:57 lux gunicorn[2479]:                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/jinja2/loaders.py", line 126, in load
+Oct 21 09:30:57 lux gunicorn[2479]:     source, filename, uptodate = self.get_source(environment, name)
+Oct 21 09:30:57 lux gunicorn[2479]:                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/templating.py", line 65, in get_source
+Oct 21 09:30:57 lux gunicorn[2479]:     return self._get_source_fast(environment, template)
+Oct 21 09:30:57 lux gunicorn[2479]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 09:30:57 lux gunicorn[2479]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/templating.py", line 99, in _get_source_fast
+Oct 21 09:30:57 lux gunicorn[2479]:     raise TemplateNotFound(template)
+Oct 21 09:30:57 lux gunicorn[2479]: jinja2.exceptions.TemplateNotFound: automation_dashboard.html

@@ -1,0 +1,148 @@
+Hello! I’m Lyra, your AI prompt optimizer. I transform vague requests into precise, effective prompts that deliver better results.
+
+What I need to know:
+	•	Target AI: ChatGPT, Claude, Gemini, or Other
+	•	Prompt Style: DETAIL (I’ll ask clarifying questions first) or BASIC (quick optimization)
+
+Examples:
+	•	“DETAIL using ChatGPT — Write me a marketing email”
+	•	“BASIC using Claude — Help with my resume”
+
+Just share your rough prompt and I’ll handle the optimization!
+
+⸻
+
+Your Optimized Prompt:
+
+Role: You are a senior full-stack product team (architect, backend, frontend, QA, DevOps) building a production-grade, fully tested, and fully working “LUX Marketing” automation platform. Output must be a complete, runnable app with zero known failing tests.
+
+Mission
+
+Deliver an extensible marketing-automation web app that actually runs end-to-end (no TODOs, no stubs) and ships with comprehensive tests, CI, and deployment docs. The app must support email, SMS, social posting, ads, SEO recommendations, contact management, reporting, and automations—powered by AI—while preventing the prior pattern of buggy, half-working code.
+
+Non-Negotiable Outcomes (Definition of Done)
+	1.	Repo & Run: Single repository with README.md showing docker compose up start. Demo data seed. App boots to a working UI at http://localhost:3000.
+	2.	Tech Stack (opinionated & reliable):
+	•	Backend: Node.js + TypeScript, NestJS, PostgreSQL (Prisma), Redis (BullMQ) for queues, OpenAPI spec.
+	•	Frontend: Next.js + TypeScript, component lib (e.g., shadcn/ui), auth via NextAuth.
+	•	Tests: Jest (unit), Supertest (API), Playwright (E2E). Coverage ≥85% lines/branches, Playwright covers at least: login, create campaign, send test email, schedule social post, create automation, view reports.
+	•	Quality: ESLint, Prettier, Type-Coverage, Zod runtime validation.
+	•	DevOps: Dockerfiles for web/api/worker, docker-compose, GitHub Actions CI with: install→lint→typecheck→test→e2e→build images.
+	3.	Security & Reliability:
+	•	Secrets via .env (no hard-coded keys). OAuth flows use official SDKs only.
+	•	Idempotent job processing, retry/backoff, dead-letter queue, request/response schema validation, input sanitization, and rate-limit on public endpoints.
+	•	Observability: structured logs, request IDs, basic metrics (job success/failure, provider API latency) exposed at /metrics.
+	4.	Docs & Tools Provided:
+	•	Architecture diagram (mermaid), data model ERD, API reference (OpenAPI JSON + Redoc), Postman collection, seed script, example .env.example.
+	•	Admin walkthrough: how to connect providers, send a campaign, review reports.
+	5.	No Hallucinations: Use only documented API capabilities; gracefully degrade if a provider is not configured.
+
+Core Features (Implement Fully)
+
+1) Email Marketing
+	•	Drag-and-drop email editor with:
+	•	BrandKit (colors, logo, fonts), AI copy generator, templates, dynamic content blocks (per segment), and subject line A/B testing with AI recommendations & personalization tokens.
+	•	Polls & surveys block with simple results tracking.
+	•	Scheduling, inbox preview (use Email on Acid/Litmus API if key present; else provide local HTML & mobile preview).
+	•	Reporting: reach/engagement dashboards, drill-down by campaign/segment, engagement heat map, newsletter archive page.
+	•	Providers: pluggable strategy for SendGrid or Mailgun (use one by default; feature-flag the other).
+
+2) Social Marketing
+	•	Schedule & auto-post to Facebook Pages, Instagram (via Graph API), LinkedIn. Support short-video uploads where APIs allow.
+	•	Calendar view for scheduled posts. Basic social reporting (impressions/engagement if available from APIs).
+
+3) Automation
+	•	Library of automation templates (welcome, abandoned cart, win-back, birthday).
+	•	AI campaign builder wizard to generate subject, body, images (image prompt only), and schedule.
+	•	Resend to non-openers with configurable subject line tweaks.
+	•	Custom automations: visual flow (trigger, conditions, actions) including: send email, send SMS, post to social, add tag, wait, branch, webhook call.
+
+4) SMS Marketing
+	•	SMS campaigns, text-to-join keyword opt-in, SMS reporting.
+	•	Provider: Twilio with proper opt-in/out compliance (STOP/HELP), per-country sending rules, rate limiting.
+
+5) Contact Management
+	•	CRUD with segments: standard, engagement, ecommerce (if store connected).
+	•	Web signup forms (embeddable, spam protection), BrandKit styling.
+	•	Unified timeline (email opens, clicks, SMS, social interactions when available).
+
+6) Ads & SEO
+	•	Ads Manager: create/manage Facebook Lookalike audiences, basic Google Ads campaign creation (search/perf-max if available), spend & ROAS reporting (read APIs where allowed).
+	•	SEO recommendations: site scan (crawler) → prioritized checklist: titles, meta, H1s, internal links, sitemap/robots hints. Provide CSV export.
+
+7) Events, Payments, Ecommerce
+	•	Event registration (form + ticket tiers), payment via Stripe Checkout, attendee export.
+	•	Sell products/services (simple catalog + Stripe). Track revenue attribution by campaign/UTM.
+	•	Ecommerce integrations (optional): connector interface for WooCommerce; if keys present, enable product sync, abandoned cart, and purchase events for automation triggers.
+
+8) Reporting & Revenue
+	•	Cross-channel dashboards: email, SMS, social, ads, SEO, events, payments.
+	•	Revenue reporting with attribution model options (first-touch, last-touch, linear).
+	•	Campaign Builder & Marketing calendar with drag-to-schedule.
+	•	Google Analytics 4 UTM integration guidance.
+
+AI Capabilities (Bounded & Verifiable)
+	•	Use LLM only for: copy suggestions, subject ideas, SEO hints, image prompts (no image generation in-app), campaign brief → multi-channel plan.
+	•	Every AI suggestion shows why + editable fields + “Insert” button; never auto-saves without user action.
+	•	Add self-check: before saving AI text, run a policy & quality validator (length limits, spam words, capitalization, personalization tokens present, link checks).
+
+Architecture & Modules
+	•	Services: api, web, worker.
+	•	Key modules: Auth, Contacts, Segments, Email, SMS, Social, Ads, SEO, Automations, Events/Payments, Reporting, Integrations.
+	•	Job types: send_email, send_sms, publish_social, build_segment, compute_metrics, fetch_provider_stats, run_seo_scan.
+	•	Data models: User, BrandKit, Contact, Segment, Campaign, Message, Automation, Job, Event, Order, Product, UTMAttribution.
+
+Testing Requirements (must pass in CI)
+	•	Unit tests for services, helpers, provider adapters (mock providers).
+	•	Integration tests for API routes with database.
+	•	E2E Playwright: auth, connect provider, create email, preview, schedule, send test, create segment, launch campaign, automation trigger run, reporting loads, create SEO scan, schedule social post, create SMS keyword, register for event, complete Stripe test payment (test keys).
+	•	Contract tests for provider SDK wrappers with recorded fixtures.
+	•	Include seeded demo flow script that runs through a complete “New Brand → Import contacts → Build campaign → Send test → View report”.
+
+Provider Compliance
+	•	Implement only what official APIs allow. Document necessary app review steps (e.g., Facebook/Instagram permissions). If a permission is unavailable, disable the toggle with tooltip describing requirements.
+
+Deliverables
+	1.	Source code with the above stack and modules.
+	2.	Diagrams & docs (architecture, ERD, sequence for send flow).
+	3.	OpenAPI spec & Postman collection.
+	4.	CI passing badge; coverage report.
+	5.	DEPLOY.md for Docker or Railway/Render. Include DB/Redis migrations and env var table.
+	6.	LIMITATIONS.md stating any deferred scopes.
+
+Acceptance Criteria (checked automatically)
+	•	Running npm run verify executes: typecheck, lint, unit, integration, e2e, coverage, build. Exit code 0 required.
+	•	Hitting /healthz returns 200 for api/web/worker; /metrics exposes basic metrics.
+	•	Creating and sending a real test email via configured provider succeeds from UI and appears in logs.
+	•	Scheduling a social post creates a queue job and marks as published (or “awaiting approval” if sandbox).
+	•	Creating automation with “Welcome series” sends the first message to a test contact.
+	•	Reports pages load with seeded data and at least one real metric from the provider when configured.
+
+Implementation Steps (enforce as milestones)
+	1.	Scaffold + auth + BrandKit + contacts & segments
+	2.	Email editor + provider + reporting
+	3.	SMS + text-to-join + compliance
+	4.	Social posting + calendar + reporting
+	5.	Automations engine + templates + AI wizard
+	6.	Ads & SEO modules
+	7.	Events & payments + revenue attribution
+	8.	E2E hardening, docs, CI badge, release tag v1.0.0
+
+Return:
+	•	Repository tree, key files, and complete code.
+	•	Setup instructions and sample .env.example.
+	•	Proof of life: screenshots (as markdown) from Playwright headed runs.
+	•	Final message: “All tests passing locally and in CI. To start: docker compose up.”
+
+⸻
+
+Key Improvements:
+• Enforces production standards: tests, coverage thresholds, CI, Docker, observability, and strict Definition of Done.
+• Converts the feature list into concrete modules, data models, and provider strategies to avoid vague, error-prone code.
+• Adds reliability patterns (queues, retries, idempotency, input validation) to stop flaky runs.
+• Scopes AI to safe, verifiable assists (copy/SEO) with a validator layer to reduce junk output.
+• Provides acceptance criteria and a npm run verify meta-command so you instantly know if the app is shippable.
+
+Techniques Applied: Role assignment, constraint-driven specs, Definition of Done, acceptance tests, architectural decomposition, few-shot style examples (checklists), chain-of-thought hidden via structured milestones.
+
+Pro Tip: Paste this into Repli and require it to return the complete repo code plus CI logs/screenshots proving green tests. If any check fails, instruct it to self-repair until npm run verify exits 0 and the app boots with docker compose up.

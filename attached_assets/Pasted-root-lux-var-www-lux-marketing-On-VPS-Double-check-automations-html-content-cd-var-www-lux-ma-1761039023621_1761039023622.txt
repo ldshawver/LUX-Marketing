@@ -1,0 +1,72 @@
+root@lux:/var/www/lux-marketing# # On VPS - Double-check automations.html content
+cd /var/www/lux-marketing
+
+# Check if automations.html has the Create Automation button
+grep "Create Automation" templates/automations.html
+
+# Count lines to make sure it's the full template (should be ~70+ lines)
+wc -l templates/automations.html
+
+# If it's less than 50 lines, the template is wrong. Show me the content:
+cat templates/automations.html
+        <i data-feather="plus"></i> Create Automation
+59 templates/automations.html
+{% extends "base.html" %}
+{% block title %}Automations - LUX Marketing{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Marketing Automations</h1>
+    <a href="{{ url_for('main.create_automation') }}" class="btn btn-primary">
+        <i data-feather="plus"></i> Create Automation
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if automations %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Automation Name</th>
+                        <th>Trigger</th>
+                        <th>Status</th>
+                        <th>Steps</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for automation in automations %}
+                    <tr>
+                        <td><strong>{{ automation.name }}</strong></td>
+                        <td>{{ automation.trigger_type }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if automation.status == 'active' else 'secondary' }}">
+                                {{ automation.status }}
+                            </span>
+                        </td>
+                        <td>{{ automation.steps.count() }}</td>
+                        <td>{{ automation.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info">
+                                <i data-feather="edit"></i> Edit
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <h3>No automations yet</h3>
+            <p class="text-muted">Create automated workflows to engage your contacts</p>
+            <a href="{{ url_for('main.create_automation') }}" class="btn btn-primary">
+                <i data-feather="plus"></i> Create Your First Automation
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

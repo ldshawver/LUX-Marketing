@@ -1,0 +1,36 @@
+> HTMLEOF
+root@lux:/var/www/lux-marketing# 
+root@lux:/var/www/lux-marketing# # Set permissions
+root@lux:/var/www/lux-marketing# chown luxapp:www-data templates/campaign_create.html
+root@lux:/var/www/lux-marketing# chmod 644 templates/campaign_create.html
+root@lux:/var/www/lux-marketing# 
+root@lux:/var/www/lux-marketing# # Restart service
+root@lux:/var/www/lux-marketing# systemctl restart lux-marketing.service
+root@lux:/var/www/lux-marketing# 
+root@lux:/var/www/lux-marketing# sleep 2
+
+root@lux:/var/www/lux-marketing# systemctl status lux-marketing.service --no-pager | head -15
+● lux-marketing.service - LUX Marketing Automation Platform
+     Loaded: loaded (/etc/systemd/system/lux-marketing.service; enabled; preset: enabled)
+     Active: active (running) since Tue 2025-10-21 08:33:46 UTC; 2s ago
+   Main PID: 1727 (gunicorn)
+      Tasks: 6 (limit: 9517)
+     Memory: 80.3M
+        CPU: 1.090s
+     CGroup: /system.slice/lux-marketing.service
+             ├─1727 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+             ├─1733 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+             ├─1734 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+             ├─1735 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+             └─1736 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+
+Oct 21 08:33:47 lux gunicorn[1727]: INFO:ai_agent:LUX AI Agent initialized successfully
+root@lux:/var/www/lux-marketing# 
+root@lux:/var/www/lux-marketing# echo ""
+
+root@lux:/var/www/lux-marketing# echo "✅ Campaign creation is ready!"
+✅ Campaign creation is ready!
+root@lux:/var/www/lux-marketing# echo "👉 Go to: https://lux.lucifercruz.com/campaigns"
+👉 Go to: https://lux.lucifercruz.com/campaigns
+root@lux:/var/www/lux-marketing# echo "👉 Click 'Create Campaign' button"~
+👉 Click 'Create Campaign' button~

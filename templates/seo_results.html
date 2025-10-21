@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}SEO Analysis Results - LUX Marketing{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1><i data-feather="bar-chart-2"></i> SEO Analysis Results</h1>
+    <p class="text-muted">{{ analysis.url }}</p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <a href="{{ url_for('main.seo_tools') }}" class="btn btn-outline-secondary">
+            <i data-feather="arrow-left"></i> Analyze Another URL
+        </a>
+    </div>
+</div>
+
+<!-- Recommendations Summary -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Recommendations</h5>
+    </div>
+    <div class="card-body">
+        {% for rec in analysis.recommendations %}
+        <div class="alert alert-{{ 'danger' if rec.type == 'error' else ('warning' if rec.type == 'warning' else ('info' if rec.type == 'info' else 'success')) }}">
+            <strong>{{ rec.category }}:</strong> {{ rec.message }}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Title Analysis -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i data-feather="type"></i> Title Tag
+            {% if analysis.title and analysis.title.optimal %}
+            <span class="badge bg-success">Optimal</span>
+            {% elif analysis.title %}
+            <span class="badge bg-warning">Needs Improvement</span>
+            {% else %}
+            <span class="badge bg-danger">Missing</span>
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if analysis.title %}
+        <p><strong>Title:</strong> {{ analysis.title.text }}</p>
+        <p><strong>Length:</strong> {{ analysis.title.length }} characters</p>
+        <div class="progress">
+            <div class="progress-bar {% if analysis.title.optimal %}bg-success{% else %}bg-warning{% endif %}" 
+                 style="width: {{ (analysis.title.length / 60 * 100) | min(100) }}%">
+            </div>
+        </div>
+        <small class="text-muted">Optimal: 50-60 characters</small>
+        {% else %}
+        <p class="text-danger">No title tag found!</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Meta Description -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i data-feather="file-text"></i> Meta Description
+            {% if analysis.meta_description and analysis.meta_description.optimal %}
+            <span class="badge bg-success">Optimal</span>
+            {% elif analysis.meta_description %}
+            <span class="badge bg-warning">Needs Improvement</span>
+            {% else %}
+            <span class="badge bg-danger">Missing</span>
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if analysis.meta_description %}
+        <p><strong>Description:</strong> {{ analysis.meta_description.text }}</p>
+        <p><strong>Length:</strong> {{ analysis.meta_description.length }} characters</p>
+        <div class="progress">
+            <div class="progress-bar {% if analysis.meta_description.optimal %}bg-success{% else %}bg-warning{% endif %}" 
+                 style="width: {{ (analysis.meta_description.length / 160 * 100) | min(100) }}%">
+            </div>
+        </div>
+        <small class="text-muted">Optimal: 150-160 characters</small>
+        {% else %}
+        <p class="text-danger">No meta description found!</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Headings -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i data-feather="list"></i> Heading Structure
+            {% if analysis.headings.h1|length == 1 %}
+            <span class="badge bg-success">Good</span>
+            {% else %}
+            <span class="badge bg-warning">Check</span>
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for level, headings in analysis.headings.items() %}
+            <div class="col-md-2">
+                <strong>{{ level.upper() }}:</strong> {{ headings|length }}
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if analysis.headings.h1 %}
+        <hr>
+        <h6>H1 Headings:</h6>
+        <ul>
+            {% for h1 in analysis.headings.h1 %}
+            <li>{{ h1 }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Images and Links -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i data-feather="image"></i> Images</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Total Images:</strong> {{ analysis.images.total }}</p>
+                <p><strong>Missing Alt Text:</strong> {{ analysis.images.missing_alt }}</p>
+                <div class="progress">
+                    <div class="progress-bar {% if analysis.images.alt_coverage >= 90 %}bg-success{% else %}bg-warning{% endif %}" 
+                         style="width: {{ analysis.images.alt_coverage }}%">
+                        {{ "%.0f"|format(analysis.images.alt_coverage) }}%
+                    </div>
+                </div>
+                <small class="text-muted">Alt text coverage</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i data-feather="link"></i> Links</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Total Links:</strong> {{ analysis.links.total }}</p>
+                <p><strong>Internal:</strong> {{ analysis.links.internal }}</p>
+                <p><strong>External:</strong> {{ analysis.links.external }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Content Analysis -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i data-feather="align-left"></i> Content Analysis
+            {% if analysis.word_count >= 300 %}
+            <span class="badge bg-success">Good</span>
+            {% else %}
+            <span class="badge bg-warning">Thin</span>
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        <p><strong>Word Count:</strong> {{ analysis.word_count }}</p>
+        <div class="progress">
+            <div class="progress-bar {% if analysis.word_count >= 300 %}bg-success{% else %}bg-warning{% endif %}" 
+                 style="width: {{ (analysis.word_count / 500 * 100) | min(100) }}%">
+            </div>
+        </div>
+        <small class="text-muted">Recommended: At least 300 words</small>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}{{ event.name }} - LUX Marketing{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('main.events_dashboard') }}" class="btn btn-outline-secondary mb-2">
+        <i data-feather="arrow-left"></i> Back to Events
+    </a>
+    <h1><i data-feather="calendar"></i> {{ event.name }}</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Event Details</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Description:</strong></p>
+                <p>{{ event.description or 'No description provided' }}</p>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong><i data-feather="calendar"></i> Start:</strong><br>
+                        {{ event.start_date.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong><i data-feather="calendar"></i> End:</strong><br>
+                        {{ event.end_date.strftime('%B %d, %Y at %I:%M %p') if event.end_date else 'Not specified' }}</p>
+                    </div>
+                </div>
+                
+                <p><strong><i data-feather="map-pin"></i> Location:</strong><br>
+                {{ event.location or 'Not specified' }}</p>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <p><strong>Price:</strong><br>
+                        {% if event.price > 0 %}
+                        ${{ "%.2f"|format(event.price) }}
+                        {% else %}
+                        <span class="badge bg-success">Free</span>
+                        {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Capacity:</strong><br>
+                        {{ event.max_attendees or 'Unlimited' }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Status:</strong><br>
+                        {% if event.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Registrations ({{ registrations|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if registrations %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Attendee</th>
+                                <th>Email</th>
+                                <th>Registered</th>
+                                <th>Payment Status</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reg in registrations %}
+                            <tr>
+                                <td>{{ reg.contact.name if reg.contact else 'Unknown' }}</td>
+                                <td>{{ reg.contact.email if reg.contact else '-' }}</td>
+                                <td>{{ reg.registered_at.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if reg.payment_status == 'paid' else ('warning' if reg.payment_status == 'pending' else 'secondary') }}">
+                                        {{ reg.payment_status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if reg.status == 'attended' else ('primary' if reg.status == 'registered' else 'secondary') }}">
+                                        {{ reg.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i data-feather="users" class="text-muted mb-2" style="width: 48px; height: 48px;"></i>
+                    <p class="text-muted">No registrations yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Quick Stats</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h3 class="mb-0">{{ registrations|length }}</h3>
+                    <small class="text-muted">Total Registrations</small>
+                </div>
+                
+                {% if event.max_attendees %}
+                <div class="mb-3">
+                    <div class="progress">
+                        <div class="progress-bar" style="width: {{ (registrations|length / event.max_attendees * 100)|min(100) }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ registrations|length }} / {{ event.max_attendees }} capacity</small>
+                </div>
+                {% endif %}
+                
+                {% if event.price > 0 %}
+                <div class="mb-3">
+                    <h3 class="mb-0">${{ "%.2f"|format(event.price * (registrations|selectattr('payment_status', 'equalto', 'paid')|list|length)) }}</h3>
+                    <small class="text-muted">Revenue</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <h6>Event Actions</h6>
+                <button class="btn btn-outline-primary btn-sm w-100 mb-2">
+                    <i data-feather="mail"></i> Email All Attendees
+                </button>
+                <button class="btn btn-outline-info btn-sm w-100 mb-2">
+                    <i data-feather="download"></i> Export Attendees
+                </button>
+                <button class="btn btn-outline-secondary btn-sm w-100">
+                    <i data-feather="share-2"></i> Share Event Link
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

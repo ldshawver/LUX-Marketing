@@ -18,6 +18,7 @@ from tracking import decode_tracking_data, record_email_event
 import logging
 import json
 from ai_agent import lux_agent
+from seo_service import seo_service
 
 logger = logging.getLogger(__name__)
 
@@ -2169,3 +2170,96 @@ def send_sms_campaign(campaign_id):
         flash('Error sending SMS campaign', 'error')
     
     return redirect(url_for('main.sms_campaigns'))
+
+# SEO Tools Routes
+@main_bp.route('/seo')
+@login_required
+def seo_tools():
+    """SEO analysis and optimization tools"""
+    return render_template('seo_tools.html')
+
+@main_bp.route('/seo/analyze', methods=['POST'])
+@login_required
+def analyze_seo():
+    """Analyze a URL for SEO"""
+    try:
+        url = request.form.get('url')
+        
+        if not url:
+            flash('Please enter a URL to analyze', 'error')
+            return redirect(url_for('main.seo_tools'))
+        
+        # Ensure URL has a protocol
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+        
+        result = seo_service.analyze_page(url)
+        
+        if result['success']:
+            return render_template('seo_results.html', analysis=result['data'])
+        else:
+            flash(f'Error analyzing URL: {result["error"]}', 'error')
+            return redirect(url_for('main.seo_tools'))
+        
+    except Exception as e:
+        logger.error(f"Error in SEO analysis: {e}")
+        flash('Error analyzing URL', 'error')
+        return redirect(url_for('main.seo_tools'))
+
+# Events Management Routes
+@main_bp.route('/events')
+@login_required
+def events_dashboard():
+    """Events management dashboard"""
+    events = Event.query.order_by(Event.start_date.desc()).all()
+    return render_template('events.html', events=events)
+
+@main_bp.route('/events/create', methods=['GET', 'POST'])
+@login_required
+def create_event():
+    """Create new event"""
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name')
+            description = request.form.get('description')
+            start_date_str = request.form.get('start_date')
+            end_date_str = request.form.get('end_date')
+            location = request.form.get('location')
+            max_attendees = request.form.get('max_attendees')
+            price = request.form.get('price', 0.0)
+            
+            event = Event()
+            event.name = name
+            event.description = description
+            event.start_date = datetime.fromisoformat(start_date_str)
+            event.end_date = datetime.fromisoformat(end_date_str) if end_date_str else None
+            event.location = location
+            event.max_attendees = int(max_attendees) if max_attendees else None
+            event.price = float(price)
+            
+            db.session.add(event)
+            db.session.commit()
+            
+            flash('Event created successfully!', 'success')
+            return redirect(url_for('main.events_dashboard'))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error creating event: {e}")
+            flash('Error creating event', 'error')
+            return redirect(url_for('main.events_dashboard'))
+    
+    return render_template('create_event.html')
+
+@main_bp.route('/events/<int:event_id>')
+@login_required
+def view_event(event_id):
+    """View event details and registrations"""
+    event = Event.query.get_or_404(event_id)
+    registrations = EventRegistration.query.filter_by(event_id=event_id).all()
+    
+    # Get contacts for registrations
+    for reg in registrations:
+        reg.contact = Contact.query.get(reg.contact_id)
+    
+    return render_template('view_event.html', event=event, registrations=registrations)

@@ -1,0 +1,89 @@
+✓ Contacts page should work now! Try refreshing.
+root@lux:/var/www/lux-marketing# # On VPS - Check if export_contacts route exists
+cd /var/www/lux-marketing
+grep -n "def export_contacts" routes.py
+
+# If it's missing, add it
+cat >> routes.py << 'EXPORT_ROUTE_EOF'
+
+@main_bp.route('/contacts/export')
+@login_required
+def export_contacts():
+    """Export contacts to CSV"""
+    import io
+    import csv
+    from flask import make_response
+    
+    contacts = Contact.query.filter_by(is_active=True).all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow(['email', 'first_name', 'last_name', 'company', 'phone', 'tags', 'created_at'])
+    
+    # Write data
+    for contact in contacts:
+        writer.writerow([
+            contact.email,
+            contact.first_name or '',
+            contact.last_name or '',
+            contact.company or '',
+            contact.phone or '',
+            contact.tags or '',
+            contact.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        ])
+    
+    # Create response
+    output.seek(0)
+    response = make_response(output.getvalue())
+    response.headers['Content-Disposition'] = 'attachment; filename=contacts.csv'
+    response.headers['Content-Type'] = 'text/csv'
+    
+    return response
+EXPORT_ROUTE_EOF
+
+echo "✓ Export contacts route added"
+
+# Also need to add the missing imports at the top if not present
+grep -q "import io" routes.py || sed -i '2i import io' routes.py
+echo "✓ Contacts page should work now! Try refreshing."d -15 from sqlalchemy import or_' routes.py
+265:def export_contacts():
+✓ Export contacts route added
+● lux-marketing.service - LUX Marketing Automation Platform
+     Loaded: loaded (/etc/systemd/system/lux-marketing.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Tue 2025-10-21 07:26:24 UTC; 1s ago
+    Process: 1165 ExecStart=/var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app (code=exited, status=1/FAILURE)
+   Main PID: 1165 (code=exited, status=1/FAILURE)
+        CPU: 1.127s
+
+✓ Contacts page should work now! Try refreshing.
+root@lux:/var/www/lux-marketing# # Check the Python syntax error
+cd /var/www/lux-marketing
+
+python3 -m py_compile routes.py
+
+# Or check the detailed error
+journalctl -u lux-marketing.service -n 30 --no-pager | grep -A 10 "Traceback\|SyntaxError"
+root@lux:/var/www/lux-marketing# # Quick fix - check for duplicate imports
+cd /var/www/lux-marketing
+
+# Check the top of the file
+head -15 routes.py
+
+# If there are duplicate imports, we need to clean them up
+import logging
+from ai_agent import lux_agent
+from sqlalchemy import or_
+from flask import Blueprint, render_template, redirect, url_for, request, flash, session
+from flask_login import login_required, current_user
+from app import db
+from models import Campaign, Contact, CampaignRecipient, EmailTemplate, Automation, Segment, ABTest, BrandKit, EmailTracking
+
+
+logger = logging.getLogger(__name__)
+main_bp = Blueprint('main', __name__)
+
+@main_bp.route('/')
+@login_required
+def dashboard():

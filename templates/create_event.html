@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Create Event - LUX Marketing{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1><i data-feather="calendar"></i> Create Event</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Event Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Event Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                               placeholder="e.g., Product Launch Webinar">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4"
+                                  placeholder="Describe your event..."></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="start_date" class="form-label">Start Date & Time *</label>
+                            <input type="datetime-local" class="form-control" id="start_date" name="start_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="end_date" class="form-label">End Date & Time</label>
+                            <input type="datetime-local" class="form-control" id="end_date" name="end_date">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="location" name="location"
+                               placeholder="e.g., Virtual (Zoom) or 123 Main St, New York">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="max_attendees" class="form-label">Max Attendees</label>
+                            <input type="number" class="form-control" id="max_attendees" name="max_attendees"
+                                   placeholder="Leave empty for unlimited">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="price" class="form-label">Ticket Price ($)</label>
+                            <input type="number" step="0.01" class="form-control" id="price" name="price"
+                                   value="0.00" placeholder="0.00 for free events">
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i data-feather="info"></i>
+                        <strong>Stripe Integration:</strong> To accept payments for paid events, configure your STRIPE_SECRET_KEY in environment variables.
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.events_dashboard') }}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i data-feather="check"></i> Create Event
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Event Tips</h5>
+            </div>
+            <div class="card-body">
+                <h6>Event Success Tips:</h6>
+                <ul class="small">
+                    <li>Create compelling event titles</li>
+                    <li>Provide detailed descriptions</li>
+                    <li>Set realistic capacity limits</li>
+                    <li>Send reminder emails 24h before</li>
+                    <li>Collect feedback after events</li>
+                </ul>
+                
+                <h6>Pricing Strategies:</h6>
+                <ul class="small">
+                    <li>Free events increase attendance</li>
+                    <li>Early bird pricing drives urgency</li>
+                    <li>Tiered pricing for different access levels</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+journalctl -u lux-marketing.service -n 50 --no-pager | grep -A 15 "Error\|Traceback"
+
+# Also check what page/action caused the error
+journalctl -u lux-marketing.service -n 100 --no-pager | tail -40
+Oct 21 07:24:13 lux gunicorn[1116]:     raise BuildError(endpoint, values, method, self)
+Oct 21 07:24:13 lux gunicorn[1116]: werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'main.export_contacts'. Did you mean 'main.contacts' instead?
+Oct 21 07:24:18 lux gunicorn[1114]: ERROR:app:Exception on /contacts [GET]
+Oct 21 07:24:18 lux gunicorn[1114]: Traceback (most recent call last):
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+Oct 21 07:24:18 lux gunicorn[1114]:     response = self.full_dispatch_request()
+Oct 21 07:24:18 lux gunicorn[1114]:                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+Oct 21 07:24:18 lux gunicorn[1114]:     rv = self.handle_user_exception(e)
+Oct 21 07:24:18 lux gunicorn[1114]:          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+Oct 21 07:24:18 lux gunicorn[1114]:     rv = self.dispatch_request()
+Oct 21 07:24:18 lux gunicorn[1114]:          ^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+Oct 21 07:24:18 lux gunicorn[1114]:     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+Oct 21 07:24:18 lux gunicorn[1114]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+Oct 21 07:24:18 lux gunicorn[1114]:     return current_app.ensure_sync(func)(*args, **kwargs)
+Oct 21 07:24:18 lux gunicorn[1114]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--
+Oct 21 07:24:18 lux gunicorn[1114]:     raise BuildError(endpoint, values, method, self)
+Oct 21 07:24:18 lux gunicorn[1114]: werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'main.export_contacts'. Did you mean 'main.contacts' instead?
+Oct 21 07:24:18 lux gunicorn[1114]:          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+Oct 21 07:24:18 lux gunicorn[1114]:     rv = self.dispatch_request()
+Oct 21 07:24:18 lux gunicorn[1114]:          ^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+Oct 21 07:24:18 lux gunicorn[1114]:     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+Oct 21 07:24:18 lux gunicorn[1114]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask_login/utils.py", line 290, in decorated_view
+Oct 21 07:24:18 lux gunicorn[1114]:     return current_app.ensure_sync(func)(*args, **kwargs)
+Oct 21 07:24:18 lux gunicorn[1114]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/routes.py", line 39, in contacts
+Oct 21 07:24:18 lux gunicorn[1114]:     return render_template('contacts.html', contacts=contacts)
+Oct 21 07:24:18 lux gunicorn[1114]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+Oct 21 07:24:18 lux gunicorn[1114]:     return _render(app, template, context)
+Oct 21 07:24:18 lux gunicorn[1114]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+Oct 21 07:24:18 lux gunicorn[1114]:     rv = template.render(context)
+Oct 21 07:24:18 lux gunicorn[1114]:          ^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+Oct 21 07:24:18 lux gunicorn[1114]:     self.environment.handle_exception()
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+Oct 21 07:24:18 lux gunicorn[1114]:     raise rewrite_traceback_stack(source=source)
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/templates/contacts.html", line 1, in top-level template code
+Oct 21 07:24:18 lux gunicorn[1114]:     {% extends "base.html" %}
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/templates/base.html", line 85, in top-level template code
+Oct 21 07:24:18 lux gunicorn[1114]:     {% block content %}{% endblock %}
+Oct 21 07:24:18 lux gunicorn[1114]:     ^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/templates/contacts.html", line 12, in block 'content'
+Oct 21 07:24:18 lux gunicorn[1114]:     <a href="{{ url_for('main.export_contacts') }}" class="btn btn-outline-secondary">
+Oct 21 07:24:18 lux gunicorn[1114]:     ^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 1121, in url_for
+Oct 21 07:24:18 lux gunicorn[1114]:     return self.handle_url_build_error(error, endpoint, values)
+Oct 21 07:24:18 lux gunicorn[1114]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/flask/app.py", line 1110, in url_for
+Oct 21 07:24:18 lux gunicorn[1114]:     rv = url_adapter.build(  # type: ignore[union-attr]
+Oct 21 07:24:18 lux gunicorn[1114]:          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:24:18 lux gunicorn[1114]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/werkzeug/routing/map.py", line 924, in build
+Oct 21 07:24:18 lux gunicorn[1114]:     raise BuildError(endpoint, values, method, self)
+Oct 21 07:24:18 lux gunicorn[1114]: werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'main.export_contacts'. Did you mean 'main.contacts' instead?

@@ -134,5 +134,6 @@ All tables successfully created:
 - Initialized PostgreSQL database with all schemas
 - Configured OpenAI API key for LUX AI agent
 - Added SMS Marketing feature with Twilio integration (campaigns, compliance, delivery tracking)
+- Added Social Media Marketing feature (Facebook, Instagram, LinkedIn, Twitter scheduling with AI captions)
 - Fixed A/B Testing template error (preview_campaign link)
 - Verified Automations dashboard functionality

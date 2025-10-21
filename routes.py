@@ -1552,7 +1552,8 @@ def respond_to_poll(poll_id):
 def ab_tests():
     """A/B testing management"""
     tests = ABTest.query.all()
-    return render_template('ab_tests.html', tests=tests)
+    draft_campaigns = Campaign.query.filter_by(status='draft').all()
+    return render_template('ab_tests.html', tests=tests, draft_campaigns=draft_campaigns)
 
 @main_bp.route('/ab-tests/create', methods=['POST'])
 @login_required
@@ -1565,12 +1566,23 @@ def create_ab_test():
         variant_b = request.form.get('variant_b')
         split_ratio = float(request.form.get('split_ratio', 0.5))
         
+        if not campaign_id or not variant_a or not variant_b:
+            flash('Campaign, Variant A, and Variant B are required', 'error')
+            return redirect(url_for('main.ab_tests'))
+        
+        # Validate campaign exists
+        campaign = Campaign.query.get(campaign_id)
+        if not campaign:
+            flash('Selected campaign not found', 'error')
+            return redirect(url_for('main.ab_tests'))
+        
         ab_test = ABTest()
         ab_test.campaign_id = campaign_id
         ab_test.test_type = test_type
         ab_test.variant_a = variant_a
         ab_test.variant_b = variant_b
         ab_test.split_ratio = split_ratio
+        ab_test.status = 'draft'
         
         db.session.add(ab_test)
         db.session.commit()
@@ -1580,6 +1592,7 @@ def create_ab_test():
         
     except Exception as e:
         logger.error(f"Error creating A/B test: {e}")
+        db.session.rollback()
         flash('Error creating A/B test', 'error')
         return redirect(url_for('main.ab_tests'))
 

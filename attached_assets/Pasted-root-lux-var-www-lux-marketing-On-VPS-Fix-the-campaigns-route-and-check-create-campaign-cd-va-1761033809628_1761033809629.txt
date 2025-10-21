@@ -1,0 +1,86 @@
+root@lux:/var/www/lux-marketing# # On VPS - Fix the campaigns route and check create_campaign
+cd /var/www/lux-marketing
+
+# Fix the campaigns route to support pagination and filtering
+cat > fix_campaigns_route.py << 'PYFIX'
+with open('routes.py', 'r') as f:
+    lines = f.readlines()
+
+# Find campaigns function
+for i, line in enumerate(lines):
+    if 'def campaigns():' in line:
+        # Find where it ends
+        end = None
+        for j in range(i + 1, len(lines)):
+            if lines[j].startswith('@main_bp.route') or (lines[j].startswith('def ') and not lines[j].startswith('    ')):
+                end = j
+                break
+        
+        # Replace with proper implementation
+        new_func = '''@login_required
+def campaigns():
+    """Campaign management page"""
+    page = request.args.get('page', 1, type=int)
+    status_filter = request.args.get('status', '')
+    
+    query = Campaign.query
+    
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    
+    campaigns = query.order_by(Campaign.created_at.desc()).paginate(page=page, per_page=20, error_out=False)
+    
+    return render_template('campaigns.html', campaigns=campaigns, status_filter=status_filter)
+
+'''
+        
+        # Keep decorator
+        decorator_line = i - 2
+        lines = lines[:decorator_line + 1] + [new_func] + lines[end:]
+        
+        with open('routes.py', 'w') as f:
+            f.writelines(lines)
+        
+        print("✓ Campaigns route fixed")
+        break
+PYFIX
+
+systemctl status lux-marketing.service --no-pager | head -10
+✓ Campaigns route fixed
+● lux-marketing.service - LUX Marketing Automation Platform
+     Loaded: loaded (/etc/systemd/system/lux-marketing.service; enabled; preset: enabled)
+     Active: active (running) since Tue 2025-10-21 07:44:45 UTC; 2s ago
+   Main PID: 1441 (gunicorn)
+      Tasks: 6 (limit: 9517)
+     Memory: 80.4M
+        CPU: 1.050s
+     CGroup: /system.slice/lux-marketing.service
+             ├─1441 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+             ├─1447 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+root@lux:/var/www/lux-marketing# # Check the create_campaign route
+grep -A 40 "def create_campaign" routes.py | head -45
+root@lux:/var/www/lux-marketing# ● lux-marketing.service - LUX Marketing Automation Platform
+     Loaded: loaded (/etc/systemd/system/lux-marketing.service; enabled; preset: enabled)
+     Active: active (running) since Tue 2025-10-21 07:44:45 UTC; 2s ago
+   Main PID: 1441 (gunicorn)
+      Tasks: 6 (limit: 9517)
+     Memory: 80.4M
+        CPU: 1.050s
+     CGroup: /system.slice/lux-marketing.service
+             ├─1441 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+             ├─1447 /var/www/lux-marketing/venv/bin/python3 /var/www/lux-marketing/venv/bin/gunicorn --config /var/www/lux-marketing/gunicorn.conf.py wsgi:app
+root@lux:/var/www/lux-marketing# # Check the create_campaign route
+grep -A 40 "def create_campaign" routes.py | head -45
+-bash: ●: command not found
+-bash: syntax error near unexpected token `('
+-bash: syntax error near unexpected token `('
+-bash: syntax error near unexpected token `('
+-bash: syntax error near unexpected token `('
+-bash: Memory:: command not found
+-bash: CPU:: command not found
+-bash: CGroup:: command not found
+-bash: ├─1441: command not found
+-bash: ├─1447: command not found
+-bash: root@lux:/var/www/lux-marketing#: No such file or directory
+root@lux:/var/www/lux-marketing# cd /var/www/lux-marketing
+grep -A 40 "def create_campaign" routes.py | head -45

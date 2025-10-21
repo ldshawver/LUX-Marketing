@@ -1,0 +1,58 @@
+
+# Also check for Python syntax errors
+cd /var/www/lux-marketing
+python3 -m py_compile routes.py
+Oct 21 07:06:23 lux systemd[1]: lux-marketing.service: Failed with result 'exit-code'.
+Oct 21 07:06:33 lux systemd[1]: lux-marketing.service: Scheduled restart job, restart counter is at 3.
+Oct 21 07:06:33 lux systemd[1]: Stopped lux-marketing.service - LUX Marketing Automation Platform.
+Oct 21 07:06:33 lux systemd[1]: Started lux-marketing.service - LUX Marketing Automation Platform.
+Oct 21 07:06:33 lux gunicorn[924]: Traceback (most recent call last):
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/venv/bin/gunicorn", line 7, in <module>
+Oct 21 07:06:33 lux gunicorn[924]:     sys.exit(run())
+Oct 21 07:06:33 lux gunicorn[924]:              ^^^^^
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 66, in run
+Oct 21 07:06:33 lux gunicorn[924]:     WSGIApplication("%(prog)s [OPTIONS] [APP_MODULE]", prog=prog).run()
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/app/base.py", line 235, in run
+Oct 21 07:06:33 lux gunicorn[924]:     super().run()
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/app/base.py", line 71, in run
+Oct 21 07:06:33 lux gunicorn[924]:     Arbiter(self).run()
+Oct 21 07:06:33 lux gunicorn[924]:     ^^^^^^^^^^^^^
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/arbiter.py", line 57, in __init__
+Oct 21 07:06:33 lux gunicorn[924]:     self.setup(app)
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/arbiter.py", line 117, in setup
+Oct 21 07:06:33 lux gunicorn[924]:     self.app.wsgi()
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/app/base.py", line 66, in wsgi
+Oct 21 07:06:33 lux gunicorn[924]:     self.callable = self.load()
+Oct 21 07:06:33 lux gunicorn[924]:                     ^^^^^^^^^^^
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+Oct 21 07:06:33 lux gunicorn[924]:     return self.load_wsgiapp()
+Oct 21 07:06:33 lux gunicorn[924]:            ^^^^^^^^^^^^^^^^^^^
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+Oct 21 07:06:33 lux gunicorn[924]:     return util.import_app(self.app_uri)
+Oct 21 07:06:33 lux gunicorn[924]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/venv/lib/python3.11/site-packages/gunicorn/util.py", line 370, in import_app
+Oct 21 07:06:33 lux gunicorn[924]:     mod = importlib.import_module(module)
+Oct 21 07:06:33 lux gunicorn[924]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:06:33 lux gunicorn[924]:   File "/usr/lib/python3.11/importlib/__init__.py", line 126, in import_module
+Oct 21 07:06:33 lux gunicorn[924]:     return _bootstrap._gcd_import(name[level:], package, level)
+Oct 21 07:06:33 lux gunicorn[924]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Oct 21 07:06:33 lux gunicorn[924]:   File "<frozen importlib._bootstrap>", line 1206, in _gcd_import
+Oct 21 07:06:33 lux gunicorn[924]:   File "<frozen importlib._bootstrap>", line 1178, in _find_and_load
+Oct 21 07:06:33 lux gunicorn[924]:   File "<frozen importlib._bootstrap>", line 1149, in _find_and_load_unlocked
+Oct 21 07:06:33 lux gunicorn[924]:   File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+Oct 21 07:06:33 lux gunicorn[924]:   File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+Oct 21 07:06:33 lux gunicorn[924]:   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/wsgi.py", line 1, in <module>
+Oct 21 07:06:33 lux gunicorn[924]:     from app import app
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/app.py", line 45, in <module>
+Oct 21 07:06:33 lux gunicorn[924]:     from routes import main_bp
+Oct 21 07:06:33 lux gunicorn[924]:   File "/var/www/lux-marketing/routes.py", line 21
+Oct 21 07:06:33 lux gunicorn[924]:     logger = logging.getLogger(__name__)\n
+Oct 21 07:06:33 lux gunicorn[924]:                                          ^
+Oct 21 07:06:33 lux gunicorn[924]: SyntaxError: unexpected character after line continuation character
+Oct 21 07:06:33 lux systemd[1]: lux-marketing.service: Main process exited, code=exited, status=1/FAILURE
+Oct 21 07:06:33 lux systemd[1]: lux-marketing.service: Failed with result 'exit-code'.
+  File "routes.py", line 21
+    logger = logging.getLogger(__name__)\n
+                                         ^
+SyntaxError: unexpected character after line continuation character

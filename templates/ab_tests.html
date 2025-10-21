@@ -30,9 +30,9 @@
                     <tr>
                         <td>
                             {% if test.campaign_id %}
-                                <a href="{{ url_for('main.preview_campaign', campaign_id=test.campaign_id) }}">
+                                <span class="text-info">
                                     Campaign #{{ test.campaign_id }}
-                                </a>
+                                </span>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}

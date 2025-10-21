@@ -1,0 +1,31 @@
+root@lux:/var/www/lux-marketing# journalctl -u lux-marketing -n 50 --no-pager | tail -30
+Oct 21 05:45:36 lux systemd[1]: lux-marketing.service: Failed with result 'exit-code'.
+Oct 21 05:45:36 lux systemd[1]: lux-marketing.service: Consumed 1.312s CPU time.
+Oct 21 05:45:42 lux systemd[1]: lux-marketing.service: Scheduled restart job, restart counter is at 941.
+Oct 21 05:45:42 lux systemd[1]: Stopped lux-marketing.service - LUX Marketing Flask Application.
+Oct 21 05:45:42 lux systemd[1]: lux-marketing.service: Consumed 1.312s CPU time.
+Oct 21 05:45:42 lux systemd[1]: Started lux-marketing.service - LUX Marketing Flask Application.
+Oct 21 05:45:43 lux systemd[1]: lux-marketing.service: Main process exited, code=exited, status=1/FAILURE
+Oct 21 05:45:43 lux systemd[1]: lux-marketing.service: Failed with result 'exit-code'.
+Oct 21 05:45:43 lux systemd[1]: lux-marketing.service: Consumed 1.151s CPU time.
+Oct 21 05:45:48 lux systemd[1]: lux-marketing.service: Scheduled restart job, restart counter is at 942.
+Oct 21 05:45:48 lux systemd[1]: Stopped lux-marketing.service - LUX Marketing Flask Application.
+Oct 21 05:45:48 lux systemd[1]: lux-marketing.service: Consumed 1.151s CPU time.
+Oct 21 05:45:48 lux systemd[1]: Started lux-marketing.service - LUX Marketing Flask Application.
+Oct 21 05:45:49 lux systemd[1]: lux-marketing.service: Main process exited, code=exited, status=1/FAILURE
+Oct 21 05:45:49 lux systemd[1]: lux-marketing.service: Failed with result 'exit-code'.
+Oct 21 05:45:49 lux systemd[1]: lux-marketing.service: Consumed 1.229s CPU time.
+Oct 21 05:45:54 lux systemd[1]: lux-marketing.service: Scheduled restart job, restart counter is at 943.
+Oct 21 05:45:54 lux systemd[1]: Stopped lux-marketing.service - LUX Marketing Flask Application.
+Oct 21 05:45:54 lux systemd[1]: lux-marketing.service: Consumed 1.229s CPU time.
+Oct 21 05:45:54 lux systemd[1]: Started lux-marketing.service - LUX Marketing Flask Application.
+Oct 21 05:45:56 lux systemd[1]: lux-marketing.service: Main process exited, code=exited, status=1/FAILURE
+Oct 21 05:45:56 lux systemd[1]: lux-marketing.service: Failed with result 'exit-code'.
+Oct 21 05:45:56 lux systemd[1]: lux-marketing.service: Consumed 1.201s CPU time.
+Oct 21 05:46:01 lux systemd[1]: lux-marketing.service: Scheduled restart job, restart counter is at 944.
+Oct 21 05:46:01 lux systemd[1]: Stopped lux-marketing.service - LUX Marketing Flask Application.
+Oct 21 05:46:01 lux systemd[1]: lux-marketing.service: Consumed 1.201s CPU time.
+Oct 21 05:46:01 lux systemd[1]: Started lux-marketing.service - LUX Marketing Flask Application.
+Oct 21 05:46:02 lux systemd[1]: lux-marketing.service: Main process exited, code=exited, status=1/FAILURE
+Oct 21 05:46:02 lux systemd[1]: lux-marketing.service: Failed with result 'exit-code'.
+Oct 21 05:46:02 lux systemd[1]: lux-marketing.service: Consumed 1.415s CPU time.

@@ -15,13 +15,13 @@ class SMSService:
         self.auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
         self.phone_number = os.environ.get('TWILIO_PHONE_NUMBER')
         
-        if self.account_sid and self.auth_token:
+        if self.account_sid and self.auth_token and self.phone_number:
             self.client = Client(self.account_sid, self.auth_token)
             self.enabled = True
         else:
             self.client = None
             self.enabled = False
-            logger.warning("Twilio credentials not configured. SMS features disabled.")
+            logger.warning("Twilio credentials not fully configured. SMS features disabled. Need: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER")
     
     def send_sms(self, to_number, message):
         """
@@ -41,14 +41,24 @@ class SMSService:
             }
         
         try:
-            # Ensure phone number is in E.164 format
-            if not to_number.startswith('+'):
-                to_number = '+' + to_number
+            # Normalize and validate phone number
+            if not self.validate_phone_number(to_number):
+                return {
+                    'success': False,
+                    'error': f'Invalid phone number format: {to_number}'
+                }
+            
+            # Clean and format to E.164
+            clean_number = to_number.replace('+', '').replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+            if not clean_number.startswith('1') and len(clean_number) == 10:
+                # Add US country code if missing
+                clean_number = '1' + clean_number
+            formatted_number = '+' + clean_number
             
             message_obj = self.client.messages.create(
                 body=message,
                 from_=self.phone_number,
-                to=to_number
+                to=formatted_number
             )
             
             logger.info(f"SMS sent successfully. SID: {message_obj.sid}")

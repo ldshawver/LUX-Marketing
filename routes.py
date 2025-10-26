@@ -2058,9 +2058,14 @@ def create_sms_campaign():
                 return redirect(url_for('main.sms_campaigns'))
             
             name = request.form.get('name')
-            message = request.form.get('message')
+            message = request.form.get('message', '')
             tags = request.form.get('tags', '').split(',')
             tags = [t.strip() for t in tags if t.strip()]
+            
+            # Validate message
+            if not message:
+                flash('Message is required', 'error')
+                return redirect(url_for('main.create_sms_campaign'))
             
             # Validate message length (160 chars for single SMS)
             if len(message) > 160:
@@ -2235,6 +2240,10 @@ def create_event():
             location = request.form.get('location')
             max_attendees = request.form.get('max_attendees')
             price = request.form.get('price', 0.0)
+            
+            if not start_date_str:
+                flash('Start date is required', 'error')
+                return redirect(url_for('main.create_event'))
             
             event = Event()
             event.name = name

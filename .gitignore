@@ -6,3 +6,9 @@ instance/
 *.sqlite
 venv/
 .DS_Store
+.local/
+*.tar.gz
+.local/
+*.tar.gz
+.local/
+*.tar.gz

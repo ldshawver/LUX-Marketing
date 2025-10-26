@@ -79,6 +79,7 @@ class SMSService:
             return {
                 'success': False,
                 'error': str(e)
+            }
     
     def send_bulk_sms(self, recipients, message):
         """

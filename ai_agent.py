@@ -507,10 +507,10 @@ class LUXAgent:
             """
             
             # Use explicit parameters to avoid any conflicts
+            # Note: DALL-E 3 doesn't support 'n' parameter (only generates 1 image)
             response = self.client.images.generate(
                 model="dall-e-3",
                 prompt=prompt,
-                n=1,
                 size="1024x1024",
                 quality="standard"
             )

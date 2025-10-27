@@ -450,14 +450,18 @@ class EventRegistration(db.Model):
 # Products & Services
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    wc_product_id = db.Column(db.Integer, unique=True)  # WooCommerce product ID
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(Text)
     price = db.Column(db.Float, nullable=False)
     sku = db.Column(db.String(50))
     category = db.Column(db.String(100))
     image_url = db.Column(db.String(255))
+    product_url = db.Column(db.String(255))  # WooCommerce product permalink
+    stock_quantity = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_synced = db.Column(db.DateTime)  # Last WooCommerce sync
     
     # Relationships
     orders = db.relationship('Order', backref='product', lazy='dynamic')

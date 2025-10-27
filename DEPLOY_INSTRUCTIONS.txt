@@ -1,0 +1,177 @@
+========================================
+LUX MARKETING - VPS DEPLOYMENT GUIDE
+========================================
+
+COMPLETE APPLICATION DEPLOYMENT TO: lux.lucifercruz.com (194.195.92.52)
+
+Package: lux-complete-deploy.tar.gz (109KB - 92 items)
+Contains: COMPLETE APPLICATION including lux/ package directory
+
+Files included:
+- 21 Root-level Python files
+- Complete lux/ package (blueprints, models, core utilities)
+- 35 HTML templates
+- CSS and JavaScript static assets
+- Complete dependency list (deploy_requirements.txt)
+
+========================================
+DEPLOYMENT STEPS
+========================================
+
+STEP 1: Download Package from Replit
+-------------------------------------
+In Replit Files panel (left sidebar):
+  1. Find file: lux-complete-deploy.tar.gz
+  2. Right-click → Download
+  3. Save to your computer (e.g., ~/Downloads/)
+
+
+STEP 2: Upload to VPS
+-------------------------------------
+On your LOCAL computer terminal, run:
+
+  scp ~/Downloads/lux-complete-deploy.tar.gz luxapp@194.195.92.52:/tmp/
+
+(Adjust path if you saved it elsewhere)
+Enter VPS password when prompted.
+
+
+STEP 3: Deploy on VPS
+-------------------------------------
+SSH into VPS:
+
+  ssh luxapp@194.195.92.52
+
+Then run these commands (COPY-PASTE ALL AT ONCE):
+
+========== BEGIN DEPLOYMENT COMMANDS ==========
+
+# Stop the service first
+sudo systemctl stop lux-marketing.service
+
+# Backup current deployment
+sudo cp -r /var/www/lux-marketing /var/www/lux-marketing-backup-$(date +%Y%m%d-%H%M%S)
+
+# Clean old application code (keep database, venv, and uploads)
+cd /var/www/lux-marketing
+sudo find . -maxdepth 1 -name "*.py" -delete
+sudo rm -rf templates static lux
+
+# Extract new complete code (includes lux/ package)
+sudo tar -xzf /tmp/lux-complete-deploy.tar.gz -C /var/www/lux-marketing
+
+# Fix permissions
+sudo chown -R luxapp:www-data /var/www/lux-marketing
+
+# Update ALL dependencies from complete requirements
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r deploy_requirements.txt
+
+# Restart application
+sudo systemctl start lux-marketing.service
+
+# Verify it's running
+sudo systemctl status lux-marketing.service
+
+========== END DEPLOYMENT COMMANDS ==========
+
+
+STEP 4: Add Twilio Credentials (REQUIRED for SMS)
+-------------------------------------
+Still SSH'd into VPS, run:
+
+  sudo nano /etc/lux/lux-marketing.env
+
+Add these lines at the END of the file:
+(Use your actual Twilio credentials)
+
+  TWILIO_ACCOUNT_SID=your_account_sid_here
+  TWILIO_AUTH_TOKEN=your_auth_token_here
+  TWILIO_PHONE_NUMBER=your_phone_number_here
+
+Save (Ctrl+O, Enter, Ctrl+X)
+
+Then restart:
+
+  sudo systemctl restart lux-marketing.service
+
+
+STEP 5: Verify Deployment
+-------------------------------------
+1. Go to: https://lux.lucifercruz.com
+2. Log in with your credentials
+3. Check for new menu items:
+   ✓ Multi-Channel → SMS Campaigns
+   ✓ Multi-Channel → Social Media
+   ✓ Multi-Channel → SEO Tools
+   ✓ Multi-Channel → Events
+
+
+========================================
+NEW FEATURES INCLUDED
+========================================
+✓ SMS Marketing (Twilio integration)
+✓ Social Media Scheduling (Facebook, Instagram, LinkedIn, Twitter)
+✓ SEO Tools (Website analysis and optimization)
+✓ Events Management (Event registration tracking)
+✓ Complete dependency updates
+✓ All bug fixes and improvements
+
+
+========================================
+TROUBLESHOOTING
+========================================
+
+If the service fails to start:
+
+  sudo journalctl -u lux-marketing.service -n 100 --no-pager
+
+View real-time logs:
+
+  sudo journalctl -u lux-marketing.service -f
+
+Check if port 5000 is in use:
+
+  sudo lsof -i :5000
+
+Restart Nginx if needed:
+
+  sudo systemctl restart nginx
+
+Test application manually:
+
+  cd /var/www/lux-marketing
+  source venv/bin/activate
+  python main.py
+
+
+========================================
+ROLLBACK (If Needed)
+========================================
+
+If deployment fails, restore backup:
+
+  sudo systemctl stop lux-marketing.service
+  sudo rm -rf /var/www/lux-marketing
+  sudo cp -r /var/www/lux-marketing-backup-YYYYMMDD-HHMMSS /var/www/lux-marketing
+  sudo systemctl start lux-marketing.service
+
+
+========================================
+VERIFICATION CHECKLIST
+========================================
+
+After deployment, verify:
+□ Service is running: systemctl status lux-marketing
+□ Website loads: https://lux.lucifercruz.com
+□ Can login successfully
+□ Dashboard shows statistics
+□ SMS Campaigns page exists
+□ Social Media page exists
+□ SEO Tools page exists
+□ Events page exists
+□ No errors in logs
+
+
+========================================

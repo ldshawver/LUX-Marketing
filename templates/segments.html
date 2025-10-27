@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Contact Segmentation - Email Marketing Automation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i data-feather="filter"></i> Contact Segmentation</h1>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createSegmentModal">
+        <i data-feather="plus"></i> Create Segment
+    </button>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if segments %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Segment Name</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Members</th>
+                        <th>Dynamic</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for segment in segments %}
+                    <tr>
+                        <td><strong>{{ segment.name }}</strong></td>
+                        <td>
+                            <small class="text-muted">
+                                {{ segment.description[:60] if segment.description else '-' }}
+                                {% if segment.description and segment.description|length > 60 %}...{% endif %}
+                            </small>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ segment.segment_type }}</span>
+                        </td>
+                        <td>{{ segment.members.count() }}</td>
+                        <td>
+                            {% if segment.is_dynamic %}
+                                <span class="badge bg-success">Dynamic</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Static</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ segment.created_at.strftime('%Y-%m-%d') if segment.created_at else '-' }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" title="View Members">
+                                <i data-feather="users"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i data-feather="filter" style="width: 64px; height: 64px;" class="text-muted mb-3"></i>
+            <h3>No Segments Yet</h3>
+            <p class="text-muted">Create contact segments to organize and target specific groups of contacts</p>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createSegmentModal">
+                <i data-feather="plus"></i> Create Your First Segment
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-body">
+        <h5><i data-feather="info"></i> About Contact Segmentation</h5>
+        <p>Segment your contacts into targeted groups for more personalized marketing campaigns.</p>
+        <ul>
+            <li><strong>Behavioral:</strong> Based on contact actions and engagement</li>
+            <li><strong>Demographic:</strong> Based on contact attributes like location, company, etc.</li>
+            <li><strong>Dynamic:</strong> Automatically updates based on conditions</li>
+            <li><strong>Static:</strong> Fixed list of contacts</li>
+        </ul>
+    </div>
+</div>
+
+<!-- Create Segment Modal -->
+<div class="modal fade" id="createSegmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Segment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('main.create_segment') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Segment Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="segment_type" class="form-label">Segment Type</label>
+                                <select class="form-select" id="segment_type" name="segment_type">
+                                    <option value="behavioral">Behavioral</option>
+                                    <option value="demographic">Demographic</option>
+                                    <option value="engagement">Engagement</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Segment Behavior</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_dynamic" name="is_dynamic">
+                                    <label class="form-check-label" for="is_dynamic">
+                                        Dynamic Segment (auto-updates)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="conditions" class="form-label">Conditions (JSON)</label>
+                        <textarea class="form-control" id="conditions" name="conditions" rows="4" placeholder='{"tag": "customer", "opened_emails": true}'></textarea>
+                        <div class="form-text">Define segment criteria as JSON. Leave empty for manual selection.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Segment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -106,6 +106,86 @@
     </div>
 </div>
 
+<!-- SMS Campaign Statistics -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-3"><i data-feather="smartphone"></i> SMS Marketing Analytics</h3>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="smartphone" class="text-primary" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ total_sms_campaigns }}</h5>
+                        <p class="card-text text-muted">SMS Campaigns</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="message-circle" class="text-success" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ sms_sent }}</h5>
+                        <p class="card-text text-muted">SMS Sent</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="x-circle" class="text-danger" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ sms_failed }}</h5>
+                        <p class="card-text text-muted">SMS Failed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="check-circle" class="text-info" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ "%.1f" | format(sms_delivery_rate) }}%</h5>
+                        <p class="card-text text-muted">Delivery Rate</p>
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar bg-info" style="width: {{ sms_delivery_rate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Campaign Analytics -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-3"><i data-feather="mail"></i> Email Marketing Analytics</h3>
+    </div>
+</div>
+
 <!-- Engagement Rates -->
 <div class="row mb-4">
     <div class="col-md-4">

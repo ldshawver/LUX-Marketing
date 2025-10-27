@@ -862,7 +862,18 @@ function generateImage() {
         },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(response => {
+        // Check if response is OK before parsing
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned non-JSON response. Please ensure you are logged in.');
+        }
+        return response.json();
+    })
     .then(data => {
         showLoading(false);
         
@@ -877,12 +888,12 @@ function generateImage() {
             // Store image data for download/copy functions
             window.currentGeneratedImage = data.image;
         } else {
-            alert('Failed to generate image: ' + data.message);
+            alert('Failed to generate image: ' + (data.message || 'Unknown error'));
         }
     })
     .catch(error => {
         showLoading(false);
-        alert('Error: ' + error.message);
+        alert('Error generating image: ' + error.message);
     });
 }
 

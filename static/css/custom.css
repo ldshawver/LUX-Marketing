@@ -40,6 +40,8 @@ body {
   border-bottom: 2px solid var(--lux-emerald-abyss);
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1030;
 }
 
 .navbar-brand {
@@ -91,6 +93,8 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .card:hover {
@@ -375,6 +379,8 @@ body {
   border: 2px solid rgba(192, 192, 192, 0.15);
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 1050;
+  position: absolute;
 }
 
 .dropdown-item {

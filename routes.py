@@ -805,6 +805,14 @@ def analytics():
     click_rate = (total_clicked / total_delivered * 100) if total_delivered > 0 else 0
     bounce_rate = (total_bounced / (total_delivered + total_bounced) * 100) if (total_delivered + total_bounced) > 0 else 0
     
+    # SMS Campaign statistics
+    total_sms_campaigns = SMSCampaign.query.count()
+    sent_sms_campaigns = SMSCampaign.query.filter_by(status='sent').count()
+    sms_sent = db.session.query(SMSRecipient).filter_by(status='sent').count()
+    sms_failed = db.session.query(SMSRecipient).filter_by(status='failed').count()
+    sms_pending = db.session.query(SMSRecipient).filter_by(status='pending').count()
+    sms_delivery_rate = (sms_sent / (sms_sent + sms_failed) * 100) if (sms_sent + sms_failed) > 0 else 0
+    
     # Tracking events breakdown
     tracking_stats = db.session.query(
         EmailTracking.event_type, 
@@ -853,7 +861,13 @@ def analytics():
                          bounce_rate=bounce_rate,
                          tracking_data=tracking_data,
                          recent_campaigns=recent_campaigns,
-                         top_campaigns=top_campaigns)
+                         top_campaigns=top_campaigns,
+                         total_sms_campaigns=total_sms_campaigns,
+                         sent_sms_campaigns=sent_sms_campaigns,
+                         sms_sent=sms_sent,
+                         sms_failed=sms_failed,
+                         sms_pending=sms_pending,
+                         sms_delivery_rate=sms_delivery_rate)
 
 @main_bp.route('/track/open/<tracking_id>')
 def track_open(tracking_id):
@@ -1197,6 +1211,10 @@ def test_email():
 @login_required
 def lux_generate_image():
     """LUX AI agent - Generate campaign images with DALL-E"""
+    # Exempt from CSRF for JSON API
+    from app import csrf
+    csrf.exempt(lux_generate_image)
+    
     try:
         from ai_agent import lux_agent
         
@@ -1229,6 +1247,10 @@ def lux_generate_image():
 @login_required
 def lux_product_campaign():
     """LUX AI agent - Create WooCommerce product campaign"""
+    # Exempt from CSRF for JSON API
+    from app import csrf
+    csrf.exempt(lux_product_campaign)
+    
     try:
         # Ensure no WooCommerce library conflicts
         import sys
@@ -1971,10 +1993,19 @@ def form_embed_code(id):
 @login_required
 def landing_pages():
     """Landing pages management"""
-    pages = LandingPage.query.all()
-    forms = WebForm.query.all()
-    
-    return render_template('landing_pages.html', pages=pages, forms=forms)
+    try:
+        pages = LandingPage.query.all()
+        try:
+            forms = WebForm.query.all()
+        except Exception as e:
+            logger.warning(f"WebForm table not found: {e}")
+            forms = []
+        
+        return render_template('landing_pages.html', pages=pages, forms=forms)
+    except Exception as e:
+        logger.error(f"Error loading landing pages: {e}")
+        flash('Error loading landing pages. Please check database tables.', 'error')
+        return redirect(url_for('main.dashboard'))
 
 @main_bp.route('/landing-pages/create', methods=['GET', 'POST'])
 @login_required
@@ -1989,6 +2020,23 @@ def create_landing_page():
             css_styles = request.form.get('css_styles')
             meta_description = request.form.get('meta_description')
             form_id = request.form.get('form_id') or None
+            
+            # Validate required fields
+            if not name or not slug or not html_content:
+                flash('Please fill in all required fields', 'error')
+                return redirect(url_for('main.create_landing_page'))
+            
+            # Validate slug format (lowercase, letters, numbers, hyphens only)
+            import re
+            if not re.match(r'^[a-z0-9-]+$', slug):
+                flash('URL slug must contain only lowercase letters, numbers, and hyphens', 'error')
+                return redirect(url_for('main.create_landing_page'))
+            
+            # Check if slug already exists
+            existing_page = LandingPage.query.filter_by(slug=slug).first()
+            if existing_page:
+                flash(f'A landing page with slug "{slug}" already exists', 'error')
+                return redirect(url_for('main.create_landing_page'))
             
             page = LandingPage()
             page.name = name
@@ -2007,9 +2055,15 @@ def create_landing_page():
             
         except Exception as e:
             logger.error(f"Error creating landing page: {e}")
-            flash('Error creating landing page', 'error')
+            flash(f'Error creating landing page: {str(e)}', 'error')
+            db.session.rollback()
     
-    forms = WebForm.query.all()
+    try:
+        forms = WebForm.query.all()
+    except Exception as e:
+        logger.warning(f"WebForm table not found: {e}")
+        forms = []
+    
     return render_template('create_landing_page.html', forms=forms)
 
 @main_bp.route('/newsletter-archive')
@@ -2280,3 +2334,181 @@ def view_event(event_id):
         reg.contact = Contact.query.get(reg.contact_id)
     
     return render_template('view_event.html', event=event, registrations=registrations)
+
+# WooCommerce Integration Routes
+@main_bp.route('/woocommerce')
+@login_required
+def woocommerce_dashboard():
+    """WooCommerce integration dashboard"""
+    from woocommerce_service import WooCommerceService
+    wc_service = WooCommerceService()
+    
+    if not wc_service.is_configured():
+        flash('WooCommerce integration is not configured. Please add WooCommerce credentials.', 'warning')
+        return render_template('woocommerce_setup.html')
+    
+    try:
+        # Get products summary
+        products = wc_service.get_products(per_page=10)
+        product_count = len(products) if products else 0
+        
+        # Get recent orders
+        orders = wc_service.get_orders(per_page=5)
+        order_count = len(orders) if orders else 0
+        
+        return render_template('woocommerce_dashboard.html', 
+                             products=products,
+                             product_count=product_count,
+                             orders=orders,
+                             order_count=order_count,
+                             is_configured=True)
+    except Exception as e:
+        logger.error(f"WooCommerce error: {e}")
+        flash('Error connecting to WooCommerce. Please check your credentials.', 'error')
+        return render_template('woocommerce_setup.html')
+
+@main_bp.route('/woocommerce/products')
+@login_required
+def woocommerce_products():
+    """View WooCommerce products"""
+    from woocommerce_service import WooCommerceService
+    wc_service = WooCommerceService()
+    
+    if not wc_service.is_configured():
+        flash('WooCommerce integration is not configured.', 'warning')
+        return redirect(url_for('main.woocommerce_dashboard'))
+    
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '')
+    
+    if search:
+        products = wc_service.search_products(search, per_page=20)
+    else:
+        products = wc_service.get_products(page=page, per_page=20)
+    
+    return render_template('woocommerce_products.html', 
+                         products=products or [],
+                         search=search,
+                         page=page)
+
+@main_bp.route('/woocommerce/products/<int:product_id>')
+@login_required
+def woocommerce_product_detail(product_id):
+    """View single WooCommerce product"""
+    from woocommerce_service import WooCommerceService
+    wc_service = WooCommerceService()
+    
+    product = wc_service.get_product(product_id)
+    if not product:
+        flash('Product not found', 'error')
+        return redirect(url_for('main.woocommerce_products'))
+    
+    return render_template('woocommerce_product_detail.html', product=product)
+
+@main_bp.route('/woocommerce/sync-products', methods=['POST'])
+@login_required
+def sync_woocommerce_products():
+    """Sync WooCommerce products to local database"""
+    from woocommerce_service import WooCommerceService
+    wc_service = WooCommerceService()
+    
+    try:
+        products = wc_service.get_all_products(max_products=500)
+        
+        synced_count = 0
+        for wc_product in products:
+            # Check if product exists
+            product = Product.query.filter_by(wc_product_id=wc_product['id']).first()
+            
+            if not product:
+                product = Product()
+                product.wc_product_id = wc_product['id']
+            
+            # Update product data
+            product.name = wc_product['name']
+            product.description = wc_product['description']
+            product.price = float(wc_product['price']) if wc_product['price'] else 0.0
+            product.sku = wc_product.get('sku', '')
+            product.stock_quantity = wc_product.get('stock_quantity', 0)
+            product.image_url = wc_product['images'][0]['src'] if wc_product.get('images') else None
+            product.product_url = wc_product['permalink']
+            
+            db.session.add(product)
+            synced_count += 1
+        
+        db.session.commit()
+        flash(f'Successfully synced {synced_count} products from WooCommerce!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error syncing WooCommerce products: {e}")
+        flash('Error syncing products from WooCommerce', 'error')
+    
+    return redirect(url_for('main.woocommerce_dashboard'))
+
+@main_bp.route('/woocommerce/create-product-campaign/<int:product_id>', methods=['GET', 'POST'])
+@login_required
+def create_product_campaign(product_id):
+    """Create email campaign for a specific product"""
+    from woocommerce_service import WooCommerceService
+    wc_service = WooCommerceService()
+    
+    # Get product from WooCommerce
+    product = wc_service.get_product(product_id)
+    if not product:
+        flash('Product not found', 'error')
+        return redirect(url_for('main.woocommerce_products'))
+    
+    if request.method == 'POST':
+        try:
+            campaign_name = request.form.get('campaign_name')
+            subject = request.form.get('subject')
+            tag = request.form.get('tag')
+            
+            # Create campaign
+            campaign = Campaign()
+            campaign.name = campaign_name
+            campaign.subject = subject
+            campaign.status = 'draft'
+            
+            # Generate email content from product
+            product_html = f"""
+            <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+                <h1 style="color: #333;">{product['name']}</h1>
+                {'<img src="' + product['images'][0]['src'] + '" style="max-width: 100%; height: auto;" />' if product.get('images') else ''}
+                <div style="margin: 20px 0;">
+                    <h2 style="color: #0066cc;">Price: ${product['price']}</h2>
+                </div>
+                <div style="margin: 20px 0;">
+                    {product.get('description', '')}
+                </div>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{product['permalink']}" style="background: #0066cc; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                        Shop Now
+                    </a>
+                </div>
+            </div>
+            """
+            
+            # Create template for this campaign
+            template = EmailTemplate()
+            template.name = f"Product Campaign - {product['name']}"
+            template.subject = subject
+            template.html_content = product_html
+            
+            db.session.add(template)
+            db.session.flush()
+            
+            campaign.template_id = template.id
+            db.session.add(campaign)
+            db.session.commit()
+            
+            flash(f'Product campaign created successfully!', 'success')
+            return redirect(url_for('main.campaign_details', id=campaign.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error creating product campaign: {e}")
+            flash('Error creating campaign', 'error')
+    
+    return render_template('create_product_campaign.html', product=product)

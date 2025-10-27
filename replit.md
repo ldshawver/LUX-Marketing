@@ -70,6 +70,7 @@ Preferred communication style: Simple, everyday language.
 - **Werkzeug**: WSGI utilities and security functions
 - **OpenAI**: AI-powered content generation and optimization
 - **Twilio**: SMS marketing and communication platform
+- **WooCommerce**: Official Python library for WooCommerce REST API v3 integration
 
 ### Frontend Dependencies
 - **Bootstrap 5**: UI framework with dark theme support
@@ -126,7 +127,35 @@ All tables successfully created:
 - ABTest (A/B testing campaigns)
 - EmailComponent (template components)
 
-### Recent Changes (October 21, 2025)
+### Recent Changes
+
+#### October 27, 2025 - WordPress/WooCommerce Integration
+- **WooCommerce Integration**: Full integration with WooCommerce REST API v3
+  - Installed woocommerce Python library (v3.0.0)
+  - Created WooCommerceService class for API abstraction
+  - Added product sync functionality (sync WooCommerce products to local database)
+  - Added product campaign creation (generate email campaigns from products)
+  - Added orders and customers viewing capabilities
+  - Updated Product model with WooCommerce fields (wc_product_id, product_url, stock_quantity, last_synced)
+- **Landing Pages**: Fixed creation errors
+  - Added comprehensive input validation (required fields, slug format)
+  - Added slug uniqueness checking to prevent conflicts
+  - Improved error handling with detailed error messages
+  - Created create_landing_page.html template with CSRF protection
+  - Added graceful handling for missing WebForm table
+- **Testing Framework**: Created comprehensive test suite
+  - Developed test_all_features.py for automated testing
+  - Tests all 14 database models (User, Contact, Campaign, SMS, Events, etc.)
+  - All tests passing successfully (14/14)
+  - Database connectivity verification
+- **Documentation**: Created WOOCOMMERCE_INTEGRATION.md
+  - Complete setup guide for WordPress/WooCommerce API credentials
+  - Step-by-step configuration instructions for development and production
+  - Feature usage documentation with examples
+  - Troubleshooting guide and security best practices
+  - API endpoints reference and performance optimization tips
+
+#### October 21, 2025 - Initial Production Deployment
 - Fixed circular dependency between Campaign and ABTest models
 - Deployed complete application to production VPS
 - Configured systemd service with security hardening

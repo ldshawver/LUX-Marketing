@@ -12,3 +12,9 @@ venv/
 *.tar.gz
 .local/
 *.tar.gz
+attached_assets/
+.local/
+*.tar.gz
+attached_assets/
+.local/
+*.tar.gz

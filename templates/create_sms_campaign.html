@@ -22,33 +22,99 @@
                     </div>
                     
                     <div class="mb-3">
+                        <label for="template_id" class="form-label">Template (Optional)</label>
+                        <select class="form-select" id="template_id" name="template_id">
+                            <option value="">Start from scratch</option>
+                            {% if templates %}
+                                {% for template in templates %}
+                                <option value="{{ template.id }}" data-message="{{ template.message }}">
+                                    {{ template.name }}
+                                </option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                        <small class="text-muted">Select a template to pre-fill the message</small>
+                    </div>
+                    
+                    <div class="mb-3">
                         <label for="message" class="form-label">
                             SMS Message * 
                             <span id="charCount" class="badge bg-secondary">0/160</span>
                         </label>
-                        <textarea class="form-control" id="message" name="message" rows="4" required
-                                  maxlength="160" placeholder="Keep it short and sweet..."></textarea>
+                        <div class="input-group mb-2">
+                            <textarea class="form-control" id="message" name="message" rows="4" required
+                                      placeholder="Keep it short and sweet..."></textarea>
+                        </div>
+                        <div class="d-flex gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="generateAISMS('professional')">
+                                <i data-feather="zap"></i> AI: Professional
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="generateAISMS('sales')">
+                                <i data-feather="zap"></i> AI: Sales
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="generateAISMS('luxury')">
+                                <i data-feather="zap"></i> AI: Luxury
+                            </button>
+                        </div>
                         <small class="text-muted">
                             SMS messages are limited to 160 characters. Include "Reply STOP to unsubscribe" for compliance.
                         </small>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="tags" class="form-label">Target Contacts</label>
-                        <input type="text" class="form-control" id="tags" name="tags" 
+                        <label for="segment_tags" class="form-label">Target Segment</label>
+                        <input type="text" class="form-control" id="segment_tags" name="segment_tags" 
                                placeholder="all, vip, customers (comma-separated)">
                         <small class="text-muted">
-                            Leave empty to send to all contacts with phone numbers ({{ contacts_with_phone }} contacts)
+                            Leave empty to send to all contacts with phone numbers
                         </small>
                     </div>
                     
-                    <div class="alert alert-info">
-                        <i data-feather="info"></i>
-                        <strong>Preview:</strong> Your message will be sent to contacts who have phone numbers and match the selected tags.
+                    <div class="mb-3">
+                        <label for="campaign_tags" class="form-label">Campaign Tags</label>
+                        <input type="text" class="form-control" id="campaign_tags" name="campaign_tags" 
+                               placeholder="e.g., summer-2025, promo, vip-only (comma-separated)">
+                        <small class="text-muted">
+                            Tag this campaign for organization and analytics
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Send Schedule</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="send_option" id="send_now" value="now" checked>
+                            <label class="form-check-label" for="send_now">
+                                Send immediately
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="send_option" id="send_scheduled" value="scheduled">
+                            <label class="form-check-label" for="send_scheduled">
+                                Schedule for later
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" id="schedule_fields" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="scheduled_date" class="form-label">Date</label>
+                                <input type="date" class="form-control" id="scheduled_date" name="scheduled_date">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="scheduled_time" class="form-label">Time</label>
+                                <input type="time" class="form-control" id="scheduled_time" name="scheduled_time">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="complianceWarnings" class="alert alert-warning" style="display: none;">
+                        <i data-feather="alert-triangle"></i>
+                        <span id="complianceMessage"></span>
                     </div>
                     
                     <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('main.sms_campaigns') }}" class="btn btn-outline-secondary">
+                        <a href="{{ url_for('main.sms_dashboard') }}" class="btn btn-outline-secondary">
                             Cancel
                         </a>
                         <button type="submit" class="btn btn-primary">
@@ -61,9 +127,9 @@
     </div>
     
     <div class="col-lg-4">
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-header">
-                <h5 class="card-title mb-0">SMS Tips</h5>
+                <h5 class="card-title mb-0">SMS Best Practices</h5>
             </div>
             <div class="card-body">
                 <h6>Message Guidelines:</h6>
@@ -86,7 +152,25 @@
                     <li>Always include unsubscribe option</li>
                     <li>Send during business hours</li>
                     <li>Respect opt-outs immediately</li>
+                    <li>Avoid spam keywords</li>
                 </ul>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">AI Content Generator</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">Use AI to generate SMS content in different tones:</p>
+                <ul class="small">
+                    <li><strong>Professional:</strong> Business-friendly tone</li>
+                    <li><strong>Sales:</strong> Promotional and urgent</li>
+                    <li><strong>Luxury:</strong> Premium and exclusive</li>
+                </ul>
+                <p class="small text-muted">
+                    AI will automatically ensure compliance and character limits.
+                </p>
             </div>
         </div>
     </div>
@@ -96,7 +180,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     const messageInput = document.getElementById('message');
     const charCount = document.getElementById('charCount');
+    const templateSelect = document.getElementById('template_id');
+    const sendScheduled = document.getElementById('send_scheduled');
+    const sendNow = document.getElementById('send_now');
+    const scheduleFields = document.getElementById('schedule_fields');
     
+    // Character counter
     messageInput.addEventListener('input', function() {
         const length = this.value.length;
         charCount.textContent = length + '/160';
@@ -108,7 +197,104 @@ document.addEventListener('DOMContentLoaded', function() {
             charCount.classList.remove('bg-warning');
             charCount.classList.add('bg-secondary');
         }
+        
+        checkCompliance();
     });
+    
+    // Template selection
+    templateSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const message = selectedOption.getAttribute('data-message');
+        if (message) {
+            messageInput.value = message;
+            messageInput.dispatchEvent(new Event('input'));
+        }
+    });
+    
+    // Schedule toggle
+    sendScheduled.addEventListener('change', function() {
+        if (this.checked) {
+            scheduleFields.style.display = 'block';
+        }
+    });
+    
+    sendNow.addEventListener('change', function() {
+        if (this.checked) {
+            scheduleFields.style.display = 'none';
+        }
+    });
+    
+    // Initialize Feather icons
+    feather.replace();
 });
+
+function checkCompliance() {
+    const message = document.getElementById('message').value;
+    const warningDiv = document.getElementById('complianceWarnings');
+    const warningMessage = document.getElementById('complianceMessage');
+    
+    // Check for opt-out language
+    const hasOptOut = message.toLowerCase().includes('stop') || 
+                      message.toLowerCase().includes('unsubscribe') ||
+                      message.toLowerCase().includes('opt-out');
+    
+    // Spam keywords
+    const spamKeywords = ['free', 'winner', 'urgent', 'act now', 'limited time'];
+    const hasSpam = spamKeywords.some(keyword => message.toLowerCase().includes(keyword));
+    
+    if (!hasOptOut && message.length > 50) {
+        warningDiv.style.display = 'block';
+        warningMessage.textContent = 'Consider adding opt-out instructions (e.g., "Reply STOP to unsubscribe")';
+        feather.replace();
+    } else if (hasSpam) {
+        warningDiv.style.display = 'block';
+        warningMessage.textContent = 'Warning: Your message contains potential spam keywords that may trigger filters.';
+        feather.replace();
+    } else {
+        warningDiv.style.display = 'none';
+    }
+}
+
+async function generateAISMS(tone) {
+    const campaignName = document.getElementById('name').value;
+    if (!campaignName) {
+        alert('Please enter a campaign name first');
+        return;
+    }
+    
+    const button = event.target.closest('button');
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+    
+    try {
+        const response = await fetch('/sms/ai-generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
+            },
+            body: JSON.stringify({
+                campaign_name: campaignName,
+                tone: tone
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('message').value = data.message;
+            document.getElementById('message').dispatchEvent(new Event('input'));
+        } else {
+            alert('Error generating SMS: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to generate SMS content');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i data-feather="zap"></i> AI: ' + tone.charAt(0).toUpperCase() + tone.slice(1);
+        feather.replace();
+    }
+}
 </script>
 {% endblock %}

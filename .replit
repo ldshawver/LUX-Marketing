@@ -4,6 +4,8 @@ modules = ["python-3.11", "postgresql-16", "python3"]
 channel = "stable-25_05"
 packages = ["openssl", "postgresql", "rsync", "u-root-cmds"]
 
+packages = ["glibcLocales", "openssl", "postgresql", "rsync", "u-root-cmds", "tecoc"]
+
 [deployment]
 deploymentTarget = "autoscale"
 run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]

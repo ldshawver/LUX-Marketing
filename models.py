@@ -347,6 +347,20 @@ class SMSRecipient(db.Model):
     def __repr__(self):
         return f'<SMSRecipient {self.campaign_id}:{self.contact_id}>'
 
+class SMSTemplate(db.Model):
+    """Reusable SMS message templates"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    message = db.Column(db.String(160), nullable=False)
+    category = db.Column(db.String(50), default='promotional')
+    tone = db.Column(db.String(50), default='professional')
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SMSTemplate {self.name}>'
+
 # Social Media Marketing
 class SocialPost(db.Model):
     id = db.Column(db.Integer, primary_key=True)

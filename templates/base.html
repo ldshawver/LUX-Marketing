@@ -84,10 +84,15 @@
                     </li>
                     
                     <!-- Analytics -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.analytics') }}">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="analyticsDropdown" role="button" data-bs-toggle="dropdown">
                             <i data-feather="bar-chart-2"></i> Analytics
                         </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('main.comprehensive_analytics') }}"><i data-feather="activity"></i> Comprehensive Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.analytics') }}"><i data-feather="trending-up"></i> Campaign Analytics</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.agents_dashboard') }}"><i data-feather="cpu"></i> AI Agents</a></li>
+                        </ul>
                     </li>
                     
                     <!-- Branding & AI -->

@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2">
+                <i data-feather="cpu"></i> AI Marketing Agents
+            </h1>
+            <p class="text-muted">Automated marketing intelligence and execution system</p>
+        </div>
+    </div>
+
+    <!-- Agent Status Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-primary">Brand & Strategy</h6>
+                    <p class="h3 mb-0">{{ agent_stats.get('brand_strategy', {}).get('success_rate', 0) }}%</p>
+                    <small class="text-muted">Success Rate</small>
+                    <div class="mt-2">
+                        <small>{{ agent_stats.get('brand_strategy', {}).get('completed', 0) }}/{{ agent_stats.get('brand_strategy', {}).get('total', 0) }} tasks</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-success">Content & SEO</h6>
+                    <p class="h3 mb-0">{{ agent_stats.get('content_seo', {}).get('success_rate', 0) }}%</p>
+                    <small class="text-muted">Success Rate</small>
+                    <div class="mt-2">
+                        <small>{{ agent_stats.get('content_seo', {}).get('completed', 0) }}/{{ agent_stats.get('content_seo', {}).get('total', 0) }} tasks</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-info">Analytics</h6>
+                    <p class="h3 mb-0">{{ agent_stats.get('analytics', {}).get('success_rate', 0) }}%</p>
+                    <small class="text-muted">Success Rate</small>
+                    <div class="mt-2">
+                        <small>{{ agent_stats.get('analytics', {}).get('completed', 0) }}/{{ agent_stats.get('analytics', {}).get('total', 0) }} tasks</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-warning">Creative Design</h6>
+                    <p class="h3 mb-0">{{ agent_stats.get('creative_design', {}).get('success_rate', 0) }}%</p>
+                    <small class="text-muted">Success Rate</small>
+                    <div class="mt-2">
+                        <small>{{ agent_stats.get('creative_design', {}).get('completed', 0) }}/{{ agent_stats.get('creative_design', {}).get('total', 0) }} tasks</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheduled Jobs -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i data-feather="clock"></i> Scheduled Jobs</h5>
+                </div>
+                <div class="card-body">
+                    {% if scheduled_jobs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Job Name</th>
+                                    <th>Next Run</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in scheduled_jobs %}
+                                <tr>
+                                    <td><small>{{ job.name }}</small></td>
+                                    <td><small>{{ job.next_run or 'Not scheduled' }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No scheduled jobs found</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i data-feather="list"></i> Pending Tasks</h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_tasks %}
+                    <div class="list-group list-group-flush">
+                        {% for task in pending_tasks[:5] %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ task.task_name }}</strong>
+                                <small class="text-muted">{{ task.agent_name }}</small>
+                            </div>
+                            <small class="text-muted">Scheduled: {{ task.scheduled_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No pending tasks</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i data-feather="activity"></i> Recent Activity</h5>
+                    <a href="{{ url_for('main.agent_logs') }}" class="btn btn-sm btn-outline-primary">View All Logs</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Agent</th>
+                                    <th>Activity</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recent_logs %}
+                                <tr>
+                                    <td><span class="badge bg-secondary">{{ log.agent_name }}</span></td>
+                                    <td>{{ log.activity_type }}</td>
+                                    <td>
+                                        {% if log.status == 'success' %}
+                                        <span class="badge bg-success">Success</span>
+                                        {% elif log.status == 'error' %}
+                                        <span class="badge bg-danger">Error</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">{{ log.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small>{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No recent activity</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Reports -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i data-feather="file-text"></i> Recent Reports</h5>
+                    <a href="{{ url_for('main.agent_reports') }}" class="btn btn-sm btn-outline-primary">View All Reports</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_reports %}
+                    <div class="list-group list-group-flush">
+                        {% for report in recent_reports %}
+                        <a href="{{ url_for('main.view_agent_report', report_id=report.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ report.report_title }}</h6>
+                                <small class="text-muted">{{ report.created_at.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                            <p class="mb-1"><small class="text-muted">{{ report.insights[:150] }}...</small></p>
+                            <small class="badge bg-secondary">{{ report.report_type }}</small>
+                            <small class="badge bg-info">{{ report.agent_name }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No reports generated yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize Feather icons
+feather.replace();
+</script>
+{% endblock %}

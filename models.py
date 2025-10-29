@@ -499,3 +499,66 @@ class CalendarEvent(db.Model):
     
     def __repr__(self):
         return f'<CalendarEvent {self.title}>'
+
+# AI Agent System
+class AgentTask(db.Model):
+    """Tasks for AI agents to execute"""
+    id = db.Column(db.Integer, primary_key=True)
+    agent_type = db.Column(db.String(50), nullable=False)  # brand_strategy, content_seo, etc.
+    agent_name = db.Column(db.String(100), nullable=False)
+    task_name = db.Column(db.String(200), nullable=False)
+    task_data = db.Column(JSON)  # Task parameters and configuration
+    status = db.Column(db.String(20), default='pending')  # pending, running, completed, failed
+    result = db.Column(JSON)  # Task execution result
+    scheduled_at = db.Column(db.DateTime, nullable=False)
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AgentTask {self.agent_name}:{self.task_name}>'
+
+class AgentLog(db.Model):
+    """Activity logs for AI agents"""
+    id = db.Column(db.Integer, primary_key=True)
+    agent_type = db.Column(db.String(50), nullable=False)
+    agent_name = db.Column(db.String(100), nullable=False)
+    activity_type = db.Column(db.String(50), nullable=False)  # content_generation, analysis, optimization, etc.
+    details = db.Column(JSON)  # Activity details and metadata
+    status = db.Column(db.String(20), default='success')  # success, error, warning
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AgentLog {self.agent_name}:{self.activity_type}>'
+
+class AgentReport(db.Model):
+    """Generated reports from AI agents"""
+    id = db.Column(db.Integer, primary_key=True)
+    agent_type = db.Column(db.String(50), nullable=False)
+    agent_name = db.Column(db.String(100), nullable=False)
+    report_type = db.Column(db.String(50), nullable=False)  # weekly, monthly, quarterly, campaign
+    report_title = db.Column(db.String(200), nullable=False)
+    report_data = db.Column(JSON)  # Report content and insights
+    insights = db.Column(Text)  # AI-generated insights and recommendations
+    period_start = db.Column(db.DateTime)
+    period_end = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AgentReport {self.report_title}>'
+
+class AgentSchedule(db.Model):
+    """Scheduling configuration for AI agents"""
+    id = db.Column(db.Integer, primary_key=True)
+    agent_type = db.Column(db.String(50), nullable=False, unique=True)
+    agent_name = db.Column(db.String(100), nullable=False)
+    is_enabled = db.Column(db.Boolean, default=True)
+    schedule_type = db.Column(db.String(20), nullable=False)  # cron, interval, daily, weekly, monthly
+    schedule_config = db.Column(JSON)  # Cron expression or interval config
+    last_run = db.Column(db.DateTime)
+    next_run = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AgentSchedule {self.agent_name}>'

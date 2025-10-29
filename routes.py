@@ -781,6 +781,32 @@ def get_branded_template_info(template_id):
     
     return template_info.get(template_id, {'name': 'Unknown Template', 'description': ''})
 
+@main_bp.route('/analytics/comprehensive')
+@login_required
+def comprehensive_analytics():
+    """Comprehensive analytics dashboard with all 6 metric categories"""
+    try:
+        from agents.analytics_agent import AnalyticsAgent
+        
+        agent = AnalyticsAgent()
+        period_days = request.args.get('period_days', 30, type=int)
+        
+        metrics_result = agent.calculate_comprehensive_metrics({'period_days': period_days})
+        
+        if not metrics_result.get('success'):
+            flash('Unable to load analytics data', 'error')
+            return redirect(url_for('main.dashboard'))
+        
+        return render_template('analytics_comprehensive.html',
+                             metrics=metrics_result.get('metrics', {}),
+                             period_days=period_days,
+                             generated_at=metrics_result.get('generated_at'))
+        
+    except Exception as e:
+        logger.error(f"Comprehensive analytics error: {e}")
+        flash('Error loading analytics dashboard', 'error')
+        return redirect(url_for('main.dashboard'))
+
 @main_bp.route('/analytics')
 @login_required
 def analytics():
@@ -2512,3 +2538,172 @@ def create_product_campaign(product_id):
             flash('Error creating campaign', 'error')
     
     return render_template('create_product_campaign.html', product=product)
+
+# AI Agent Dashboard Routes
+@main_bp.route('/agents')
+@login_required
+def agents_dashboard():
+    """AI Agents Dashboard - View and manage all marketing agents"""
+    from models import AgentTask, AgentLog, AgentReport, AgentSchedule
+    from agent_scheduler import get_agent_scheduler
+    
+    # Get scheduler and job information
+    scheduler = get_agent_scheduler()
+    scheduled_jobs = scheduler.get_scheduled_jobs() if scheduler else []
+    
+    # Get recent agent activity
+    recent_logs = AgentLog.query.order_by(AgentLog.created_at.desc()).limit(20).all()
+    pending_tasks = AgentTask.query.filter_by(status='pending').order_by(AgentTask.scheduled_at).all()
+    recent_reports = AgentReport.query.order_by(AgentReport.created_at.desc()).limit(10).all()
+    
+    # Get agent stats
+    agent_stats = {}
+    agent_types = ['brand_strategy', 'content_seo', 'analytics', 'creative_design']
+    
+    for agent_type in agent_types:
+        total_tasks = AgentTask.query.filter_by(agent_type=agent_type).count()
+        completed_tasks = AgentTask.query.filter_by(agent_type=agent_type, status='completed').count()
+        failed_tasks = AgentTask.query.filter_by(agent_type=agent_type, status='failed').count()
+        
+        agent_stats[agent_type] = {
+            'total': total_tasks,
+            'completed': completed_tasks,
+            'failed': failed_tasks,
+            'success_rate': round((completed_tasks / max(total_tasks, 1)) * 100, 1)
+        }
+    
+    return render_template('agents_dashboard.html',
+                         scheduled_jobs=scheduled_jobs,
+                         recent_logs=recent_logs,
+                         pending_tasks=pending_tasks,
+                         recent_reports=recent_reports,
+                         agent_stats=agent_stats)
+
+@main_bp.route('/agents/<agent_type>/trigger', methods=['POST'])
+@login_required
+def trigger_agent(agent_type):
+    """Manually trigger an agent task"""
+    try:
+        task_data = request.get_json() or {}
+        
+        # Ensure task_type is set with defaults per agent
+        if 'task_type' not in task_data:
+            task_type_defaults = {
+                'brand_strategy': 'market_research',
+                'content_seo': 'keyword_research',
+                'analytics': 'performance_summary',
+                'creative_design': 'generate_ad_creative',
+                'advertising': 'campaign_strategy',
+                'social_media': 'daily_posts',
+                'email_crm': 'weekly_campaign',
+                'sales_enablement': 'sales_deck',
+                'retention': 'churn_analysis',
+                'operations': 'system_health'
+            }
+            task_data['task_type'] = task_type_defaults.get(agent_type, 'default_task')
+        
+        # Get the appropriate agent
+        agent = None
+        if agent_type == 'brand_strategy':
+            from agents.brand_strategy_agent import BrandStrategyAgent
+            agent = BrandStrategyAgent()
+        elif agent_type == 'content_seo':
+            from agents.content_seo_agent import ContentSEOAgent
+            agent = ContentSEOAgent()
+        elif agent_type == 'analytics':
+            from agents.analytics_agent import AnalyticsAgent
+            agent = AnalyticsAgent()
+        elif agent_type == 'creative_design':
+            from agents.creative_agent import CreativeAgent
+            agent = CreativeAgent()
+        elif agent_type == 'advertising':
+            from agents.advertising_agent import AdvertisingAgent
+            agent = AdvertisingAgent()
+        elif agent_type == 'social_media':
+            from agents.social_media_agent import SocialMediaAgent
+            agent = SocialMediaAgent()
+        elif agent_type == 'email_crm':
+            from agents.email_crm_agent import EmailCRMAgent
+            agent = EmailCRMAgent()
+        elif agent_type == 'sales_enablement':
+            from agents.sales_enablement_agent import SalesEnablementAgent
+            agent = SalesEnablementAgent()
+        elif agent_type == 'retention':
+            from agents.retention_agent import RetentionAgent
+            agent = RetentionAgent()
+        elif agent_type == 'operations':
+            from agents.operations_agent import OperationsAgent
+            agent = OperationsAgent()
+        else:
+            return jsonify({'success': False, 'error': 'Unknown agent type'}), 400
+        
+        # Create and execute task
+        task_id = agent.create_task(
+            task_name=task_data.get('task_name', 'Manual Trigger'),
+            task_data=task_data
+        )
+        
+        result = agent.execute(task_data)
+        
+        if task_id:
+            agent.complete_task(
+                task_id,
+                result,
+                status='completed' if result.get('success') else 'failed'
+            )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error triggering agent {agent_type}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/agents/logs')
+@login_required
+def agent_logs():
+    """View detailed agent logs"""
+    from models import AgentLog
+    
+    page = request.args.get('page', 1, type=int)
+    agent_type = request.args.get('agent_type', '')
+    
+    query = AgentLog.query
+    
+    if agent_type:
+        query = query.filter_by(agent_type=agent_type)
+    
+    logs = query.order_by(AgentLog.created_at.desc()).paginate(
+        page=page, per_page=50, error_out=False
+    )
+    
+    return render_template('agent_logs.html', logs=logs, selected_agent=agent_type)
+
+@main_bp.route('/agents/reports')
+@login_required
+def agent_reports():
+    """View agent-generated reports"""
+    from models import AgentReport
+    
+    page = request.args.get('page', 1, type=int)
+    report_type = request.args.get('report_type', '')
+    
+    query = AgentReport.query
+    
+    if report_type:
+        query = query.filter_by(report_type=report_type)
+    
+    reports = query.order_by(AgentReport.created_at.desc()).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    
+    return render_template('agent_reports.html', reports=reports, selected_type=report_type)
+
+@main_bp.route('/agents/reports/<int:report_id>')
+@login_required
+def view_agent_report(report_id):
+    """View detailed agent report"""
+    from models import AgentReport
+    
+    report = AgentReport.query.get_or_404(report_id)
+    
+    return render_template('view_agent_report.html', report=report)

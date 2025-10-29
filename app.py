@@ -79,3 +79,13 @@ def campaign_status_color_filter(status):
 # Initialize scheduler
 from scheduler import init_scheduler
 init_scheduler(app)
+
+# Initialize AI Agent Scheduler
+try:
+    from agent_scheduler import initialize_agent_scheduler
+    with app.app_context():
+        agent_scheduler = initialize_agent_scheduler()
+        if agent_scheduler:
+            logging.info("AI Agent Scheduler initialized successfully")
+except Exception as e:
+    logging.error(f"Failed to initialize AI Agent Scheduler: {e}")

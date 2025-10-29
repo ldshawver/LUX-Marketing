@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Comprehensive Analytics - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-graph-up me-2"></i>Comprehensive Marketing Analytics</h2>
+            <p class="text-muted mb-0">Complete performance metrics across all marketing dimensions</p>
+        </div>
+        <div>
+            <select class="form-select" id="periodSelector" onchange="changePeriod(this.value)">
+                <option value="7" {% if period_days == 7 %}selected{% endif %}>Last 7 Days</option>
+                <option value="30" {% if period_days == 30 %}selected{% endif %}>Last 30 Days</option>
+                <option value="60" {% if period_days == 60 %}selected{% endif %}>Last 60 Days</option>
+                <option value="90" {% if period_days == 90 %}selected{% endif %}>Last 90 Days</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 1. AWARENESS METRICS -->
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-eye me-2"></i>1. Awareness Metrics</h5>
+            <small>Brand visibility and reach</small>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-broadcast display-4 text-primary"></i>
+                        <h3 class="mt-2">{{ "{:,}".format(metrics.awareness.impressions) }}</h3>
+                        <p class="text-muted mb-0">Impressions</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-people display-4 text-info"></i>
+                        <h3 class="mt-2">{{ "{:,}".format(metrics.awareness.reach) }}</h3>
+                        <p class="text-muted mb-0">Reach</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-arrow-right-circle display-4 text-success"></i>
+                        <h3 class="mt-2">{{ "{:,}".format(metrics.awareness.website_traffic) }}</h3>
+                        <p class="text-muted mb-0">Website Traffic</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-award display-4 text-warning"></i>
+                        <h3 class="mt-2">{{ metrics.awareness.brand_awareness_score }}%</h3>
+                        <p class="text-muted mb-0">Brand Awareness Score</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. ENGAGEMENT METRICS -->
+    <div class="card mb-4 border-info">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-hand-thumbs-up me-2"></i>2. Engagement Metrics</h5>
+            <small>How audiences interact with your content</small>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-envelope-open display-4 text-info"></i>
+                        <h3 class="mt-2">{{ metrics.engagement.email_open_rate }}%</h3>
+                        <p class="text-muted mb-0">Email Open Rate</p>
+                        <small class="text-success">{{ "{:,}".format(metrics.engagement.total_opens) }} opens</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-cursor display-4 text-primary"></i>
+                        <h3 class="mt-2">{{ metrics.engagement.click_through_rate }}%</h3>
+                        <p class="text-muted mb-0">Click-Through Rate</p>
+                        <small class="text-success">{{ "{:,}".format(metrics.engagement.total_clicks) }} clicks</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-clock display-4 text-warning"></i>
+                        <h3 class="mt-2">{{ metrics.engagement.avg_time_on_site }}s</h3>
+                        <p class="text-muted mb-0">Avg Time on Site</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-chat-dots display-4 text-success"></i>
+                        <h3 class="mt-2">{{ metrics.engagement.social_engagement_rate }}%</h3>
+                        <p class="text-muted mb-0">Social Engagement Rate</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. ACQUISITION METRICS -->
+    <div class="card mb-4 border-success">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>3. Acquisition Metrics</h5>
+            <small>New customer and lead generation</small>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-trophy display-4 text-success"></i>
+                        <h3 class="mt-2">{{ "{:,}".format(metrics.acquisition.leads_generated) }}</h3>
+                        <p class="text-muted mb-0">Leads Generated</p>
+                        <small class="{% if metrics.acquisition.leads_growth > 0 %}text-success{% else %}text-danger{% endif %}">
+                            <i class="bi bi-{% if metrics.acquisition.leads_growth > 0 %}arrow-up{% else %}arrow-down{% endif %}"></i>
+                            {{ metrics.acquisition.leads_growth }}% vs previous period
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-cash-coin display-4 text-warning"></i>
+                        <h3 class="mt-2">${{ "{:,.2f}".format(metrics.acquisition.cost_per_lead) }}</h3>
+                        <p class="text-muted mb-0">Cost Per Lead (CPL)</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-graph-up display-4 text-primary"></i>
+                        <h3 class="mt-2">{{ metrics.acquisition.conversion_rate }}%</h3>
+                        <p class="text-muted mb-0">Conversion Rate</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-currency-dollar display-4 text-info"></i>
+                        <h3 class="mt-2">${{ "{:,.2f}".format(metrics.acquisition.customer_acquisition_cost) }}</h3>
+                        <p class="text-muted mb-0">Customer Acquisition Cost</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. REVENUE METRICS -->
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>4. Revenue Metrics</h5>
+            <small>Sales performance and monetization</small>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-piggy-bank display-4 text-warning"></i>
+                        <h3 class="mt-2">${{ "{:,.0f}".format(metrics.revenue.total_revenue) }}</h3>
+                        <p class="text-muted mb-0">Total Revenue</p>
+                        <small class="text-success"><i class="bi bi-arrow-up"></i> {{ metrics.revenue.revenue_growth }}% growth</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-cart4 display-4 text-primary"></i>
+                        <h3 class="mt-2">${{ "{:,.2f}".format(metrics.revenue.average_order_value) }}</h3>
+                        <p class="text-muted mb-0">Average Order Value</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-graph-up-arrow display-4 text-success"></i>
+                        <h3 class="mt-2">{{ metrics.revenue.return_on_ad_spend }}x</h3>
+                        <p class="text-muted mb-0">Return on Ad Spend (ROAS)</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-person-check display-4 text-info"></i>
+                        <h3 class="mt-2">${{ "{:,.2f}".format(metrics.revenue.revenue_per_contact) }}</h3>
+                        <p class="text-muted mb-0">Revenue per Contact</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. RETENTION METRICS -->
+    <div class="card mb-4" style="border-color: #8B5CF6;">
+        <div class="card-header text-white" style="background-color: #8B5CF6;">
+            <h5 class="mb-0"><i class="bi bi-heart me-2"></i>5. Retention Metrics</h5>
+            <small>Customer loyalty and lifetime value</small>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-gem display-4" style="color: #8B5CF6;"></i>
+                        <h3 class="mt-2">${{ "{:,.0f}".format(metrics.retention.customer_lifetime_value) }}</h3>
+                        <p class="text-muted mb-0">Customer Lifetime Value</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-repeat display-4 text-primary"></i>
+                        <h3 class="mt-2">{{ metrics.retention.repeat_purchase_rate }}%</h3>
+                        <p class="text-muted mb-0">Repeat Purchase Rate</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-exclamation-triangle display-4 text-danger"></i>
+                        <h3 class="mt-2">{{ metrics.retention.churn_rate }}%</h3>
+                        <p class="text-muted mb-0">Churn Rate</p>
+                        <small class="{% if metrics.retention.churn_rate < 5 %}text-success{% else %}text-warning{% endif %}">
+                            {% if metrics.retention.churn_rate < 5 %}Low{% elif metrics.retention.churn_rate < 10 %}Moderate{% else %}High{% endif %}
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-star display-4 text-warning"></i>
+                        <h3 class="mt-2">{{ metrics.retention.net_promoter_score }}</h3>
+                        <p class="text-muted mb-0">Net Promoter Score (NPS)</p>
+                        <small class="{% if metrics.retention.net_promoter_score > 50 %}text-success{% elif metrics.retention.net_promoter_score > 30 %}text-warning{% else %}text-danger{% endif %}">
+                            {% if metrics.retention.net_promoter_score > 50 %}Excellent{% elif metrics.retention.net_promoter_score > 30 %}Good{% else %}Needs Work{% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. EFFICIENCY METRICS -->
+    <div class="card mb-4" style="border-color: #EC4899;">
+        <div class="card-header text-white" style="background-color: #EC4899;">
+            <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>6. Efficiency Metrics</h5>
+            <small>Marketing ROI and resource optimization</small>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-pie-chart display-4" style="color: #EC4899;"></i>
+                        <h3 class="mt-2">{{ metrics.efficiency.marketing_roi }}%</h3>
+                        <p class="text-muted mb-0">Marketing ROI</p>
+                        <small class="{% if metrics.efficiency.marketing_roi > 100 %}text-success{% else %}text-warning{% endif %}">
+                            {% if metrics.efficiency.marketing_roi > 100 %}Profitable{% else %}Improving{% endif %}
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-cash display-4 text-warning"></i>
+                        <h3 class="mt-2">${{ "{:,.2f}".format(metrics.efficiency.cost_per_acquisition) }}</h3>
+                        <p class="text-muted mb-0">Cost per Acquisition (CPA)</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-funnel display-4 text-primary"></i>
+                        <h3 class="mt-2">{{ metrics.efficiency.funnel_conversion_rate }}%</h3>
+                        <p class="text-muted mb-0">Funnel Efficiency</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card p-3 rounded bg-dark text-center">
+                        <i class="bi bi-cursor-fill display-4 text-info"></i>
+                        <h3 class="mt-2">${{ "{:,.2f}".format(metrics.efficiency.cost_per_click) }}</h3>
+                        <p class="text-muted mb-0">Cost per Click</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary & Insights -->
+    <div class="card border-0 bg-gradient">
+        <div class="card-body text-center">
+            <p class="mb-2"><small class="text-muted">Analytics generated: {{ generated_at }}</small></p>
+            <p class="mb-0"><small class="text-muted">Data reflects the last {{ period_days }} days of marketing activity</small></p>
+        </div>
+    </div>
+</div>
+
+<style>
+.metric-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, rgba(1, 50, 32, 0.1) 0%, rgba(48, 25, 52, 0.1) 100%);
+}
+</style>
+
+<script>
+function changePeriod(days) {
+    window.location.href = `/analytics/comprehensive?period_days=${days}`;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}Attribution Dashboard - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i data-feather="trending-up"></i> Multi-Touch Attribution Dashboard</h2>
+            <p class="text-muted mb-0">Track and attribute revenue across all marketing touchpoints</p>
+        </div>
+        <div class="d-flex gap-2">
+            <select class="form-select" id="attribution-model" onchange="changeModel(this.value)" style="width: auto;">
+                <option value="last_touch">Last Touch</option>
+                <option value="first_touch">First Touch</option>
+                <option value="linear">Linear</option>
+                <option value="time_decay">Time Decay</option>
+                <option value="position_based">Position Based</option>
+            </select>
+            <select class="form-select" id="date-range" style="width: auto;">
+                <option value="7">Last 7 Days</option>
+                <option value="30" selected>Last 30 Days</option>
+                <option value="60">Last 60 Days</option>
+                <option value="90">Last 90 Days</option>
+            </select>
+            <button class="btn btn-primary" onclick="generateReport()">
+                <i data-feather="download"></i> Export Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Attribution Model Explanation -->
+    <div class="alert alert-info" id="model-explanation">
+        <strong>Last Touch Attribution:</strong> 100% of the credit goes to the last touchpoint before conversion.
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-feather="target" class="mb-2" style="width: 40px; height: 40px; color: #013220;"></i>
+                    <h3 class="mb-0">{{ "{:,}".format(total_conversions|default(0)) }}</h3>
+                    <p class="text-muted mb-0">Total Conversions</p>
+                    <small class="text-success"><i data-feather="trending-up"></i> +12% vs last period</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-feather="dollar-sign" class="mb-2" style="width: 40px; height: 40px; color: #301934;"></i>
+                    <h3 class="mb-0">${{ "{:,.2f}".format(total_revenue|default(0)) }}</h3>
+                    <p class="text-muted mb-0">Total Revenue</p>
+                    <small class="text-success"><i data-feather="trending-up"></i> +18% vs last period</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-feather="activity" class="mb-2" style="width: 40px; height: 40px; color: #C0C0C0;"></i>
+                    <h3 class="mb-0">{{ "{:,}".format(total_touches|default(0)) }}</h3>
+                    <p class="text-muted mb-0">Total Touchpoints</p>
+                    <small class="text-muted">{{ avg_touches|default(0)|round(1) }} avg per conversion</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-feather="clock" class="mb-2" style="width: 40px; height: 40px; color: #013220;"></i>
+                    <h3 class="mb-0">{{ avg_journey_days|default(0)|round(1) }}</h3>
+                    <p class="text-muted mb-0">Avg Journey (days)</p>
+                    <small class="text-muted">Time to conversion</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attribution by Channel -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Revenue Attribution by Channel</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="attribution-chart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Channel Mix</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="channel-pie-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attribution Model Comparison -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Compare Attribution Models</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Channel</th>
+                                    <th>First Touch</th>
+                                    <th>Last Touch</th>
+                                    <th>Linear</th>
+                                    <th>Time Decay</th>
+                                    <th>Position Based</th>
+                                </tr>
+                            </thead>
+                            <tbody id="model-comparison">
+                                <tr>
+                                    <td><strong>Email</strong></td>
+                                    <td>$12,450</td>
+                                    <td>$18,320</td>
+                                    <td>$15,880</td>
+                                    <td>$16,540</td>
+                                    <td>$14,990</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Social</strong></td>
+                                    <td>$8,920</td>
+                                    <td>$6,540</td>
+                                    <td>$7,880</td>
+                                    <td>$7,120</td>
+                                    <td>$8,430</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Paid Search</strong></td>
+                                    <td>$15,680</td>
+                                    <td>$21,340</td>
+                                    <td>$18,450</td>
+                                    <td>$19,230</td>
+                                    <td>$17,890</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Organic</strong></td>
+                                    <td>$5,430</td>
+                                    <td>$4,120</td>
+                                    <td>$4,890</td>
+                                    <td>$4,560</td>
+                                    <td>$5,010</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Direct</strong></td>
+                                    <td>$3,210</td>
+                                    <td>$8,940</td>
+                                    <td>$5,980</td>
+                                    <td>$6,870</td>
+                                    <td>$4,560</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Journey Visualization -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Top Customer Journeys</h5>
+                </div>
+                <div class="card-body">
+                    <div id="journey-paths">
+                        <!-- Journey Path 1 -->
+                        <div class="journey-path mb-4 p-3 border rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Journey Pattern #1</h6>
+                                <span class="badge bg-primary">42 conversions • $12,450 revenue</span>
+                            </div>
+                            <div class="d-flex align-items-center journey-steps">
+                                <div class="journey-step">
+                                    <span class="badge bg-info">Organic Search</span>
+                                    <small class="text-muted d-block">Day 1</small>
+                                </div>
+                                <i data-feather="arrow-right" class="mx-2"></i>
+                                <div class="journey-step">
+                                    <span class="badge bg-success">Email</span>
+                                    <small class="text-muted d-block">Day 3</small>
+                                </div>
+                                <i data-feather="arrow-right" class="mx-2"></i>
+                                <div class="journey-step">
+                                    <span class="badge bg-warning">Paid Ad</span>
+                                    <small class="text-muted d-block">Day 7</small>
+                                </div>
+                                <i data-feather="arrow-right" class="mx-2"></i>
+                                <div class="journey-step">
+                                    <span class="badge bg-danger">Direct</span>
+                                    <small class="text-muted d-block">Day 14</small>
+                                </div>
+                                <i data-feather="arrow-right" class="mx-2"></i>
+                                <div class="journey-step">
+                                    <span class="badge bg-dark">💰 Conversion</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Journey Path 2 -->
+                        <div class="journey-path mb-4 p-3 border rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Journey Pattern #2</h6>
+                                <span class="badge bg-primary">38 conversions • $9,820 revenue</span>
+                            </div>
+                            <div class="d-flex align-items-center journey-steps">
+                                <div class="journey-step">
+                                    <span class="badge bg-success">Email</span>
+                                    <small class="text-muted d-block">Day 1</small>
+                                </div>
+                                <i data-feather="arrow-right" class="mx-2"></i>
+                                <div class="journey-step">
+                                    <span class="badge bg-info">Social</span>
+                                    <small class="text-muted d-block">Day 2</small>
+                                </div>
+                                <i data-feather="arrow-right" class="mx-2"></i>
+                                <div class="journey-step">
+                                    <span class="badge bg-danger">Direct</span>
+                                    <small class="text-muted d-block">Day 5</small>
+                                </div>
+                                <i data-feather="arrow-right" class="mx-2"></i>
+                                <div class="journey-step">
+                                    <span class="badge bg-dark">💰 Conversion</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Journey Path 3 -->
+                        <div class="journey-path mb-4 p-3 border rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Journey Pattern #3</h6>
+                                <span class="badge bg-primary">29 conversions • $7,540 revenue</span>
+                            </div>
+                            <div class="d-flex align-items-center journey-steps">
+                                <div class="journey-step">
+                                    <span class="badge bg-warning">Paid Ad</span>
+                                    <small class="text-muted d-block">Day 1</small>
+                                </div>
+                                <i data-feather="arrow-right" class="mx-2"></i>
+                                <div class="journey-step">
+                                    <span class="badge bg-danger">Direct</span>
+                                    <small class="text-muted d-block">Day 3</small>
+                                </div>
+                                <i data-feather="arrow-right" class="mx-2"></i>
+                                <div class="journey-step">
+                                    <span class="badge bg-dark">💰 Conversion</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Conversions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Conversions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Contact</th>
+                                    <th>Event Type</th>
+                                    <th>Value</th>
+                                    <th>Touchpoints</th>
+                                    <th>Attribution</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for conversion in recent_conversions|default([]) %}
+                                <tr>
+                                    <td>{{ conversion.contact.email if conversion.contact else 'Unknown' }}</td>
+                                    <td><span class="badge bg-success">{{ conversion.event_type|title }}</span></td>
+                                    <td>${{ conversion.event_value|round(2) }}</td>
+                                    <td>{{ conversion.contact.attribution_touches|length if conversion.contact else 0 }} touches</td>
+                                    <td><span class="badge bg-primary">{{ conversion.attribution_model|title|replace('_', ' ') }}</span></td>
+                                    <td>{{ conversion.occurred_at.strftime('%Y-%m-%d %H:%M') if conversion.occurred_at else 'N/A' }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewJourney({{ conversion.contact_id if conversion.contact_id else 0 }})">
+                                            <i data-feather="eye"></i> View Journey
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">No recent conversions</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+// Attribution Model Explanations
+const modelExplanations = {
+    'last_touch': '<strong>Last Touch Attribution:</strong> 100% of the credit goes to the last touchpoint before conversion.',
+    'first_touch': '<strong>First Touch Attribution:</strong> 100% of the credit goes to the first touchpoint that introduced the customer.',
+    'linear': '<strong>Linear Attribution:</strong> Credit is distributed equally across all touchpoints in the customer journey.',
+    'time_decay': '<strong>Time Decay Attribution:</strong> More recent touchpoints receive more credit, with exponential decay for earlier interactions.',
+    'position_based': '<strong>Position Based (U-Shaped):</strong> 40% credit to first touch, 40% to last touch, 20% distributed among middle touches.'
+};
+
+function changeModel(model) {
+    document.getElementById('model-explanation').innerHTML = modelExplanations[model];
+    // Reload data with new model
+    loadAttributionData(model);
+}
+
+function loadAttributionData(model) {
+    // AJAX call to reload attribution data with selected model
+    console.log('Loading data for model:', model);
+    // Implementation would fetch new data from server
+}
+
+function viewJourney(contactId) {
+    // Show modal with full customer journey
+    alert(`Viewing journey for contact ${contactId}`);
+}
+
+function generateReport() {
+    alert('Exporting attribution report...');
+}
+
+// Initialize charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Attribution Bar Chart
+    const ctx = document.getElementById('attribution-chart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Email', 'Social', 'Paid Search', 'Organic', 'Direct'],
+                datasets: [{
+                    label: 'Revenue Attributed ($)',
+                    data: [18320, 6540, 21340, 4120, 8940],
+                    backgroundColor: ['#013220', '#301934', '#C0C0C0', '#666', '#333']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Channel Pie Chart
+    const pieCtx = document.getElementById('channel-pie-chart');
+    if (pieCtx) {
+        new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Email', 'Social', 'Paid Search', 'Organic', 'Direct'],
+                datasets: [{
+                    data: [31, 11, 36, 7, 15],
+                    backgroundColor: ['#013220', '#301934', '#C0C0C0', '#666', '#333']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.journey-steps {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.journey-step {
+    min-width: 100px;
+    text-align: center;
+}
+
+.journey-path {
+    background: #f8f9fa;
+}
+</style>
+
+{% endblock %}

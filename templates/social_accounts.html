@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Social Media Accounts - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2><i data-feather="users"></i> Social Media Accounts</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#connectAccountModal">
+                <i data-feather="plus"></i> Connect Account
+            </button>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        {% if accounts %}
+            {% for account in accounts %}
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5>{{ account.platform|capitalize }}</h5>
+                                <p class="text-muted">@{{ account.account_name }}</p>
+                            </div>
+                            {% if account.is_verified %}
+                            <span class="badge bg-success">Verified</span>
+                            {% else %}
+                            <span class="badge bg-warning">Pending</span>
+                            {% endif %}
+                        </div>
+                        <hr>
+                        <p class="mb-1"><strong>Followers:</strong> {{ account.follower_count|default('N/A', true) }}</p>
+                        <p class="mb-1"><strong>Last Synced:</strong> {{ account.last_synced.strftime('%Y-%m-%d') if account.last_synced else 'Never' }}</p>
+                        <div class="mb-2">
+                            <small class="text-muted">Connection Status:</small>
+                            <span id="status-{{ account.id }}" class="badge bg-secondary">Unknown</span>
+                        </div>
+                        <div class="mt-3 d-flex gap-2">
+                            <button onclick="testConnection({{ account.id }}, '{{ account.platform }}')" class="btn btn-sm btn-outline-primary" id="test-btn-{{ account.id }}">
+                                <i data-feather="wifi"></i> Test Connection
+                            </button>
+                            <button onclick="refreshAccount({{ account.id }})" class="btn btn-sm btn-outline-secondary">
+                                <i data-feather="refresh-cw"></i> Sync
+                            </button>
+                            <a href="{{ url_for('main.social_schedule_post') }}?account_id={{ account.id }}" class="btn btn-sm btn-primary">
+                                <i data-feather="calendar"></i> Schedule Post
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-feather="share-2" style="width: 48px; height: 48px; color: #6c757d;"></i>
+                    <p class="text-muted mt-3">No social media accounts connected yet.</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#connectAccountModal">
+                        Connect Your First Account
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Connect Account Modal -->
+<div class="modal fade" id="connectAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('main.connect_social_account') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Connect Social Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Platform</label>
+                        <select name="platform" class="form-select" required>
+                            <option value="twitter">Twitter</option>
+                            <option value="instagram">Instagram</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="telegram">Telegram</option>
+                            <option value="tiktok">TikTok</option>
+                            <option value="reddit">Reddit</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Account Name/Handle</label>
+                        <input type="text" name="account_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Access Token</label>
+                        <input type="text" name="access_token" class="form-control" placeholder="Enter API token" required>
+                        <small class="text-muted">Get this from your platform's developer settings</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Connect Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+function testConnection(accountId, platform) {
+    const btn = document.getElementById(`test-btn-${accountId}`);
+    const statusBadge = document.getElementById(`status-${accountId}`);
+    
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<i data-feather="loader"></i> Testing...';
+    statusBadge.className = 'badge bg-info';
+    statusBadge.textContent = 'Testing...';
+    feather.replace();
+    
+    // Test connection
+    fetch(`/social/accounts/${accountId}/test`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-feather="wifi"></i> Test Connection';
+        feather.replace();
+        
+        if (data.success) {
+            statusBadge.className = 'badge bg-success';
+            statusBadge.innerHTML = '<i data-feather="check-circle"></i> Connected';
+            
+            // Show success message with details
+            const message = data.message || 'Connection successful!';
+            const details = data.details ? `<br><small>${data.details}</small>` : '';
+            
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show mt-3';
+            alert.innerHTML = `
+                <i data-feather="check-circle"></i>
+                <strong>${platform.charAt(0).toUpperCase() + platform.slice(1)}:</strong> ${message}${details}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            btn.closest('.card').appendChild(alert);
+            feather.replace();
+            
+            setTimeout(() => alert.remove(), 5000);
+        } else {
+            statusBadge.className = 'badge bg-danger';
+            statusBadge.innerHTML = '<i data-feather="x-circle"></i> Failed';
+            
+            // Show error message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show mt-3';
+            alert.innerHTML = `
+                <i data-feather="alert-triangle"></i>
+                <strong>Connection Failed:</strong> ${data.message || 'Unknown error'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            btn.closest('.card').appendChild(alert);
+            feather.replace();
+            
+            setTimeout(() => alert.remove(), 7000);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        btn.disabled = false;
+        btn.innerHTML = '<i data-feather="wifi"></i> Test Connection';
+        statusBadge.className = 'badge bg-danger';
+        statusBadge.innerHTML = '<i data-feather="x-circle"></i> Error';
+        feather.replace();
+        
+        alert('Error testing connection. Please try again.');
+    });
+}
+
+function refreshAccount(accountId) {
+    fetch(`/social/accounts/${accountId}/refresh`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error refreshing account: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error refreshing account data');
+    });
+}
+</script>
+
+{% endblock %}

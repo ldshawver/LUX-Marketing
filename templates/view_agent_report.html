@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}{{ report.title }} - Agent Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i data-feather="file-text"></i> Agent Report Details</h2>
+                <a href="{{ url_for('main.agent_reports') }}" class="btn btn-secondary">
+                    <i data-feather="arrow-left"></i> Back to Reports
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">{{ report.title }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="badge bg-primary me-2">{{ report.report_type | replace('_', ' ') | title }}</span>
+                        {% if report.status == 'completed' %}
+                            <span class="badge bg-success">Completed</span>
+                        {% elif report.status == 'pending' %}
+                            <span class="badge bg-warning">Pending</span>
+                        {% elif report.status == 'failed' %}
+                            <span class="badge bg-danger">Failed</span>
+                        {% else %}
+                            <span class="badge bg-info">{{ report.status | title }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="report-content">
+                        {{ report.content | safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Report Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Agent:</dt>
+                        <dd class="col-sm-7">{{ report.agent_name }}</dd>
+
+                        <dt class="col-sm-5">Type:</dt>
+                        <dd class="col-sm-7">{{ report.report_type | replace('_', ' ') | title }}</dd>
+
+                        <dt class="col-sm-5">Created:</dt>
+                        <dd class="col-sm-7">{{ report.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+
+                        <dt class="col-sm-5">Status:</dt>
+                        <dd class="col-sm-7">
+                            {% if report.status == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                            {% elif report.status == 'pending' %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% elif report.status == 'failed' %}
+                                <span class="badge bg-danger">Failed</span>
+                            {% else %}
+                                <span class="badge bg-info">{{ report.status | title }}</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" onclick="window.print()">
+                            <i data-feather="printer"></i> Print Report
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="copyReport()">
+                            <i data-feather="copy"></i> Copy Content
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    feather.replace();
+    
+    function copyReport() {
+        const reportContent = document.querySelector('.report-content').innerText;
+        navigator.clipboard.writeText(reportContent).then(() => {
+            alert('Report content copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            alert('Failed to copy content');
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Marketing Calendar - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i data-feather="calendar"></i> Marketing Calendar</h2>
+            <p class="text-muted">Unified view of all marketing activities</p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>{{ month }}/{{ year }}</h5>
+                    <div>
+                        <a href="?year={{ year }}&month={{ month - 1 if month > 1 else 12 }}" class="btn btn-sm btn-outline-secondary">Previous</a>
+                        <a href="?year={{ year }}&month={{ month + 1 if month < 12 else 1 }}" class="btn btn-sm btn-outline-secondary">Next</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h6>Upcoming Activities (Next 30 Days)</h6>
+                    {% if upcoming %}
+                    <div class="list-group mt-3">
+                        {% for item in upcoming %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ item.title }}</h6>
+                                    <p class="mb-1 text-muted">{{ item.description }}</p>
+                                    <small class="text-muted">
+                                        <i data-feather="calendar"></i> 
+                                        {{ item.scheduled_at.strftime('%Y-%m-%d %H:%M') }}
+                                        <span class="badge bg-secondary ms-2">{{ item.module_type }}</span>
+                                    </small>
+                                </div>
+                                <span class="badge 
+                                    {% if item.status == 'completed' %}bg-success
+                                    {% elif item.status == 'scheduled' %}bg-primary
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ item.status }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-muted mt-3">No upcoming activities scheduled</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6>Activity Types</h6>
+                    <span class="badge bg-primary me-2">Email Campaign</span>
+                    <span class="badge bg-success me-2">SMS Campaign</span>
+                    <span class="badge bg-info me-2">Social Post</span>
+                    <span class="badge bg-warning me-2">Event</span>
+                    <span class="badge bg-danger me-2">Automation</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

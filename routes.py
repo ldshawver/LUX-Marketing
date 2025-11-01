@@ -9,9 +9,12 @@ from app import db
 from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTracking, 
                     BrandKit, EmailComponent, Poll, PollResponse, ABTest, Automation, 
                     AutomationStep, SMSCampaign, SMSRecipient, SMSTemplate, SocialPost, Segment, 
-                    SegmentMember, WebForm, FormSubmission, Event, EventRegistration, 
+                    SegmentMember, WebForm, FormSubmission, Event, EventRegistration, EventTicket,
                     Product, Order, CalendarEvent, AutomationTemplate, AutomationExecution,
-                    AutomationAction, LandingPage, NewsletterArchive, NonOpenerResend)
+                    AutomationAction, LandingPage, NewsletterArchive, NonOpenerResend,
+                    SEOKeyword, SEOBacklink, SEOCompetitor, SEOAudit, SEOPage,
+                    TicketPurchase, EventCheckIn, SocialMediaAccount, SocialMediaSchedule,
+                    AutomationTest, AutomationTriggerLibrary, AutomationABTest)
 from email_service import EmailService
 from utils import validate_email
 from tracking import decode_tracking_data, record_email_event
@@ -2774,3 +2777,391 @@ def view_agent_report(report_id):
     report = AgentReport.query.get_or_404(report_id)
     
     return render_template('view_agent_report.html', report=report)
+
+# ===== PHASE 2: SEO & ANALYTICS MODULE =====
+@main_bp.route('/seo/dashboard')
+@login_required
+def seo_dashboard():
+    """SEO dashboard with overview"""
+    from services.seo_service import SEOService
+    from models import SEOKeyword, SEOBacklink, SEOCompetitor, SEOAudit
+    
+    stats = SEOService.get_dashboard_stats()
+    recent_audits = SEOAudit.query.order_by(SEOAudit.created_at.desc()).limit(5).all()
+    top_keywords = SEOKeyword.query.filter(
+        SEOKeyword.current_position.isnot(None),
+        SEOKeyword.current_position <= 10
+    ).order_by(SEOKeyword.current_position).limit(10).all()
+    
+    return render_template('seo_dashboard.html', 
+                         stats=stats,
+                         recent_audits=recent_audits,
+                         top_keywords=top_keywords)
+
+@main_bp.route('/seo/keywords')
+@login_required
+def seo_keywords():
+    """Keyword tracking list"""
+    from models import SEOKeyword
+    keywords = SEOKeyword.query.filter_by(is_tracking=True).all()
+    return render_template('seo_keywords.html', keywords=keywords)
+
+@main_bp.route('/seo/keywords/add', methods=['POST'])
+@login_required
+def add_keyword():
+    """Add keyword to track"""
+    from services.seo_service import SEOService
+    keyword = request.form.get('keyword')
+    target_url = request.form.get('target_url')
+    
+    if keyword:
+        SEOService.track_keyword(keyword, target_url)
+        flash('Keyword added for tracking!', 'success')
+    return redirect(url_for('main.seo_keywords'))
+
+@main_bp.route('/seo/backlinks')
+@login_required
+def seo_backlinks():
+    """Backlink monitoring"""
+    from models import SEOBacklink
+    backlinks = SEOBacklink.query.filter_by(status='active').order_by(SEOBacklink.domain_authority.desc()).all()
+    return render_template('seo_backlinks.html', backlinks=backlinks)
+
+@main_bp.route('/seo/competitors')
+@login_required
+def seo_competitors():
+    """Competitor tracking"""
+    from models import SEOCompetitor
+    competitors = SEOCompetitor.query.filter_by(is_active=True).all()
+    return render_template('seo_competitors.html', competitors=competitors)
+
+@main_bp.route('/seo/audit', methods=['GET', 'POST'])
+@login_required
+def seo_audit():
+    """Run site audit"""
+    from services.seo_service import SEOService
+    
+    if request.method == 'POST':
+        url = request.form.get('url')
+        audit_type = request.form.get('audit_type', 'full')
+        
+        audit = SEOService.run_site_audit(url, audit_type)
+        if audit:
+            flash('Site audit completed!', 'success')
+            return redirect(url_for('main.seo_audit_results', audit_id=audit.id))
+    
+    return render_template('seo_audit_form.html')
+
+@main_bp.route('/seo/audit/<int:audit_id>')
+@login_required
+def seo_audit_results(audit_id):
+    """View audit results"""
+    from models import SEOAudit
+    audit = SEOAudit.query.get_or_404(audit_id)
+    return render_template('seo_audit_results.html', audit=audit)
+
+# ===== PHASE 3: EVENT ENHANCEMENTS =====
+@main_bp.route('/events/<int:event_id>/tickets')
+@login_required
+def event_tickets(event_id):
+    """Manage event tickets"""
+    from models import Event, EventTicket
+    event = Event.query.get_or_404(event_id)
+    tickets = EventTicket.query.filter_by(event_id=event_id).all()
+    return render_template('event_tickets.html', event=event, tickets=tickets)
+
+@main_bp.route('/events/<int:event_id>/tickets/create', methods=['POST'])
+@login_required
+def create_ticket_type(event_id):
+    """Create ticket type"""
+    from services.event_service import EventService
+    
+    name = request.form.get('name')
+    price = float(request.form.get('price', 0))
+    quantity = int(request.form.get('quantity', 0))
+    description = request.form.get('description')
+    
+    EventService.create_ticket_type(event_id, name, price, quantity, description)
+    flash('Ticket type created!', 'success')
+    return redirect(url_for('main.event_tickets', event_id=event_id))
+
+@main_bp.route('/events/<int:event_id>/purchase', methods=['POST'])
+@login_required
+def purchase_event_ticket(event_id):
+    """Purchase event ticket"""
+    from services.event_service import EventService
+    
+    ticket_id = int(request.form.get('ticket_id'))
+    contact_id = int(request.form.get('contact_id'))
+    quantity = int(request.form.get('quantity', 1))
+    
+    purchase = EventService.purchase_ticket(ticket_id, contact_id, quantity)
+    if purchase:
+        flash('Ticket purchased successfully!', 'success')
+    else:
+        flash('Ticket purchase failed. Check availability.', 'error')
+    
+    return redirect(url_for('main.view_event', id=event_id))
+
+@main_bp.route('/events/<int:event_id>/checkin', methods=['GET', 'POST'])
+@login_required
+def event_checkin(event_id):
+    """Event check-in system"""
+    from models import Event, EventCheckIn, TicketPurchase
+    from services.event_service import EventService
+    
+    event = Event.query.get_or_404(event_id)
+    
+    if request.method == 'POST':
+        contact_id = int(request.form.get('contact_id'))
+        ticket_purchase_id = request.form.get('ticket_purchase_id')
+        
+        EventService.check_in_attendee(
+            event_id, 
+            contact_id,
+            int(ticket_purchase_id) if ticket_purchase_id else None,
+            method='manual',
+            staff_name=current_user.username
+        )
+        flash('Attendee checked in!', 'success')
+    
+    checkins = EventCheckIn.query.filter_by(event_id=event_id).all()
+    purchases = TicketPurchase.query.join(EventTicket).filter(
+        EventTicket.event_id == event_id
+    ).all()
+    
+    return render_template('event_checkin.html', event=event, checkins=checkins, purchases=purchases)
+
+# ===== PHASE 4: SOCIAL MEDIA EXPANSION =====
+@main_bp.route('/social/accounts')
+@login_required
+def social_accounts():
+    """Manage connected social media accounts"""
+    from models import SocialMediaAccount
+    accounts = SocialMediaAccount.query.filter_by(is_active=True).all()
+    return render_template('social_accounts.html', accounts=accounts)
+
+@main_bp.route('/social/accounts/connect', methods=['POST'])
+@login_required
+def connect_social_account():
+    """Connect new social media account"""
+    from services.social_media_service import SocialMediaService
+    
+    platform = request.form.get('platform')
+    account_name = request.form.get('account_name')
+    access_token = request.form.get('access_token')
+    
+    account = SocialMediaService.connect_account(platform, account_name, access_token)
+    if account:
+        flash(f'{platform.capitalize()} account connected!', 'success')
+    else:
+        flash('Failed to connect account', 'error')
+    
+    return redirect(url_for('main.social_accounts'))
+
+@main_bp.route('/social/schedule', methods=['GET', 'POST'])
+@login_required
+def social_schedule_post():
+    """Schedule social media post"""
+    from services.social_media_service import SocialMediaService
+    from models import SocialMediaAccount
+    
+    if request.method == 'POST':
+        account_id = int(request.form.get('account_id'))
+        content = request.form.get('content')
+        scheduled_for = datetime.fromisoformat(request.form.get('scheduled_for'))
+        hashtags = request.form.get('hashtags')
+        
+        post = SocialMediaService.schedule_post(account_id, content, scheduled_for, hashtags=hashtags)
+        if post:
+            flash('Post scheduled!', 'success')
+            return redirect(url_for('main.social_media'))
+    
+    accounts = SocialMediaAccount.query.filter_by(is_active=True).all()
+    return render_template('social_schedule.html', accounts=accounts)
+
+@main_bp.route('/social/crosspost', methods=['POST'])
+@login_required
+def social_crosspost():
+    """Create cross-platform post"""
+    from services.social_media_service import SocialMediaService
+    
+    content = request.form.get('content')
+    platforms = request.form.getlist('platforms')
+    scheduled_for = datetime.fromisoformat(request.form.get('scheduled_for'))
+    
+    cross_post = SocialMediaService.create_cross_post(content, platforms, scheduled_for)
+    if cross_post:
+        flash('Cross-post created!', 'success')
+    
+    return redirect(url_for('main.social_media'))
+
+# ===== PHASE 5: ADVANCED AUTOMATIONS =====
+@main_bp.route('/automations/<int:automation_id>/test', methods=['POST'])
+@login_required
+def test_automation(automation_id):
+    """Test automation in test mode"""
+    from services.automation_service import AutomationService
+    
+    test_contact_id = request.form.get('test_contact_id')
+    test = AutomationService.run_test(
+        automation_id,
+        int(test_contact_id) if test_contact_id else None
+    )
+    
+    if test:
+        return jsonify({
+            'success': True,
+            'test_id': test.id,
+            'results': test.test_results
+        })
+    
+    return jsonify({'success': False}), 500
+
+@main_bp.route('/automations/triggers')
+@login_required
+def automation_triggers():
+    """Browse trigger library"""
+    from services.automation_service import AutomationService
+    
+    category = request.args.get('category')
+    triggers = AutomationService.get_trigger_library(category)
+    
+    categories = ['ecommerce', 'engagement', 'nurture', 'retention']
+    return render_template('automation_triggers.html', triggers=triggers, categories=categories)
+
+@main_bp.route('/automations/<int:automation_id>/abtest', methods=['POST'])
+@login_required
+def create_automation_abtest(automation_id):
+    """Create A/B test for automation"""
+    from services.automation_service import AutomationService
+    
+    step_id = int(request.form.get('step_id'))
+    variant_a_id = int(request.form.get('variant_a_template_id'))
+    variant_b_id = int(request.form.get('variant_b_template_id'))
+    split = int(request.form.get('split_percentage', 50))
+    
+    ab_test = AutomationService.create_ab_test(automation_id, step_id, variant_a_id, variant_b_id, split)
+    if ab_test:
+        flash('A/B test created!', 'success')
+    
+    return redirect(url_for('main.edit_automation', id=automation_id))
+
+# ===== PHASE 6: UNIFIED MARKETING CALENDAR =====
+@main_bp.route('/calendar')
+@login_required
+def marketing_calendar():
+    """Unified marketing calendar view"""
+    from services.scheduling_service import SchedulingService
+    from datetime import datetime
+    
+    year = request.args.get('year', datetime.now().year, type=int)
+    month = request.args.get('month', datetime.now().month, type=int)
+    
+    calendar_data = SchedulingService.get_calendar_view(year, month)
+    upcoming = SchedulingService.get_upcoming_schedules(days=30)
+    
+    return render_template('marketing_calendar.html', 
+                         calendar_data=calendar_data,
+                         upcoming=upcoming,
+                         year=year,
+                         month=month)
+
+@main_bp.route('/calendar/schedule', methods=['POST'])
+@login_required
+def calendar_schedule():
+    """Add item to calendar"""
+    from services.scheduling_service import SchedulingService
+    
+    module_type = request.form.get('module_type')
+    module_object_id = int(request.form.get('module_object_id'))
+    title = request.form.get('title')
+    scheduled_at = datetime.fromisoformat(request.form.get('scheduled_at'))
+    description = request.form.get('description', '')
+    
+    schedule = SchedulingService.create_schedule(
+        module_type,
+        module_object_id,
+        title,
+        scheduled_at,
+        description
+    )
+    
+    if schedule:
+        flash('Item added to calendar!', 'success')
+    
+    return redirect(url_for('main.marketing_calendar'))
+
+# ===== SYSTEM INITIALIZATION =====
+@main_bp.route('/system/init')
+@login_required
+def system_init():
+    """Initialize system data (trigger library, etc.)"""
+    from services.automation_service import AutomationService
+    
+    try:
+        # Seed trigger library
+        AutomationService.seed_trigger_library()
+        
+        flash('System initialized successfully! Trigger library seeded.', 'success')
+    except Exception as e:
+        logger.error(f"System initialization error: {e}")
+        flash(f'Initialization error: {str(e)}', 'error')
+    
+    return redirect(url_for('main.dashboard'))
+
+# ===== MONITORING & HEALTH CHECK =====
+@main_bp.route('/health')
+def health_check():
+    """Health check endpoint for monitoring"""
+    try:
+        # Check database connection
+        db.session.execute(db.text('SELECT 1'))
+        
+        # Check critical tables exist
+        from models import Contact, Campaign, SEOKeyword, EventTicket, SocialMediaAccount
+        
+        Contact.query.limit(1).all()
+        Campaign.query.limit(1).all()
+        SEOKeyword.query.limit(1).all()
+        EventTicket.query.limit(1).all()
+        SocialMediaAccount.query.limit(1).all()
+        
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'timestamp': datetime.utcnow().isoformat(),
+            'version': 'Phase 2-6 Release'
+        }), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+@main_bp.route('/system/status')
+@login_required
+def system_status():
+    """Detailed system status page"""
+    try:
+        # Count records in key tables
+        stats = {
+            'contacts': Contact.query.count(),
+            'campaigns': Campaign.query.count(),
+            'seo_keywords': SEOKeyword.query.count(),
+            'events': Event.query.count(),
+            'event_tickets': EventTicket.query.count(),
+            'social_accounts': SocialMediaAccount.query.count(),
+            'automation_triggers': AutomationTriggerLibrary.query.count(),
+        }
+        
+        # Check AI agents
+        from models import AgentSchedule
+        agent_count = AgentSchedule.query.filter_by(is_enabled=True).count()
+        
+        return render_template('system_status.html', stats=stats, agent_count=agent_count)
+    except Exception as e:
+        flash(f'Error loading system status: {str(e)}', 'error')
+        return redirect(url_for('main.dashboard'))

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Audit Results - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2><i data-feather="check-circle"></i> Site Audit Results</h2>
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>Overall Score</h6>
+                    <h2 class="{% if audit.overall_score >= 80 %}text-success{% elif audit.overall_score >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ audit.overall_score }}
+                    </h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center"><div class="card-body">
+                <h6>Technical</h6><h3>{{ audit.technical_score }}</h3>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center"><div class="card-body">
+                <h6>Content</h6><h3>{{ audit.content_score }}</h3>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center"><div class="card-body">
+                <h6>Performance</h6><h3>{{ audit.performance_score }}</h3>
+            </div></div>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5>Issues Found</h5></div>
+                <div class="card-body">
+                    {% if audit.issues_found %}
+                        {% for issue in audit.issues_found %}
+                        <div class="alert alert-{{ 'danger' if issue.severity == 'high' else 'warning' }}">
+                            <strong>{{ issue.severity|capitalize }}:</strong> {{ issue.issue }}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <p class="text-muted">No issues found!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5>Recommendations</h5></div>
+                <div class="card-body">
+                    {% if audit.recommendations %}
+                    <ul>
+                        {% for rec in audit.recommendations %}
+                        <li>{{ rec }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted">No recommendations</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

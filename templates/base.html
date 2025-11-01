@@ -42,12 +42,13 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ url_for('main.campaigns') }}"><i data-feather="send"></i> Campaigns</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('main.templates') }}"><i data-feather="file-text"></i> Templates</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.templates') }}"><i data-feather="file-text"></i> Email Templates</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.drag_drop_editor') }}"><i data-feather="edit-3"></i> Drag & Drop Editor</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.ab_tests') }}"><i data-feather="shuffle"></i> A/B Testing</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.automation_dashboard') }}"><i data-feather="zap"></i> Automation</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('main.automation_templates') }}"><i data-feather="layers"></i> Templates</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.automation_triggers') }}"><i data-feather="book"></i> Trigger Library</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.automation_templates') }}"><i data-feather="layers"></i> Automation Templates</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.automation_analytics') }}"><i data-feather="trending-up"></i> Analytics</a></li>
                         </ul>
                     </li>
@@ -78,6 +79,12 @@
                             <li><a class="dropdown-item" href="{{ url_for('main.social_media') }}"><i data-feather="share-2"></i> Social Media</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.sms_dashboard') }}"><i data-feather="message-square"></i> SMS Campaigns</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.seo_tools') }}"><i data-feather="search"></i> SEO Tools</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.social_accounts') }}"><i data-feather="users"></i> Social Accounts</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.sms_dashboard') }}"><i data-feather="message-circle"></i> SMS Marketing</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.seo_dashboard') }}"><i data-feather="search"></i> SEO Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.seo_keywords') }}"><i data-feather="target"></i> Keywords</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.seo_competitors') }}"><i data-feather="eye"></i> Competitors</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.events_dashboard') }}"><i data-feather="calendar"></i> Events</a></li>
                         </ul>
@@ -92,6 +99,8 @@
                             <li><a class="dropdown-item" href="{{ url_for('main.comprehensive_analytics') }}"><i data-feather="activity"></i> Comprehensive Dashboard</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.analytics') }}"><i data-feather="trending-up"></i> Campaign Analytics</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.agents_dashboard') }}"><i data-feather="cpu"></i> AI Agents</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.marketing_calendar') }}"><i data-feather="calendar"></i> Marketing Calendar</a></li>
                         </ul>
                     </li>
                     

@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+
+{% block title %}Affiliate & Influencer Management - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i data-feather="link-2"></i> Affiliate & Influencer Management</h2>
+            <p class="text-muted mb-0">Manage affiliate links, influencers, and performance tracking</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#linkBuilderModal">
+                <i data-feather="link"></i> Generate Link
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addInfluencerModal">
+                <i data-feather="user-plus"></i> Add Influencer
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#affiliate-tab">
+                <i data-feather="link-2"></i> Affiliate Links
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#influencer-tab">
+                <i data-feather="users"></i> Influencer CRM
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#performance-tab">
+                <i data-feather="trending-up"></i> Performance
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#payouts-tab">
+                <i data-feather="dollar-sign"></i> Payouts
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Affiliate Links Tab -->
+        <div class="tab-pane fade show active" id="affiliate-tab">
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3>{{ "{:,}".format(total_clicks|default(0)) }}</h3>
+                            <p class="text-muted mb-0">Total Clicks</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3>{{ "{:,}".format(total_conversions|default(0)) }}</h3>
+                            <p class="text-muted mb-0">Conversions</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3>${{ "{:,.2f}".format(total_commission|default(0)) }}</h3>
+                            <p class="text-muted mb-0">Total Commission</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3>{{ "{:.1f}".format(conversion_rate|default(0)) }}%</h3>
+                            <p class="text-muted mb-0">Conversion Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Affiliate Links</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tracking Code</th>
+                                    <th>Product URL</th>
+                                    <th>Clicks</th>
+                                    <th>Conversions</th>
+                                    <th>Commission</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="affiliate-links">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">No affiliate links yet</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Influencer CRM Tab -->
+        <div class="tab-pane fade" id="influencer-tab">
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <h3>{{ "{:,}".format(total_influencers|default(0)) }}</h3>
+                            <p class="text-muted mb-0">Total Influencers</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <h3>{{ "{:,}".format(active_contracts|default(0)) }}</h3>
+                            <p class="text-muted mb-0">Active Contracts</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <h3>{{ "{:,.0f}".format(total_reach|default(0)) }}</h3>
+                            <p class="text-muted mb-0">Total Reach</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <h3>{{ "{:.1f}".format(avg_engagement|default(0)) }}%</h3>
+                            <p class="text-muted mb-0">Avg Engagement</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Influencer Database</h5>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="tier-filter" style="width: auto;">
+                            <option value="">All Tiers</option>
+                            <option value="nano">Nano (1K-10K)</option>
+                            <option value="micro">Micro (10K-100K)</option>
+                            <option value="mid">Mid (100K-500K)</option>
+                            <option value="macro">Macro (500K-1M)</option>
+                            <option value="mega">Mega (1M+)</option>
+                        </select>
+                        <select class="form-select form-select-sm" id="status-filter" style="width: auto;">
+                            <option value="">All Statuses</option>
+                            <option value="prospect">Prospect</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Tier</th>
+                                    <th>Niche</th>
+                                    <th>Followers</th>
+                                    <th>Engagement</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="influencers-list">
+                                {% for inf in influencers|default([]) %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ inf.name }}</strong><br>
+                                        <small class="text-muted">{{ inf.email }}</small>
+                                    </td>
+                                    <td><span class="badge bg-secondary">{{ inf.tier|title }}</span></td>
+                                    <td>{{ inf.niche|title }}</td>
+                                    <td>{{ "{:,}".format(inf.follower_count) }}</td>
+                                    <td>{{ "{:.1f}".format(inf.engagement_rate) }}%</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if inf.status == 'active' else 'warning' }}">
+                                            {{ inf.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewInfluencer({{ inf.id }})">
+                                            <i data-feather="eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success" onclick="createContract({{ inf.id }})">
+                                            <i data-feather="file-text"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">No influencers yet</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Tab -->
+        <div class="tab-pane fade" id="performance-tab">
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Affiliate Performance</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="affiliate-performance-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Influencer Content Performance</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="influencer-performance-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payouts Tab -->
+        <div class="tab-pane fade" id="payouts-tab">
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3>${{ "{:,.2f}".format(pending_payouts|default(0)) }}</h3>
+                            <p class="text-muted mb-0">Pending Payouts</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3>${{ "{:,.2f}".format(paid_out|default(0)) }}</h3>
+                            <p class="text-muted mb-0">Paid Out (30d)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3>{{ payout_requests|default(0) }}</h3>
+                            <p class="text-muted mb-0">Payout Requests</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Payout History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Affiliate ID</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                    <th>Requested</th>
+                                    <th>Processed</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">No payout history</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Link Builder Modal -->
+<div class="modal fade" id="linkBuilderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Affiliate Link Builder</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="link-builder-form">
+                    <div class="mb-3">
+                        <label class="form-label">Affiliate ID</label>
+                        <input type="number" class="form-control" id="affiliate-id" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Product URL</label>
+                        <input type="url" class="form-control" id="product-url" placeholder="https://yoursite.com/product" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Campaign Name (Optional)</label>
+                        <input type="text" class="form-control" id="campaign-name" placeholder="summer-sale-2025">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Commission Rate</label>
+                            <input type="number" class="form-control" id="commission-rate" value="10" step="0.1" min="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Type</label>
+                            <select class="form-select" id="commission-type">
+                                <option value="percentage">Percentage (%)</option>
+                                <option value="fixed">Fixed ($)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="generateAffiliateLink()">
+                        <i data-feather="link"></i> Generate Link
+                    </button>
+                </form>
+                <div id="generated-link-result" class="mt-4 d-none">
+                    <hr>
+                    <h6>Generated Deep Link</h6>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="generated-link" readonly>
+                        <button class="btn btn-outline-primary" onclick="copyLink()">
+                            <i data-feather="copy"></i> Copy
+                        </button>
+                    </div>
+                    <h6>QR Code</h6>
+                    <div id="qr-code-container" class="text-center">
+                        <img id="qr-code-image" style="max-width: 300px;">
+                    </div>
+                    <button class="btn btn-outline-success mt-2" onclick="downloadQR()">
+                        <i data-feather="download"></i> Download QR Code
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Influencer Modal -->
+<div class="modal fade" id="addInfluencerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Influencer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-influencer-form">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" id="inf-name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="inf-email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Instagram Handle</label>
+                        <input type="text" class="form-control" id="inf-instagram" placeholder="@username">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Followers</label>
+                            <input type="number" class="form-control" id="inf-followers">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tier</label>
+                            <select class="form-select" id="inf-tier">
+                                <option value="nano">Nano</option>
+                                <option value="micro" selected>Micro</option>
+                                <option value="mid">Mid</option>
+                                <option value="macro">Macro</option>
+                                <option value="mega">Mega</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Niche</label>
+                        <input type="text" class="form-control" id="inf-niche" placeholder="beauty, fitness, tech">
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="addInfluencer()">
+                        <i data-feather="user-plus"></i> Add Influencer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+function generateAffiliateLink() {
+    const affiliateId = document.getElementById('affiliate-id').value;
+    const productUrl = document.getElementById('product-url').value;
+    const campaignName = document.getElementById('campaign-name').value;
+    const commissionRate = parseFloat(document.getElementById('commission-rate').value);
+    const commissionType = document.getElementById('commission-type').value;
+    
+    if (!affiliateId || !productUrl) {
+        alert('Please fill in required fields');
+        return;
+    }
+    
+    fetch('/affiliate/generate-link', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            affiliate_id: affiliateId,
+            product_url: productUrl,
+            campaign_name: campaignName,
+            commission_rate: commissionRate,
+            commission_type: commissionType
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('generated-link').value = data.deep_link;
+            document.getElementById('qr-code-image').src = data.qr_code;
+            document.getElementById('generated-link-result').classList.remove('d-none');
+            feather.replace();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    });
+}
+
+function copyLink() {
+    const link = document.getElementById('generated-link');
+    link.select();
+    document.execCommand('copy');
+    alert('Link copied!');
+}
+
+function downloadQR() {
+    const qrImg = document.getElementById('qr-code-image');
+    const link = document.createElement('a');
+    link.href = qrImg.src;
+    link.download = 'affiliate-qr-code.png';
+    link.click();
+}
+
+function addInfluencer() {
+    const data = {
+        name: document.getElementById('inf-name').value,
+        email: document.getElementById('inf-email').value,
+        instagram: document.getElementById('inf-instagram').value,
+        followers: parseInt(document.getElementById('inf-followers').value) || 0,
+        tier: document.getElementById('inf-tier').value,
+        niche: document.getElementById('inf-niche').value
+    };
+    
+    fetch('/influencer/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('Influencer added successfully!');
+            location.reload();
+        }
+    });
+}
+
+function viewInfluencer(id) {
+    window.location.href = `/influencer/${id}`;
+}
+
+function createContract(id) {
+    alert(`Create contract for influencer ${id} - Feature coming soon!`);
+}
+
+// Re-initialize feather icons when tabs change
+document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', () => feather.replace());
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+
+{% block title %}Marketing Analytics - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i data-feather="bar-chart-2"></i> Marketing Analytics Hub</h2>
+            <p class="text-muted mb-0">Comprehensive performance metrics across all marketing channels</p>
+        </div>
+        <div class="d-flex gap-2">
+            <select class="form-select" id="periodSelector" onchange="changePeriod(this.value)" style="width: auto;">
+                <option value="7">Last 7 Days</option>
+                <option value="30" selected>Last 30 Days</option>
+                <option value="60">Last 60 Days</option>
+                <option value="90">Last 90 Days</option>
+            </select>
+            <button class="btn btn-outline-primary" onclick="refreshAnalytics()">
+                <i data-feather="refresh-cw"></i> Refresh
+            </button>
+            <button class="btn btn-primary" onclick="exportReport()">
+                <i data-feather="download"></i> Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4" id="analyticsTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i data-feather="trending-up"></i> Overview
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="email-tab" data-bs-toggle="tab" data-bs-target="#email" type="button" role="tab">
+                <i data-feather="mail"></i> Email
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sms-tab" data-bs-toggle="tab" data-bs-target="#sms" type="button" role="tab">
+                <i data-feather="message-circle"></i> SMS
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="social-tab" data-bs-toggle="tab" data-bs-target="#social" type="button" role="tab">
+                <i data-feather="share-2"></i> Social Media
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="campaigns-tab" data-bs-toggle="tab" data-bs-target="#campaigns" type="button" role="tab">
+                <i data-feather="target"></i> Campaigns
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="automations-tab" data-bs-toggle="tab" data-bs-target="#automations" type="button" role="tab">
+                <i data-feather="zap"></i> Automations
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="seo-tab" data-bs-toggle="tab" data-bs-target="#seo" type="button" role="tab">
+                <i data-feather="search"></i> SEO
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="analyticsTabContent">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row g-4">
+                <!-- Key Metrics Overview -->
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="eye" class="mb-2" style="width: 48px; height: 48px; color: #013220;"></i>
+                            <h3 class="mb-0">{{ "{:,}".format(total_impressions|default(0)) }}</h3>
+                            <p class="text-muted mb-0">Total Impressions</p>
+                            <small class="text-success"><i data-feather="trending-up"></i> +12% vs last period</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="users" class="mb-2" style="width: 48px; height: 48px; color: #301934;"></i>
+                            <h3 class="mb-0">{{ "{:,}".format(total_contacts|default(0)) }}</h3>
+                            <p class="text-muted mb-0">Total Contacts</p>
+                            <small class="text-success"><i data-feather="trending-up"></i> +8% vs last period</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="mail-open" class="mb-2" style="width: 48px; height: 48px; color: #C0C0C0;"></i>
+                            <h3 class="mb-0">{{ open_rate|default(0)|round(2) }}%</h3>
+                            <p class="text-muted mb-0">Avg Open Rate</p>
+                            <small class="text-success"><i data-feather="trending-up"></i> +3% vs last period</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="dollar-sign" class="mb-2" style="width: 48px; height: 48px; color: #013220;"></i>
+                            <h3 class="mb-0">${{ "{:,.2f}".format(total_revenue|default(0)) }}</h3>
+                            <p class="text-muted mb-0">Total Revenue</p>
+                            <small class="text-success"><i data-feather="trending-up"></i> +15% vs last period</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Charts -->
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Campaign Performance Over Time</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="performanceChart" height="80"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Channel Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="channelChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Link to Comprehensive Analytics -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i data-feather="info"></i>
+                        <strong>Need deeper insights?</strong> Check out our 
+                        <a href="{{ url_for('main.comprehensive_analytics') }}" class="alert-link">Comprehensive Analytics Dashboard</a>
+                        with detailed metrics across all 6 marketing dimensions.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Analytics Tab -->
+        <div class="tab-pane fade" id="email" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="send" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ "{:,}".format(total_sent|default(0)) }}</h4>
+                            <p class="text-muted mb-0 small">Emails Sent</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="mail-open" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ open_rate|default(0)|round(2) }}%</h4>
+                            <p class="text-muted mb-0 small">Open Rate</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="mouse-pointer" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ click_rate|default(0)|round(2) }}%</h4>
+                            <p class="text-muted mb-0 small">Click Rate</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="alert-triangle" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ bounce_rate|default(0)|round(2) }}%</h4>
+                            <p class="text-muted mb-0 small">Bounce Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Recent Email Campaigns</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Campaign</th>
+                                            <th>Sent</th>
+                                            <th>Opens</th>
+                                            <th>Clicks</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for campaign in recent_campaigns|default([]) %}
+                                        <tr>
+                                            <td>{{ campaign.name }}</td>
+                                            <td>{{ campaign.sent_count|default(0) }}</td>
+                                            <td>{{ campaign.open_rate|default(0)|round(1) }}%</td>
+                                            <td>{{ campaign.click_rate|default(0)|round(1) }}%</td>
+                                            <td><span class="badge bg-success">{{ campaign.status|title }}</span></td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">No recent campaigns</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SMS Analytics Tab -->
+        <div class="tab-pane fade" id="sms" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="message-square" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ "{:,}".format(sms_sent|default(0)) }}</h4>
+                            <p class="text-muted mb-0 small">SMS Sent</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="check-circle" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ sms_delivery_rate|default(0)|round(2) }}%</h4>
+                            <p class="text-muted mb-0 small">Delivery Rate</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="corner-up-left" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ sms_response_rate|default(0)|round(2) }}%</h4>
+                            <p class="text-muted mb-0 small">Response Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">SMS Campaign Performance</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">SMS analytics are integrated from your Twilio account.</p>
+                    <a href="{{ url_for('main.sms_campaigns') }}" class="btn btn-primary">View SMS Campaigns</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social Media Tab -->
+        <div class="tab-pane fade" id="social" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="share-2" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ "{:,}".format(social_posts|default(0)) }}</h4>
+                            <p class="text-muted mb-0 small">Total Posts</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="heart" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ "{:,}".format(social_engagement|default(0)) }}</h4>
+                            <p class="text-muted mb-0 small">Total Engagement</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="users" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ "{:,}".format(social_followers|default(0)) }}</h4>
+                            <p class="text-muted mb-0 small">Total Followers</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="trending-up" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ social_engagement_rate|default(0)|round(2) }}%</h4>
+                            <p class="text-muted mb-0 small">Engagement Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Social Media Performance by Platform</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="socialPlatformChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Campaigns Tab -->
+        <div class="tab-pane fade" id="campaigns" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="target" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ total_campaigns|default(0) }}</h4>
+                            <p class="text-muted mb-0 small">Total Campaigns</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="play-circle" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ active_campaigns|default(0) }}</h4>
+                            <p class="text-muted mb-0 small">Active</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="check-square" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ completed_campaigns|default(0) }}</h4>
+                            <p class="text-muted mb-0 small">Completed</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="trending-up" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ campaign_success_rate|default(0)|round(1) }}%</h4>
+                            <p class="text-muted mb-0 small">Success Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Top Performing Campaigns</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">View detailed campaign performance metrics.</p>
+                    <a href="{{ url_for('main.campaigns') }}" class="btn btn-primary">View All Campaigns</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Automations Tab -->
+        <div class="tab-pane fade" id="automations" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="zap" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ total_automations|default(0) }}</h4>
+                            <p class="text-muted mb-0 small">Active Automations</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="activity" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ automation_executions|default(0) }}</h4>
+                            <p class="text-muted mb-0 small">Total Executions</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="award" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ automation_success_rate|default(0)|round(1) }}%</h4>
+                            <p class="text-muted mb-0 small">Success Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Automation Performance</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Track automated workflows and their performance.</p>
+                    <a href="{{ url_for('main.automation_dashboard') }}" class="btn btn-primary">View Automations</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEO Tab -->
+        <div class="tab-pane fade" id="seo" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="search" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ seo_rankings|default(0) }}</h4>
+                            <p class="text-muted mb-0 small">Keywords Ranked</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="trending-up" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ "{:,}".format(organic_traffic|default(0)) }}</h4>
+                            <p class="text-muted mb-0 small">Organic Traffic</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="link" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ backlinks|default(0) }}</h4>
+                            <p class="text-muted mb-0 small">Backlinks</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i data-feather="award" class="mb-2" style="width: 40px; height: 40px;"></i>
+                            <h4 class="mb-0">{{ domain_authority|default(0) }}</h4>
+                            <p class="text-muted mb-0 small">Domain Authority</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">SEO Performance Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Track search engine optimization and organic performance.</p>
+                    <a href="{{ url_for('main.seo_dashboard') }}" class="btn btn-primary">View SEO Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+function changePeriod(days) {
+    window.location.href = `{{ url_for('main.analytics_unified') }}?period_days=${days}`;
+}
+
+function refreshAnalytics() {
+    location.reload();
+}
+
+function exportReport() {
+    alert('Export functionality will be implemented');
+}
+
+// Initialize charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Performance Chart (placeholder - will use real data)
+    const perfCtx = document.getElementById('performanceChart');
+    if (perfCtx) {
+        new Chart(perfCtx, {
+            type: 'line',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [{
+                    label: 'Email Opens',
+                    data: [1200, 1900, 1500, 2100],
+                    borderColor: '#013220',
+                    tension: 0.1
+                }, {
+                    label: 'Clicks',
+                    data: [450, 680, 520, 750],
+                    borderColor: '#301934',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        });
+    }
+
+    // Channel Chart (placeholder)
+    const channelCtx = document.getElementById('channelChart');
+    if (channelCtx) {
+        new Chart(channelCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Email', 'SMS', 'Social', 'SEO'],
+                datasets: [{
+                    data: [45, 25, 20, 10],
+                    backgroundColor: ['#013220', '#301934', '#C0C0C0', '#666']
+                }]
+            }
+        });
+    }
+});
+</script>
+
+{% endblock %}

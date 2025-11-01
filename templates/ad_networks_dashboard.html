@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Ad Networks Dashboard - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i data-feather="target"></i> Ad Networks Dashboard</h2>
+            <p class="text-muted mb-0">Manage and monitor all advertising networks</p>
+        </div>
+        <div class="d-flex gap-2">
+            <select class="form-select" id="date-range" onchange="changeDateRange(this.value)" style="width: auto;">
+                <option value="7">Last 7 Days</option>
+                <option value="30" selected>Last 30 Days</option>
+                <option value="60">Last 60 Days</option>
+                <option value="90">Last 90 Days</option>
+            </select>
+            <button class="btn btn-outline-primary" onclick="refreshData()">
+                <i data-feather="refresh-cw"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Network Overview Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i data-feather="activity"></i> ExoClick</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="text-muted mb-1">Impressions</p>
+                            <h4>{{ "{:,}".format(exoclick.impressions|default(0)) }}</h4>
+                        </div>
+                        <div class="col-6">
+                            <p class="text-muted mb-1">Clicks</p>
+                            <h4>{{ "{:,}".format(exoclick.clicks|default(0)) }}</h4>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="text-muted mb-1">Spend</p>
+                            <h4>${{ "{:,.2f}".format(exoclick.spend|default(0)) }}</h4>
+                        </div>
+                        <div class="col-6">
+                            <p class="text-muted mb-1">CTR</p>
+                            <h4>{{ "{:.2f}".format(exoclick.ctr|default(0)) }}%</h4>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-success">CPC: ${{ "{:.3f}".format(exoclick.cpc|default(0)) }}</span>
+                        <span class="badge bg-info">Conv: {{ exoclick.conversions|default(0) }}</span>
+                        <span class="badge bg-warning text-dark">CVR: {{ "{:.1f}".format(exoclick.conversion_rate|default(0)) }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i data-feather="zap"></i> Clickadilla</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="text-muted mb-1">Impressions</p>
+                            <h4>{{ "{:,}".format(clickadilla.impressions|default(0)) }}</h4>
+                        </div>
+                        <div class="col-6">
+                            <p class="text-muted mb-1">Clicks</p>
+                            <h4>{{ "{:,}".format(clickadilla.clicks|default(0)) }}</h4>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="text-muted mb-1">Spend</p>
+                            <h4>${{ "{:,.2f}".format(clickadilla.spend|default(0)) }}</h4>
+                        </div>
+                        <div class="col-6">
+                            <p class="text-muted mb-1">CTR</p>
+                            <h4>{{ "{:.2f}".format(clickadilla.ctr|default(0)) }}%</h4>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-success">CPC: ${{ "{:.3f}".format(clickadilla.cpc|default(0)) }}</span>
+                        <span class="badge bg-info">Conv: {{ clickadilla.conversions|default(0) }}</span>
+                        <span class="badge bg-warning text-dark">CVR: {{ "{:.1f}".format(clickadilla.conversion_rate|default(0)) }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i data-feather="video"></i> Tube Corporate</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="text-muted mb-1">Conversions</p>
+                            <h4>{{ "{:,}".format(tubecorporate.conversions|default(0)) }}</h4>
+                        </div>
+                        <div class="col-6">
+                            <p class="text-muted mb-1">Revenue</p>
+                            <h4>${{ "{:,.2f}".format(tubecorporate.revenue|default(0)) }}</h4>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <p class="text-muted mb-1">Campaign ID</p>
+                            <p class="mb-0"><code>{{ tubecorporate.campaign_id|default('Not configured') }}</code></p>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-secondary">Postback Tracking</span>
+                        <span class="badge bg-info">{{ tubecorporate.period_days|default(30) }} days</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Combined Performance Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Network Performance Comparison</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="network-comparison-chart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Management Tabs -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#exoclick-tab">
+                                <i data-feather="activity"></i> ExoClick Campaigns
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#clickadilla-tab">
+                                <i data-feather="zap"></i> Clickadilla Campaigns
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#tubecorporate-tab">
+                                <i data-feather="video"></i> Tube Corporate Links
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        <!-- ExoClick Tab -->
+                        <div class="tab-pane fade show active" id="exoclick-tab">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h6>Active Campaigns</h6>
+                                <button class="btn btn-sm btn-primary" onclick="createCampaign('exoclick')">
+                                    <i data-feather="plus"></i> New Campaign
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Campaign</th>
+                                            <th>Status</th>
+                                            <th>Impressions</th>
+                                            <th>Clicks</th>
+                                            <th>CTR</th>
+                                            <th>Spend</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="exoclick-campaigns">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">
+                                                Loading campaigns...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Clickadilla Tab -->
+                        <div class="tab-pane fade" id="clickadilla-tab">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h6>Active Campaigns</h6>
+                                <button class="btn btn-sm btn-success" onclick="createCampaign('clickadilla')">
+                                    <i data-feather="plus"></i> New Campaign
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Campaign</th>
+                                            <th>Status</th>
+                                            <th>Impressions</th>
+                                            <th>Clicks</th>
+                                            <th>CTR</th>
+                                            <th>Spend</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="clickadilla-campaigns">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">
+                                                Loading campaigns...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Tube Corporate Tab -->
+                        <div class="tab-pane fade" id="tubecorporate-tab">
+                            <div class="mb-3">
+                                <h6>Tracking Link Generator</h6>
+                                <p class="text-muted">Generate Tube Corporate tracking links for your campaigns</p>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">Destination URL</label>
+                                    <input type="url" class="form-control" id="tc-destination-url" placeholder="https://yoursite.com/offer">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Custom Param (optional)</label>
+                                    <input type="text" class="form-control" id="tc-custom-param" placeholder="subid">
+                                </div>
+                            </div>
+                            <button class="btn btn-warning" onclick="generateTCLink()">
+                                <i data-feather="link"></i> Generate Tracking Link
+                            </button>
+                            <div id="tc-result" class="mt-3 d-none">
+                                <label class="form-label">Generated Tracking URL</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="tc-generated-url" readonly>
+                                    <button class="btn btn-outline-primary" onclick="copyTCLink()">
+                                        <i data-feather="copy"></i> Copy
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Performance Trend -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Daily Performance Trend</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="daily-trend-chart" height="60"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+function refreshData() {
+    location.reload();
+}
+
+function changeDateRange(days) {
+    window.location.href = `/ad-networks/dashboard?days=${days}`;
+}
+
+function createCampaign(network) {
+    alert(`Create ${network} campaign - Feature coming soon!`);
+}
+
+function generateTCLink() {
+    const destUrl = document.getElementById('tc-destination-url').value;
+    if (!destUrl) {
+        alert('Please enter a destination URL');
+        return;
+    }
+    
+    const customParam = document.getElementById('tc-custom-param').value;
+    
+    fetch('/ad-networks/tubecorporate/generate-link', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            destination_url: destUrl,
+            custom_param: customParam
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('tc-generated-url').value = data.tracking_link;
+            document.getElementById('tc-result').classList.remove('d-none');
+        }
+    });
+}
+
+function copyTCLink() {
+    const url = document.getElementById('tc-generated-url');
+    url.select();
+    document.execCommand('copy');
+    alert('Tracking link copied!');
+}
+
+// Initialize charts
+document.addEventListener('DOMContentLoaded', function() {
+    feather.replace();
+    
+    // Network comparison chart
+    const compCtx = document.getElementById('network-comparison-chart');
+    if (compCtx) {
+        new Chart(compCtx, {
+            type: 'bar',
+            data: {
+                labels: ['ExoClick', 'Clickadilla', 'Tube Corporate'],
+                datasets: [
+                    {
+                        label: 'Clicks',
+                        data: [{{ exoclick.clicks|default(0) }}, {{ clickadilla.clicks|default(0) }}, 0],
+                        backgroundColor: '#007bff'
+                    },
+                    {
+                        label: 'Conversions',
+                        data: [{{ exoclick.conversions|default(0) }}, {{ clickadilla.conversions|default(0) }}, {{ tubecorporate.conversions|default(0) }}],
+                        backgroundColor: '#28a745'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Load campaigns
+    loadExoClickCampaigns();
+    loadClickadillaCampaigns();
+});
+
+function loadExoClickCampaigns() {
+    fetch('/ad-networks/exoclick/campaigns')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.campaigns.length > 0) {
+                const tbody = document.getElementById('exoclick-campaigns');
+                tbody.innerHTML = data.campaigns.map(c => `
+                    <tr>
+                        <td>${c.name || c.id}</td>
+                        <td><span class="badge bg-${c.status === 'active' ? 'success' : 'secondary'}">${c.status}</span></td>
+                        <td>${c.impressions || 0}</td>
+                        <td>${c.clicks || 0}</td>
+                        <td>${c.ctr || 0}%</td>
+                        <td>$${c.spend || 0}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewCampaign('exoclick', ${c.id})">
+                                <i data-feather="eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+                feather.replace();
+            }
+        });
+}
+
+function loadClickadillaCampaigns() {
+    fetch('/ad-networks/clickadilla/campaigns')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.campaigns.length > 0) {
+                const tbody = document.getElementById('clickadilla-campaigns');
+                tbody.innerHTML = data.campaigns.map(c => `
+                    <tr>
+                        <td>${c.name || c.id}</td>
+                        <td><span class="badge bg-${c.status === 'active' ? 'success' : 'secondary'}">${c.status}</span></td>
+                        <td>${c.impressions || 0}</td>
+                        <td>${c.clicks || 0}</td>
+                        <td>${c.ctr || 0}%</td>
+                        <td>$${c.cost || 0}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-success" onclick="viewCampaign('clickadilla', ${c.id})">
+                                <i data-feather="eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+                feather.replace();
+            }
+        });
+}
+
+function viewCampaign(network, campaignId) {
+    alert(`View ${network} campaign ${campaignId} - Detailed stats coming soon!`);
+}
+</script>
+
+{% endblock %}

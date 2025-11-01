@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}System Status - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2><i data-feather="activity"></i> System Status</h2>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header"><h5>Database Statistics</h5></div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr><th>Module</th><th>Record Count</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Contacts</td>
+                                <td>{{ stats.contacts }}</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td>Campaigns</td>
+                                <td>{{ stats.campaigns }}</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td>SEO Keywords</td>
+                                <td>{{ stats.seo_keywords }}</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td>Events</td>
+                                <td>{{ stats.events }}</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td>Event Tickets</td>
+                                <td>{{ stats.event_tickets }}</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td>Social Media Accounts</td>
+                                <td>{{ stats.social_accounts }}</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td>Automation Triggers</td>
+                                <td>{{ stats.automation_triggers }}</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5>AI Agents</h5></div>
+                <div class="card-body">
+                    <p><strong>Active Agents:</strong> {{ agent_count }} / 10</p>
+                    <p class="mb-0">All AI agents operational and scheduled</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5>Application Info</h5></div>
+                <div class="card-body">
+                    <p><strong>Version:</strong> Phase 2-6 Release</p>
+                    <p><strong>Status:</strong> <span class="badge bg-success">Running</span></p>
+                    <p class="mb-0"><strong>Health Check:</strong> <a href="/health" target="_blank">/health</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

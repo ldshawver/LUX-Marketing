@@ -29,12 +29,15 @@
             </div>
             <div class="card-footer">
                 <div class="btn-group w-100">
-                    <button type="button" class="btn btn-outline-info btn-sm" onclick="previewTemplate({{ template.id }})">
+                    <a href="{{ url_for('main.preview_template', template_id=template.id) }}" class="btn btn-outline-info btn-sm" target="_blank">
                         <i data-feather="eye"></i> Preview
-                    </button>
-                    <a href="{{ url_for('main.create_template') }}?edit={{ template.id }}" class="btn btn-outline-secondary btn-sm">
+                    </a>
+                    <a href="{{ url_for('main.edit_template', template_id=template.id) }}" class="btn btn-outline-secondary btn-sm">
                         <i data-feather="edit"></i> Edit
                     </a>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="copyTemplate({{ template.id }}, '{{ template.name }}')">
+                        <i data-feather="copy"></i> Copy
+                    </button>
                 </div>
             </div>
         </div>
@@ -75,12 +78,29 @@
 
 {% block scripts %}
 <script>
-function previewTemplate(templateId) {
-    // For now, just show a placeholder
-    document.getElementById('preview-content').innerHTML = '<div class="text-center"><i data-feather="eye"></i><p>Template preview functionality coming soon</p></div>';
-    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
-    modal.show();
-    feather.replace();
+function copyTemplate(templateId, templateName) {
+    if (confirm(`Create a copy of "${templateName}"?`)) {
+        fetch(`/templates/${templateId}/copy`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Template copied successfully! New template: "${data.new_name}"`);
+                window.location.reload();
+            } else {
+                alert('Error copying template: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error copying template');
+        });
+    }
 }
 </script>
 {% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}SEO Dashboard - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i data-feather="search"></i> SEO Dashboard</h2>
+            <p class="text-muted">Track keywords, monitor backlinks, and analyze competitors</p>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Keywords</h6>
+                    <h3>{{ stats.total_keywords or 0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Top 10 Rankings</h6>
+                    <h3 class="text-success">{{ stats.top_performing or 0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Backlinks</h6>
+                    <h3>{{ stats.total_backlinks or 0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Competitors</h6>
+                    <h3>{{ stats.total_competitors or 0 }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Quick Actions</h5>
+                    <a href="{{ url_for('main.seo_keywords') }}" class="btn btn-primary">Manage Keywords</a>
+                    <a href="{{ url_for('main.seo_backlinks') }}" class="btn btn-secondary">View Backlinks</a>
+                    <a href="{{ url_for('main.seo_competitors') }}" class="btn btn-info">Track Competitors</a>
+                    <a href="{{ url_for('main.seo_audit') }}" class="btn btn-warning">Run Site Audit</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Keywords -->
+    {% if top_keywords %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Top Performing Keywords</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Keyword</th>
+                                <th>Position</th>
+                                <th>Search Volume</th>
+                                <th>Last Checked</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for kw in top_keywords %}
+                            <tr>
+                                <td>{{ kw.keyword }}</td>
+                                <td><span class="badge bg-success">#{{ kw.current_position }}</span></td>
+                                <td>{{ kw.search_volume or 'N/A' }}</td>
+                                <td>{{ kw.last_checked.strftime('%Y-%m-%d %H:%M') if kw.last_checked else 'Never' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Run SEO Audit - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2><i data-feather="search"></i> Run SEO Audit</h2>
+    <div class="row mt-4">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label class="form-label">Website URL</label>
+                            <input type="url" name="url" class="form-control" placeholder="https://example.com" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Audit Type</label>
+                            <select name="audit_type" class="form-select">
+                                <option value="full">Full Audit</option>
+                                <option value="quick">Quick Scan</option>
+                                <option value="technical">Technical Only</option>
+                                <option value="content">Content Only</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Run Audit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

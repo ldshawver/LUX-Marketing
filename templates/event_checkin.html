@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Event Check-in - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2><i data-feather="check-square"></i> Check-in - {{ event.name }}</h2>
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header"><h5>Recent Check-ins</h5></div>
+                <div class="card-body">
+                    {% if checkins %}
+                    <div class="list-group">
+                        {% for checkin in checkins %}
+                        <div class="list-group-item">
+                            <strong>Contact ID: {{ checkin.contact_id }}</strong>
+                            <br><small>{{ checkin.checked_in_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            <br><small>Method: {{ checkin.check_in_method }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No check-ins yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header"><h5>Check-in Attendee</h5></div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label>Contact ID</label>
+                            <input type="number" name="contact_id" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Ticket Purchase ID (Optional)</label>
+                            <input type="number" name="ticket_purchase_id" class="form-control">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Check In</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

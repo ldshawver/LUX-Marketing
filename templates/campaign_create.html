@@ -24,8 +24,19 @@
                     
                     <div class="mb-4">
                         <label for="subject" class="form-label">Email Subject *</label>
-                        <input type="text" class="form-control" id="subject" name="subject" required>
-                        <div class="form-text">The subject line recipients will see</div>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="subject" name="subject" required>
+                            <button class="btn btn-outline-primary" type="button" id="autoGenerateBtn">
+                                <i data-feather="zap"></i> Auto Generate
+                            </button>
+                        </div>
+                        <div class="form-text">The subject line recipients will see (use Auto Generate for AI suggestions)</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="utm_keyword" class="form-label">UTM Keyword</label>
+                        <input type="text" class="form-control" id="utm_keyword" name="utm_keyword" placeholder="campaign-keyword">
+                        <div class="form-text">Optional tracking keyword for campaign analytics</div>
                     </div>
                     
                     <div class="mb-4">
@@ -98,6 +109,65 @@ document.addEventListener('DOMContentLoaded', function() {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     datetimeInput.min = now.toISOString().slice(0, 16);
+    
+    // Auto Generate Button
+    const autoGenerateBtn = document.getElementById('autoGenerateBtn');
+    const campaignNameInput = document.getElementById('name');
+    const subjectInput = document.getElementById('subject');
+    const utmKeywordInput = document.getElementById('utm_keyword');
+    
+    autoGenerateBtn.addEventListener('click', async function() {
+        const campaignName = campaignNameInput.value.trim();
+        
+        if (!campaignName) {
+            alert('Please enter a campaign name first');
+            return;
+        }
+        
+        // Disable button and show loading
+        autoGenerateBtn.disabled = true;
+        const originalText = autoGenerateBtn.innerHTML;
+        autoGenerateBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+        
+        try {
+            const response = await fetch('/campaigns/auto-generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    campaign_name: campaignName
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to generate content');
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Fill in the generated content
+                subjectInput.value = data.subject;
+                if (data.utm_keyword) {
+                    utmKeywordInput.value = data.utm_keyword;
+                }
+                
+                // Show success message
+                alert('✨ Campaign content generated successfully!\\n\\nSubject: ' + data.subject);
+            } else {
+                throw new Error(data.message || 'Generation failed');
+            }
+        } catch (error) {
+            console.error('Auto-generate error:', error);
+            alert('Failed to generate content. Please try again or enter manually.');
+        } finally {
+            // Re-enable button
+            autoGenerateBtn.disabled = false;
+            autoGenerateBtn.innerHTML = originalText;
+            feather.replace();
+        }
+    });
 });
 </script>
 {% endblock %}

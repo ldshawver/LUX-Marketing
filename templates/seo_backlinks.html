@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Backlink Monitoring - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2><i data-feather="link"></i> Backlink Monitoring</h2>
+    <div class="card mt-4">
+        <div class="card-body">
+            {% if backlinks %}
+            <table class="table">
+                <thead>
+                    <tr><th>Source Domain</th><th>Anchor Text</th><th>DA</th><th>Status</th><th>First Seen</th></tr>
+                </thead>
+                <tbody>
+                    {% for link in backlinks %}
+                    <tr>
+                        <td>{{ link.source_domain }}</td>
+                        <td>{{ link.anchor_text or 'N/A' }}</td>
+                        <td><span class="badge bg-info">{{ link.domain_authority }}</span></td>
+                        <td><span class="badge bg-success">{{ link.status }}</span></td>
+                        <td>{{ link.first_seen.strftime('%Y-%m-%d') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-center text-muted">No backlinks tracked yet</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

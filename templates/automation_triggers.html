@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Automation Trigger Library - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i data-feather="book"></i> Automation Trigger Library</h2>
+            <p class="text-muted">Pre-built automation templates to get started quickly</p>
+        </div>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('main.automation_triggers') }}" class="btn btn-outline-secondary {% if not request.args.get('category') %}active{% endif %}">All</a>
+                {% for cat in categories %}
+                <a href="{{ url_for('main.automation_triggers', category=cat) }}" 
+                   class="btn btn-outline-secondary {% if request.args.get('category') == cat %}active{% endif %}">
+                    {{ cat|capitalize }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Triggers List -->
+    <div class="row mt-4">
+        {% if triggers %}
+            {% for trigger in triggers %}
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5>{{ trigger.name }}</h5>
+                                <p class="text-muted">{{ trigger.description }}</p>
+                            </div>
+                            <span class="badge bg-primary">{{ trigger.category|capitalize }}</span>
+                        </div>
+                        <hr>
+                        <p class="mb-2"><strong>Trigger:</strong> {{ trigger.trigger_type|replace('_', ' ')|title }}</p>
+                        <p class="mb-2"><strong>Steps:</strong> {{ trigger.steps_template|length if trigger.steps_template else 0 }}</p>
+                        <p class="mb-2"><strong>Used:</strong> {{ trigger.usage_count }} times</p>
+                        <div class="mt-3">
+                            <a href="{{ url_for('main.create_automation') }}?template={{ trigger.id }}" class="btn btn-primary btn-sm">
+                                <i data-feather="copy"></i> Use This Template
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-feather="book" style="width: 48px; height: 48px; color: #6c757d;"></i>
+                    <p class="text-muted mt-3">No triggers available. Library will be seeded on first run.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

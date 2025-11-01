@@ -2,9 +2,13 @@ modules = ["python-3.11", "postgresql-16", "python3"]
 
 [nix]
 channel = "stable-25_05"
+<<<<<<< HEAD
 packages = ["openssl", "postgresql", "rsync", "u-root-cmds"]
 
 packages = ["glibcLocales", "openssl", "postgresql", "rsync", "u-root-cmds", "tecoc"]
+=======
+packages = ["freetype", "glibcLocales", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "postgresql", "rsync", "tcl", "tecoc", "tk", "u-root-cmds", "zlib"]
+>>>>>>> 601d41e (relese2 of 6)
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -38,3 +42,7 @@ externalPort = 80
 [[ports]]
 localPort = 8080
 externalPort = 8080
+
+[[ports]]
+localPort = 41077
+externalPort = 3000

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Competitor Tracking - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2><i data-feather="eye"></i> Competitor Tracking</h2>
+    <div class="row mt-4">
+        {% if competitors %}
+            {% for comp in competitors %}
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5>{{ comp.name }}</h5>
+                        <p class="text-muted">{{ comp.domain }}</p>
+                        <hr>
+                        <p><strong>Organic Traffic:</strong> {{ comp.organic_traffic|default(0) }}</p>
+                        <p><strong>Keywords:</strong> {{ comp.organic_keywords|default(0) }}</p>
+                        <p><strong>Backlinks:</strong> {{ comp.backlinks|default(0) }}</p>
+                        <p><strong>DA:</strong> {{ comp.domain_authority|default(0) }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="col-md-12">
+            <div class="card"><div class="card-body text-center">
+                <p class="text-muted">No competitors tracked yet</p>
+            </div></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

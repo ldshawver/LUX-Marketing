@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Keyword Tracking - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2><i data-feather="target"></i> Keyword Tracking</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
+                <i data-feather="plus"></i> Add Keyword
+            </button>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    {% if keywords %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Keyword</th>
+                                <th>Current Position</th>
+                                <th>Previous</th>
+                                <th>Best</th>
+                                <th>Volume</th>
+                                <th>Difficulty</th>
+                                <th>Last Checked</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for kw in keywords %}
+                            <tr>
+                                <td><strong>{{ kw.keyword }}</strong></td>
+                                <td>
+                                    {% if kw.current_position %}
+                                    <span class="badge bg-success">#{{ kw.current_position }}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Not ranked</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ kw.previous_position or '-' }}</td>
+                                <td>{{ kw.best_position or '-' }}</td>
+                                <td>{{ kw.search_volume or 0 }}</td>
+                                <td>{{ kw.difficulty or 0 }}</td>
+                                <td>{{ kw.last_checked.strftime('%Y-%m-%d') if kw.last_checked else 'Never' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="text-center text-muted">No keywords tracked yet. Add your first keyword!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Keyword Modal -->
+<div class="modal fade" id="addKeywordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('main.add_keyword') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Keyword</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Keyword</label>
+                        <input type="text" name="keyword" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Target URL (Optional)</label>
+                        <input type="url" name="target_url" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Keyword</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

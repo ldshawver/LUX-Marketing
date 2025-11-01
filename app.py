@@ -62,6 +62,14 @@ with app.app_context():
     # Import models to ensure tables are created
     import models
     db.create_all()
+    
+    # Seed automation trigger library (idempotent)
+    try:
+        from services.automation_service import AutomationService
+        AutomationService.seed_trigger_library()
+        logging.info("Automation trigger library seeded successfully")
+    except Exception as e:
+        logging.error(f"Error seeding trigger library: {e}")
 
 # Add Jinja2 filters
 @app.template_filter('campaign_status_color')

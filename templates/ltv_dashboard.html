@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}Customer LTV & Segmentation - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i data-feather="users"></i> Customer LTV & RFM Segmentation</h2>
+            <p class="text-muted mb-0">Analyze customer lifetime value and segment your audience</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="recalculateSegments()">
+                <i data-feather="refresh-cw"></i> Recalculate
+            </button>
+            <button class="btn btn-primary" onclick="exportSegments()">
+                <i data-feather="download"></i> Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-feather="users" class="mb-2" style="width: 40px; height: 40px; color: #013220;"></i>
+                    <h3 class="mb-0">{{ "{:,}".format(total_customers|default(0)) }}</h3>
+                    <p class="text-muted mb-0">Total Customers</p>
+                    <small class="text-muted">With purchase history</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-feather="trending-up" class="mb-2" style="width: 40px; height: 40px; color: #301934;"></i>
+                    <h3 class="mb-0">${{ "{:,.2f}".format(avg_ltv|default(0)) }}</h3>
+                    <p class="text-muted mb-0">Average LTV</p>
+                    <small class="text-muted">Per customer</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-feather="star" class="mb-2" style="width: 40px; height: 40px; color: #C0C0C0;"></i>
+                    <h3 class="mb-0">{{ "{:,}".format(champions_count|default(0)) }}</h3>
+                    <p class="text-muted mb-0">Champions</p>
+                    <small class="text-success">Your best customers</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-feather="alert-circle" class="mb-2" style="width: 40px; height: 40px; color: #dc3545;"></i>
+                    <h3 class="mb-0">{{ "{:,}".format(at_risk_count|default(0)) }}</h3>
+                    <p class="text-muted mb-0">At Risk</p>
+                    <small class="text-danger">Need attention</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RFM Segments -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">RFM Segment Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <canvas id="segment-chart" height="80"></canvas>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Segment Definitions</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><span class="badge bg-success">Champions</span> - Best customers (R5F5M5)</li>
+                                <li class="mb-2"><span class="badge bg-primary">Loyal</span> - Regular buyers (R3F3M3+)</li>
+                                <li class="mb-2"><span class="badge bg-info">New</span> - Recent first purchase (R5F1)</li>
+                                <li class="mb-2"><span class="badge bg-warning text-dark">At Risk</span> - Haven't bought recently (R2F3M3)</li>
+                                <li class="mb-2"><span class="badge bg-danger">Can't Lose</span> - High value, going away (R2F5)</li>
+                                <li class="mb-2"><span class="badge bg-secondary">Lost</span> - Churned customers (R1F1M1)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Segment Details Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Segment Performance</h5>
+                    <select class="form-select w-auto" onchange="filterSegment(this.value)">
+                        <option value="">All Segments</option>
+                        <option value="Champions">Champions</option>
+                        <option value="Loyal Customers">Loyal Customers</option>
+                        <option value="New Customers">New Customers</option>
+                        <option value="At Risk">At Risk</option>
+                        <option value="Cant Lose Them">Can't Lose Them</option>
+                        <option value="Promising">Promising</option>
+                        <option value="Lost">Lost</option>
+                        <option value="Potential Loyalists">Potential Loyalists</option>
+                        <option value="Need Attention">Need Attention</option>
+                    </select>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Segment</th>
+                                    <th>Customers</th>
+                                    <th>Total Revenue</th>
+                                    <th>Avg Recency</th>
+                                    <th>Avg Frequency</th>
+                                    <th>Avg Monetary</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="segment-table">
+                                {% for segment, data in segments.items() %}
+                                <tr>
+                                    <td><strong>{{ segment }}</strong></td>
+                                    <td>{{ "{:,}".format(data.count) }}</td>
+                                    <td>${{ "{:,.2f}".format(data.total_revenue) }}</td>
+                                    <td>{{ "{:.0f}".format(data.avg_recency) }} days</td>
+                                    <td>{{ "{:.1f}".format(data.avg_frequency) }}</td>
+                                    <td>${{ "{:,.2f}".format(data.avg_monetary) }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewSegmentDetails('{{ segment }}')">
+                                            <i data-feather="eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cohort Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Cohort Retention Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm text-center">
+                            <thead>
+                                <tr>
+                                    <th>Cohort Month</th>
+                                    <th>Size</th>
+                                    <th>Month 0</th>
+                                    <th>Month 1</th>
+                                    <th>Month 2</th>
+                                    <th>Month 3</th>
+                                    <th>Month 4</th>
+                                    <th>Month 5</th>
+                                    <th>Month 6+</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cohort-table">
+                                <!-- Populated dynamically -->
+                                <tr>
+                                    <td><strong>2025-05</strong></td>
+                                    <td>120</td>
+                                    <td style="background-color: #013220; color: white;">100%</td>
+                                    <td style="background-color: #1a5938; color: white;">45%</td>
+                                    <td style="background-color: #338050;">38%</td>
+                                    <td style="background-color: #4da668;">32%</td>
+                                    <td style="background-color: #66cd80;">28%</td>
+                                    <td style="background-color: #80f398;">24%</td>
+                                    <td style="background-color: #99ffb0;">20%</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>2025-06</strong></td>
+                                    <td>145</td>
+                                    <td style="background-color: #013220; color: white;">100%</td>
+                                    <td style="background-color: #1a5938; color: white;">48%</td>
+                                    <td style="background-color: #338050;">40%</td>
+                                    <td style="background-color: #4da668;">35%</td>
+                                    <td style="background-color: #66cd80;">30%</td>
+                                    <td style="background-color: #80f398;">26%</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>2025-07</strong></td>
+                                    <td>168</td>
+                                    <td style="background-color: #013220; color: white;">100%</td>
+                                    <td style="background-color: #1a5938; color: white;">52%</td>
+                                    <td style="background-color: #338050;">42%</td>
+                                    <td style="background-color: #4da668;">38%</td>
+                                    <td style="background-color: #66cd80;">33%</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted">Color intensity represents retention rate: Darker = higher retention</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer List with RFM -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Customer Segmentation Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Segment</th>
+                                    <th>RFM Score</th>
+                                    <th>Recency</th>
+                                    <th>Frequency</th>
+                                    <th>Monetary</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for customer in customers|default([]) %}
+                                <tr>
+                                    <td>{{ customer.name }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if customer.rfm_segment == 'Champions' %}bg-success
+                                            {% elif customer.rfm_segment == 'Loyal Customers' %}bg-primary
+                                            {% elif customer.rfm_segment == 'At Risk' %}bg-warning text-dark
+                                            {% elif customer.rfm_segment == 'Cant Lose Them' %}bg-danger
+                                            {% elif customer.rfm_segment == 'Lost' %}bg-secondary
+                                            {% else %}bg-info
+                                            {% endif %}">
+                                            {{ customer.rfm_segment }}
+                                        </span>
+                                    </td>
+                                    <td>{{ customer.rfm_string }}</td>
+                                    <td>{{ customer.recency_days }} days</td>
+                                    <td>{{ customer.frequency }} purchases</td>
+                                    <td>${{ "{:,.2f}".format(customer.monetary_value) }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewCustomerLTV({{ customer.contact_id }})">
+                                            <i data-feather="trending-up"></i> LTV
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success" onclick="createCampaign('{{ customer.rfm_segment }}')">
+                                            <i data-feather="send"></i> Campaign
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">No customer data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LTV Details Modal -->
+<div class="modal fade" id="ltvModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Customer Lifetime Value Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="ltv-details">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Segment Recommendations Modal -->
+<div class="modal fade" id="recommendationsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Marketing Recommendations</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="recommendations-content">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+function viewSegmentDetails(segment) {
+    // Show recommendations for this segment
+    fetch(`/ltv/api/recommendations/${segment}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const rec = data.recommendations;
+                const content = `
+                    <h6>Strategy: ${rec.strategy}</h6>
+                    <h6 class="mt-3">Recommended Actions:</h6>
+                    <ul>
+                        ${rec.actions.map(a => `<li>${a}</li>`).join('')}
+                    </ul>
+                    <h6 class="mt-3">Best Channels:</h6>
+                    <p>${rec.channels.join(', ')}</p>
+                    <p><strong>Priority:</strong> <span class="badge bg-${rec.priority === 'Critical' ? 'danger' : rec.priority === 'High' ? 'warning' : 'info'}">${rec.priority}</span></p>
+                `;
+                document.getElementById('recommendations-content').innerHTML = content;
+                new bootstrap.Modal(document.getElementById('recommendationsModal')).show();
+            }
+        });
+}
+
+function viewCustomerLTV(contactId) {
+    fetch(`/ltv/api/customer/${contactId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const ltv = data.ltv;
+                const content = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Historical LTV</h6>
+                            <h3>$${ltv.ltv.toFixed(2)}</h3>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Predicted LTV (12 mo)</h6>
+                            <h3 class="text-success">$${ltv.predicted_ltv.toFixed(2)}</h3>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <p><strong>Total Purchases:</strong> ${ltv.num_purchases}</p>
+                            <p><strong>Avg Order Value:</strong> $${ltv.avg_order_value.toFixed(2)}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Purchase Frequency:</strong> ${ltv.purchase_frequency.toFixed(2)}/mo</p>
+                            <p><strong>Customer Lifespan:</strong> ${ltv.customer_lifespan_days} days</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>First Purchase:</strong> ${new Date(ltv.first_purchase).toLocaleDateString()}</p>
+                            <p><strong>Last Purchase:</strong> ${new Date(ltv.last_purchase).toLocaleDateString()}</p>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('ltv-details').innerHTML = content;
+                new bootstrap.Modal(document.getElementById('ltvModal')).show();
+            }
+        });
+}
+
+function createCampaign(segment) {
+    if (confirm(`Create a campaign targeting ${segment} customers?`)) {
+        window.location.href = `/campaigns/new?segment=${encodeURIComponent(segment)}`;
+    }
+}
+
+function recalculateSegments() {
+    if (confirm('Recalculate RFM segments for all customers? This may take a moment.')) {
+        fetch('/ltv/api/recalculate', { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Segments recalculated successfully!');
+                    location.reload();
+                }
+            });
+    }
+}
+
+function exportSegments() {
+    window.location.href = '/ltv/api/export';
+}
+
+function filterSegment(segment) {
+    // Filter table by segment
+    const rows = document.querySelectorAll('#segment-table tr');
+    rows.forEach(row => {
+        if (segment === '' || row.textContent.includes(segment)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Initialize segment chart
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('segment-chart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ segment_labels|tojson|safe }},
+                datasets: [{
+                    label: 'Customers',
+                    data: {{ segment_counts|tojson|safe }},
+                    backgroundColor: [
+                        '#28a745', '#007bff', '#17a2b8', '#ffc107',
+                        '#dc3545', '#6c757d', '#20c997', '#fd7e14', '#6610f2'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+
+{% endblock %}

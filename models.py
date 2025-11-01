@@ -72,6 +72,7 @@ class Campaign(db.Model):
     scheduled_at = db.Column(db.DateTime)
     sent_at = db.Column(db.DateTime)
     revenue_generated = db.Column(db.Float, default=0.0)
+    utm_keyword = db.Column(db.String(100))  # UTM tracking keyword
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -576,3 +577,606 @@ class AgentSchedule(db.Model):
     
     def __repr__(self):
         return f'<AgentSchedule {self.agent_name}>'
+
+# SEO & Analytics Module (Phase 2)
+class SEOKeyword(db.Model):
+    """Track keyword rankings and performance"""
+    id = db.Column(db.Integer, primary_key=True)
+    keyword = db.Column(db.String(255), nullable=False)
+    target_url = db.Column(db.String(500))
+    search_volume = db.Column(db.Integer, default=0)
+    difficulty = db.Column(db.Integer, default=0)  # 0-100 scale
+    current_position = db.Column(db.Integer)
+    previous_position = db.Column(db.Integer)
+    best_position = db.Column(db.Integer)
+    search_engine = db.Column(db.String(20), default='google')  # google, bing, yahoo
+    location = db.Column(db.String(100), default='US')
+    device = db.Column(db.String(20), default='desktop')  # desktop, mobile
+    is_tracking = db.Column(db.Boolean, default=True)
+    last_checked = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    rankings = db.relationship('KeywordRanking', backref='keyword', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<SEOKeyword {self.keyword}>'
+
+class KeywordRanking(db.Model):
+    """Historical ranking data for keywords"""
+    id = db.Column(db.Integer, primary_key=True)
+    keyword_id = db.Column(db.Integer, db.ForeignKey('seo_keyword.id'), nullable=False)
+    position = db.Column(db.Integer, nullable=False)
+    url = db.Column(db.String(500))
+    impressions = db.Column(db.Integer, default=0)
+    clicks = db.Column(db.Integer, default=0)
+    ctr = db.Column(db.Float, default=0.0)
+    checked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<KeywordRanking {self.keyword_id}:{self.position}>'
+
+class SEOBacklink(db.Model):
+    """Monitor backlinks to the site"""
+    id = db.Column(db.Integer, primary_key=True)
+    source_url = db.Column(db.String(500), nullable=False)
+    source_domain = db.Column(db.String(255))
+    target_url = db.Column(db.String(500), nullable=False)
+    anchor_text = db.Column(db.String(255))
+    link_type = db.Column(db.String(20), default='dofollow')  # dofollow, nofollow
+    status = db.Column(db.String(20), default='active')  # active, lost, broken
+    domain_authority = db.Column(db.Integer, default=0)
+    page_authority = db.Column(db.Integer, default=0)
+    spam_score = db.Column(db.Integer, default=0)
+    first_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    lost_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SEOBacklink {self.source_domain}>'
+
+class SEOCompetitor(db.Model):
+    """Track competitor SEO performance"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    domain = db.Column(db.String(255), nullable=False, unique=True)
+    organic_traffic = db.Column(db.Integer, default=0)
+    organic_keywords = db.Column(db.Integer, default=0)
+    backlinks = db.Column(db.Integer, default=0)
+    domain_authority = db.Column(db.Integer, default=0)
+    page_authority = db.Column(db.Integer, default=0)
+    notes = db.Column(Text)
+    is_active = db.Column(db.Boolean, default=True)
+    last_analyzed = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    snapshots = db.relationship('CompetitorSnapshot', backref='competitor', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<SEOCompetitor {self.name}>'
+
+class CompetitorSnapshot(db.Model):
+    """Historical snapshots of competitor metrics"""
+    id = db.Column(db.Integer, primary_key=True)
+    competitor_id = db.Column(db.Integer, db.ForeignKey('seo_competitor.id'), nullable=False)
+    organic_traffic = db.Column(db.Integer, default=0)
+    organic_keywords = db.Column(db.Integer, default=0)
+    backlinks = db.Column(db.Integer, default=0)
+    domain_authority = db.Column(db.Integer, default=0)
+    top_keywords = db.Column(JSON)  # List of top performing keywords
+    snapshot_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<CompetitorSnapshot {self.competitor_id}>'
+
+class SEOAudit(db.Model):
+    """Site audit results and recommendations"""
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String(500), nullable=False)
+    audit_type = db.Column(db.String(50), default='full')  # full, quick, technical, content
+    overall_score = db.Column(db.Integer, default=0)  # 0-100
+    technical_score = db.Column(db.Integer, default=0)
+    content_score = db.Column(db.Integer, default=0)
+    performance_score = db.Column(db.Integer, default=0)
+    mobile_score = db.Column(db.Integer, default=0)
+    issues_found = db.Column(JSON)  # List of issues with severity
+    recommendations = db.Column(JSON)  # AI-generated recommendations
+    audit_data = db.Column(JSON)  # Full audit details
+    status = db.Column(db.String(20), default='completed')  # pending, running, completed, failed
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SEOAudit {self.url}:{self.overall_score}>'
+
+class SEOPage(db.Model):
+    """Individual page SEO metrics"""
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String(500), nullable=False, unique=True)
+    title = db.Column(db.String(255))
+    meta_description = db.Column(db.String(500))
+    h1_tag = db.Column(db.String(255))
+    word_count = db.Column(db.Integer, default=0)
+    internal_links = db.Column(db.Integer, default=0)
+    external_links = db.Column(db.Integer, default=0)
+    images_count = db.Column(db.Integer, default=0)
+    images_without_alt = db.Column(db.Integer, default=0)
+    page_speed = db.Column(db.Integer, default=0)  # Google PageSpeed score
+    mobile_friendly = db.Column(db.Boolean, default=True)
+    schema_markup = db.Column(JSON)  # Structured data found
+    canonical_url = db.Column(db.String(500))
+    status_code = db.Column(db.Integer, default=200)
+    last_crawled = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SEOPage {self.url}>'
+
+# Event Enhancements (Phase 3)
+class EventTicket(db.Model):
+    """Ticket types for events"""
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)  # VIP, General, Early Bird
+    description = db.Column(Text)
+    price = db.Column(db.Float, nullable=False)
+    quantity_total = db.Column(db.Integer, nullable=False)
+    quantity_sold = db.Column(db.Integer, default=0)
+    sale_start = db.Column(db.DateTime)
+    sale_end = db.Column(db.DateTime)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    event = db.relationship('Event', backref='tickets', foreign_keys=[event_id])
+    purchases = db.relationship('TicketPurchase', backref='ticket', lazy='dynamic', cascade='all, delete-orphan')
+    
+    @property
+    def quantity_available(self):
+        return self.quantity_total - self.quantity_sold
+    
+    def __repr__(self):
+        return f'<EventTicket {self.name}>'
+
+class TicketPurchase(db.Model):
+    """Individual ticket purchases"""
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_id = db.Column(db.Integer, db.ForeignKey('event_ticket.id'), nullable=False)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+    total_amount = db.Column(db.Float, nullable=False)
+    payment_status = db.Column(db.String(20), default='pending')  # pending, paid, refunded, failed
+    payment_method = db.Column(db.String(50))
+    transaction_id = db.Column(db.String(100))
+    ticket_codes = db.Column(JSON)  # Array of unique ticket codes
+    checked_in = db.Column(db.Boolean, default=False)
+    check_in_time = db.Column(db.DateTime)
+    purchased_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    contact = db.relationship('Contact', backref='ticket_purchases')
+    
+    def __repr__(self):
+        return f'<TicketPurchase {self.id}>'
+
+class EventCheckIn(db.Model):
+    """Track event check-ins"""
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    ticket_purchase_id = db.Column(db.Integer, db.ForeignKey('ticket_purchase.id'))
+    check_in_method = db.Column(db.String(50), default='manual')  # manual, qr_code, email
+    checked_in_by = db.Column(db.String(100))  # Staff member name
+    checked_in_at = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(Text)
+    
+    def __repr__(self):
+        return f'<EventCheckIn {self.event_id}:{self.contact_id}>'
+
+# Social Media Expansion (Phase 4)
+class SocialMediaAccount(db.Model):
+    """Connected social media accounts"""
+    id = db.Column(db.Integer, primary_key=True)
+    platform = db.Column(db.String(50), nullable=False)  # twitter, instagram, facebook, telegram, tiktok, reddit
+    account_name = db.Column(db.String(100), nullable=False)
+    account_id = db.Column(db.String(100))  # Platform-specific ID
+    access_token = db.Column(db.String(500))
+    refresh_token = db.Column(db.String(500))
+    token_expires_at = db.Column(db.DateTime)
+    is_active = db.Column(db.Boolean, default=True)
+    is_verified = db.Column(db.Boolean, default=False)
+    follower_count = db.Column(db.Integer, default=0)
+    last_synced = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    scheduled_posts = db.relationship('SocialMediaSchedule', backref='account', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<SocialMediaAccount {self.platform}:{self.account_name}>'
+
+class SocialMediaSchedule(db.Model):
+    """Scheduled social media posts"""
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('social_media_account.id'), nullable=False)
+    content = db.Column(Text, nullable=False)
+    media_urls = db.Column(JSON)  # Array of image/video URLs
+    hashtags = db.Column(db.String(500))
+    scheduled_for = db.Column(db.DateTime, nullable=False)
+    status = db.Column(db.String(20), default='scheduled')  # scheduled, published, failed, cancelled
+    post_id = db.Column(db.String(100))  # Platform post ID after publishing
+    engagement_metrics = db.Column(JSON)  # Likes, comments, shares, etc.
+    posted_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SocialMediaSchedule {self.account_id}:{self.scheduled_for}>'
+
+class SocialMediaCrossPost(db.Model):
+    """Cross-posting to multiple platforms"""
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(Text, nullable=False)
+    media_urls = db.Column(JSON)
+    platforms = db.Column(JSON)  # List of platforms to post to
+    scheduled_for = db.Column(db.DateTime, nullable=False)
+    status = db.Column(db.String(20), default='scheduled')
+    post_results = db.Column(JSON)  # Results for each platform
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SocialMediaCrossPost {self.id}>'
+
+# Advanced Automations (Phase 5)
+class AutomationTest(db.Model):
+    """Test mode for automations"""
+    id = db.Column(db.Integer, primary_key=True)
+    automation_id = db.Column(db.Integer, db.ForeignKey('automation.id'), nullable=False)
+    test_contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'))
+    test_data = db.Column(JSON)  # Test parameters
+    test_results = db.Column(JSON)  # Step-by-step results
+    status = db.Column(db.String(20), default='pending')  # pending, running, completed, failed
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AutomationTest {self.automation_id}>'
+
+class AutomationTriggerLibrary(db.Model):
+    """Pre-built automation triggers"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    trigger_type = db.Column(db.String(50), nullable=False)
+    description = db.Column(Text)
+    category = db.Column(db.String(50))  # ecommerce, engagement, nurture, retention
+    trigger_config = db.Column(JSON)  # Pre-configured trigger settings
+    steps_template = db.Column(JSON)  # Suggested automation steps
+    is_predefined = db.Column(db.Boolean, default=True)
+    usage_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AutomationTriggerLibrary {self.name}>'
+
+class AutomationABTest(db.Model):
+    """A/B testing within automations"""
+    id = db.Column(db.Integer, primary_key=True)
+    automation_id = db.Column(db.Integer, db.ForeignKey('automation.id'), nullable=False)
+    step_id = db.Column(db.Integer, db.ForeignKey('automation_step.id'), nullable=False)
+    variant_a_template_id = db.Column(db.Integer, db.ForeignKey('email_template.id'))
+    variant_b_template_id = db.Column(db.Integer, db.ForeignKey('email_template.id'))
+    split_percentage = db.Column(db.Integer, default=50)  # % for variant A
+    winner_criteria = db.Column(db.String(50), default='open_rate')  # open_rate, click_rate, conversion
+    status = db.Column(db.String(20), default='running')  # running, completed, paused
+    variant_a_sent = db.Column(db.Integer, default=0)
+    variant_b_sent = db.Column(db.Integer, default=0)
+    variant_a_opens = db.Column(db.Integer, default=0)
+    variant_b_opens = db.Column(db.Integer, default=0)
+    variant_a_clicks = db.Column(db.Integer, default=0)
+    variant_b_clicks = db.Column(db.Integer, default=0)
+    winner_variant = db.Column(db.String(1))  # 'A' or 'B'
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    
+    def __repr__(self):
+        return f'<AutomationABTest {self.automation_id}:{self.step_id}>'
+
+# Revenue & Attribution Tracking (v4.1)
+class UTMLink(db.Model):
+    """Track UTM campaign links"""
+    id = db.Column(db.Integer, primary_key=True)
+    campaign_name = db.Column(db.String(200))
+    base_url = db.Column(db.String(500), nullable=False)
+    full_url = db.Column(Text, nullable=False)
+    short_url = db.Column(db.String(100))
+    utm_source = db.Column(db.String(100), nullable=False)
+    utm_medium = db.Column(db.String(100), nullable=False)
+    utm_campaign = db.Column(db.String(200), nullable=False)
+    utm_term = db.Column(db.String(200))
+    utm_content = db.Column(db.String(200))
+    clicks = db.Column(db.Integer, default=0)
+    conversions = db.Column(db.Integer, default=0)
+    revenue = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    def __repr__(self):
+        return f'<UTMLink {self.utm_campaign}>'
+
+class UTMTemplate(db.Model):
+    """Saved UTM parameter templates"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    utm_source = db.Column(db.String(100))
+    utm_medium = db.Column(db.String(100))
+    utm_campaign = db.Column(db.String(200))
+    utm_term = db.Column(db.String(200))
+    utm_content = db.Column(db.String(200))
+    usage_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    def __repr__(self):
+        return f'<UTMTemplate {self.name}>'
+
+class AttributionTouch(db.Model):
+    """Track customer attribution touchpoints"""
+    id = db.Column(db.Integer, primary_key=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    session_id = db.Column(db.String(100))
+    touchpoint_type = db.Column(db.String(50))  # email, social, ad, organic, direct, referral
+    campaign_id = db.Column(db.Integer, db.ForeignKey('campaign.id'))
+    utm_source = db.Column(db.String(100))
+    utm_medium = db.Column(db.String(100))
+    utm_campaign = db.Column(db.String(200))
+    page_url = db.Column(Text)
+    referrer_url = db.Column(Text)
+    device_type = db.Column(db.String(50))
+    occurred_at = db.Column(db.DateTime, default=datetime.utcnow)
+    position = db.Column(db.Integer)  # Touch sequence (1 = first, N = last)
+    
+    # Relationships
+    contact = db.relationship('Contact', backref='attribution_touches')
+    
+    def __repr__(self):
+        return f'<AttributionTouch {self.contact_id}:{self.touchpoint_type}>'
+
+class ConversionEvent(db.Model):
+    """Track conversion events"""
+    id = db.Column(db.Integer, primary_key=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    event_type = db.Column(db.String(50), nullable=False)  # purchase, signup, download, etc.
+    event_value = db.Column(db.Float, default=0.0)  # Revenue or value
+    session_id = db.Column(db.String(100))
+    utm_source = db.Column(db.String(100))
+    utm_medium = db.Column(db.String(100))
+    utm_campaign = db.Column(db.String(200))
+    attributed_campaign_id = db.Column(db.Integer, db.ForeignKey('campaign.id'))
+    attribution_model = db.Column(db.String(50))  # first_touch, last_touch, linear, time_decay
+    occurred_at = db.Column(db.DateTime, default=datetime.utcnow)
+    event_metadata = db.Column(JSON)  # Additional event data
+    
+    # Relationships
+    contact = db.relationship('Contact', backref='conversions')
+    
+    def __repr__(self):
+        return f'<ConversionEvent {self.event_type}:{self.event_value}>'
+
+class CustomerSegment(db.Model):
+    """Customer RFM segmentation"""
+    id = db.Column(db.Integer, primary_key=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False, unique=True)
+    rfm_score = db.Column(db.String(3))  # e.g., "555" for R=5, F=5, M=5
+    recency_score = db.Column(db.Integer)
+    frequency_score = db.Column(db.Integer)
+    monetary_score = db.Column(db.Integer)
+    segment_name = db.Column(db.String(50))  # Champions, Loyal, At Risk, etc.
+    ltv = db.Column(db.Float, default=0.0)
+    predicted_ltv = db.Column(db.Float, default=0.0)
+    last_calculated = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    contact = db.relationship('Contact', backref=db.backref('segment', uselist=False))
+    
+    def __repr__(self):
+        return f'<CustomerSegment {self.segment_name}:{self.rfm_score}>'
+
+# Affiliate & Influencer Management (v4.1 Stage 4)
+class AffiliateLink(db.Model):
+    """Store affiliate link metadata for accurate tracking"""
+    id = db.Column(db.Integer, primary_key=True)
+    tracking_code = db.Column(db.String(50), nullable=False, unique=True, index=True)
+    affiliate_id = db.Column(db.Integer, nullable=False, index=True)
+    product_url = db.Column(db.Text, nullable=False)
+    campaign_name = db.Column(db.String(200))
+    commission_rate = db.Column(db.Float, default=10.0)
+    commission_type = db.Column(db.String(20), default='percentage')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AffiliateLink {self.tracking_code}:{self.affiliate_id}>'
+
+class AffiliateClick(db.Model):
+    """Track affiliate link clicks"""
+    id = db.Column(db.Integer, primary_key=True)
+    tracking_code = db.Column(db.String(50), nullable=False, index=True)
+    ip_address = db.Column(db.String(50))
+    user_agent = db.Column(db.String(500))
+    referrer = db.Column(db.String(500))
+    clicked_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    def __repr__(self):
+        return f'<AffiliateClick {self.tracking_code}>'
+
+class AffiliateConversion(db.Model):
+    """Track affiliate conversions and commissions"""
+    id = db.Column(db.Integer, primary_key=True)
+    tracking_code = db.Column(db.String(50), nullable=False, index=True)
+    affiliate_id = db.Column(db.Integer, nullable=False, index=True)
+    sale_amount = db.Column(db.Float, default=0.0)
+    commission_amount = db.Column(db.Float, default=0.0)
+    order_id = db.Column(db.String(100))
+    status = db.Column(db.String(20), default='pending')  # pending, approved, paid, rejected
+    converted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    paid_at = db.Column(db.DateTime)
+    
+    def __repr__(self):
+        return f'<AffiliateConversion {self.tracking_code}:${self.commission_amount}>'
+
+class AffiliatePayout(db.Model):
+    """Track affiliate commission payouts"""
+    id = db.Column(db.Integer, primary_key=True)
+    affiliate_id = db.Column(db.Integer, nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    payment_method = db.Column(db.String(50))  # paypal, bank, crypto
+    status = db.Column(db.String(20), default='pending')  # pending, processing, completed, failed
+    notes = db.Column(db.Text)
+    requested_at = db.Column(db.DateTime, default=datetime.utcnow)
+    processed_at = db.Column(db.DateTime)
+    
+    def __repr__(self):
+        return f'<AffiliatePayout {self.affiliate_id}:${self.amount}>'
+
+class Influencer(db.Model):
+    """Influencer profiles and contact information"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    email = db.Column(db.String(200))
+    instagram_handle = db.Column(db.String(100))
+    tiktok_handle = db.Column(db.String(100))
+    youtube_channel = db.Column(db.String(200))
+    twitter_handle = db.Column(db.String(100))
+    niche = db.Column(db.String(100))  # beauty, fitness, tech, lifestyle, etc.
+    follower_count = db.Column(db.Integer, default=0)
+    engagement_rate = db.Column(db.Float, default=0.0)
+    tier = db.Column(db.String(20))  # nano, micro, mid, macro, mega
+    status = db.Column(db.String(20), default='prospect')  # prospect, active, inactive, blocked
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Influencer {self.name}>'
+
+class InfluencerContract(db.Model):
+    """Influencer contracts and agreements"""
+    id = db.Column(db.Integer, primary_key=True)
+    influencer_id = db.Column(db.Integer, db.ForeignKey('influencer.id'), nullable=False)
+    campaign_name = db.Column(db.String(200))
+    deliverables = db.Column(JSON)  # List of required content pieces
+    compensation_type = db.Column(db.String(20))  # fixed, commission, product, hybrid
+    compensation_amount = db.Column(db.Float, default=0.0)
+    start_date = db.Column(db.DateTime)
+    end_date = db.Column(db.DateTime)
+    content_guidelines = db.Column(db.Text)
+    exclusivity_clause = db.Column(db.Boolean, default=False)
+    status = db.Column(db.String(20), default='draft')  # draft, active, completed, cancelled
+    signed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    influencer = db.relationship('Influencer', backref='contracts')
+    
+    def __repr__(self):
+        return f'<InfluencerContract {self.campaign_name}>'
+
+class InfluencerContent(db.Model):
+    """Track influencer content performance"""
+    id = db.Column(db.Integer, primary_key=True)
+    influencer_id = db.Column(db.Integer, db.ForeignKey('influencer.id'), nullable=False)
+    contract_id = db.Column(db.Integer, db.ForeignKey('influencer_contract.id'))
+    platform = db.Column(db.String(50))  # instagram, tiktok, youtube, twitter
+    content_type = db.Column(db.String(50))  # post, story, reel, video, tweet
+    content_url = db.Column(db.String(500))
+    posted_at = db.Column(db.DateTime)
+    views = db.Column(db.Integer, default=0)
+    likes = db.Column(db.Integer, default=0)
+    comments = db.Column(db.Integer, default=0)
+    shares = db.Column(db.Integer, default=0)
+    clicks = db.Column(db.Integer, default=0)
+    conversions = db.Column(db.Integer, default=0)
+    engagement_rate = db.Column(db.Float, default=0.0)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    influencer = db.relationship('Influencer', backref='content')
+    
+    def __repr__(self):
+        return f'<InfluencerContent {self.platform}:{self.content_type}>'
+
+# Advanced Workflow Builder (v4.1 Stage 5)
+class WorkflowAutomation(db.Model):
+    """Advanced visual workflow automation"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    trigger_type = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='draft')  # draft, active, paused, archived
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='workflows')
+    
+    def __repr__(self):
+        return f'<WorkflowAutomation {self.name}>'
+
+class WorkflowNode(db.Model):
+    """Individual nodes in workflow canvas"""
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey('workflow_automation.id'), nullable=False)
+    node_type = db.Column(db.String(50), nullable=False)  # trigger, action, logic, exit
+    action_type = db.Column(db.String(100), nullable=False)  # send_email, wait, if_condition, etc
+    position_x = db.Column(db.Integer, default=0)
+    position_y = db.Column(db.Integer, default=0)
+    config = db.Column(JSON)  # Node-specific configuration
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    workflow = db.relationship('WorkflowAutomation', backref='nodes')
+    
+    def __repr__(self):
+        return f'<WorkflowNode {self.node_type}:{self.action_type}>'
+
+class WorkflowConnection(db.Model):
+    """Connections between workflow nodes"""
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey('workflow_automation.id'), nullable=False)
+    source_node_id = db.Column(db.Integer, db.ForeignKey('workflow_node.id'), nullable=False)
+    target_node_id = db.Column(db.Integer, db.ForeignKey('workflow_node.id'), nullable=False)
+    condition = db.Column(db.String(50))  # For conditional branches: 'true', 'false', or null
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    workflow = db.relationship('WorkflowAutomation', backref='connections')
+    source_node = db.relationship('WorkflowNode', foreign_keys=[source_node_id])
+    target_node = db.relationship('WorkflowNode', foreign_keys=[target_node_id])
+    
+    def __repr__(self):
+        return f'<WorkflowConnection {self.source_node_id}->{self.target_node_id}>'
+
+class WorkflowExecution(db.Model):
+    """Track workflow execution for contacts"""
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey('workflow_automation.id'), nullable=False)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, running, completed, failed, waiting
+    current_node_id = db.Column(db.Integer, db.ForeignKey('workflow_node.id'))
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    error_message = db.Column(db.Text)
+    
+    # Relationships
+    workflow = db.relationship('WorkflowAutomation', backref='executions')
+    contact = db.relationship('Contact', backref='workflow_executions')
+    current_node = db.relationship('WorkflowNode', foreign_keys=[current_node_id])
+    
+    def __repr__(self):
+        return f'<WorkflowExecution {self.workflow_id}:{self.contact_id}:{self.status}>'

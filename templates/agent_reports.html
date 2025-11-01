@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Agent Reports - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i data-feather="file-text"></i> AI Agent Reports</h2>
+                <a href="{{ url_for('main.agents_dashboard') }}" class="btn btn-secondary">
+                    <i data-feather="arrow-left"></i> Back to Agents
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="report_type" class="form-label">Filter by Type</label>
+                            <select class="form-select" id="report_type" name="report_type" onchange="this.form.submit()">
+                                <option value="">All Reports</option>
+                                <option value="brand_strategy" {% if selected_type == 'brand_strategy' %}selected{% endif %}>Brand Strategy</option>
+                                <option value="content_plan" {% if selected_type == 'content_plan' %}selected{% endif %}>Content Plan</option>
+                                <option value="analytics_summary" {% if selected_type == 'analytics_summary' %}selected{% endif %}>Analytics Summary</option>
+                                <option value="seo_analysis" {% if selected_type == 'seo_analysis' %}selected{% endif %}>SEO Analysis</option>
+                                <option value="social_insights" {% if selected_type == 'social_insights' %}selected{% endif %}>Social Insights</option>
+                                <option value="email_performance" {% if selected_type == 'email_performance' %}selected{% endif %}>Email Performance</option>
+                                <option value="advertising_optimization" {% if selected_type == 'advertising_optimization' %}selected{% endif %}>Advertising Optimization</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8 d-flex align-items-end">
+                            <a href="{{ url_for('main.agent_reports') }}" class="btn btn-outline-secondary">
+                                <i data-feather="x"></i> Clear Filters
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            {% if reports.items %}
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Report Type</th>
+                                        <th>Title</th>
+                                        <th>Agent</th>
+                                        <th>Created</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for report in reports.items %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-primary">{{ report.report_type | replace('_', ' ') | title }}</span>
+                                        </td>
+                                        <td>
+                                            <strong>{{ report.title }}</strong>
+                                        </td>
+                                        <td>{{ report.agent_name }}</td>
+                                        <td>{{ report.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            {% if report.status == 'completed' %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% elif report.status == 'pending' %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% elif report.status == 'failed' %}
+                                                <span class="badge bg-danger">Failed</span>
+                                            {% else %}
+                                                <span class="badge bg-info">{{ report.status | title }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('main.view_agent_report', report_id=report.id) }}" class="btn btn-sm btn-primary">
+                                                <i data-feather="eye"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if reports.pages > 1 %}
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center">
+                                {% if reports.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('main.agent_reports', page=reports.prev_num, report_type=selected_type) }}">Previous</a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for page in reports.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                    {% if page %}
+                                        <li class="page-item {% if page == reports.page %}active{% endif %}">
+                                            <a class="page-link" href="{{ url_for('main.agent_reports', page=page, report_type=selected_type) }}">{{ page }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if reports.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('main.agent_reports', page=reports.next_num, report_type=selected_type) }}">Next</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i data-feather="info"></i> 
+                    No reports found. AI agents will automatically generate reports based on their scheduled tasks.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    feather.replace();
+</script>
+{% endblock %}

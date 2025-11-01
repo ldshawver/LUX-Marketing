@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Event Tickets - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2><i data-feather="ticket"></i> Manage Tickets - {{ event.name }}</h2>
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header"><h5>Ticket Types</h5></div>
+                <div class="card-body">
+                    {% if tickets %}
+                    <table class="table">
+                        <thead>
+                            <tr><th>Name</th><th>Price</th><th>Sold</th><th>Available</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in tickets %}
+                            <tr>
+                                <td><strong>{{ ticket.name }}</strong></td>
+                                <td>${{ '%.2f'|format(ticket.price) }}</td>
+                                <td>{{ ticket.quantity_sold }}</td>
+                                <td>{{ ticket.quantity_total - ticket.quantity_sold }}</td>
+                                <td><span class="badge bg-{{ 'success' if ticket.is_active else 'secondary' }}">
+                                    {{ 'Active' if ticket.is_active else 'Inactive' }}
+                                </span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="text-muted">No tickets created yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header"><h5>Add Ticket Type</h5></div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('main.create_ticket_type', event_id=event.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label>Name</label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Price</label>
+                            <input type="number" name="price" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Quantity</label>
+                            <input type="number" name="quantity" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Ticket</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

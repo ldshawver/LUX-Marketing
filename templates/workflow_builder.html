@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block title %}Workflow Builder - LUX Marketing{% endblock %}
+
+{% block extra_css %}
+<style>
+.workflow-canvas {
+    background: #1a1a1a;
+    border: 2px solid #333;
+    border-radius: 8px;
+    min-height: 600px;
+    position: relative;
+    overflow: auto;
+}
+
+.node-palette {
+    background: #212529;
+    border-radius: 8px;
+    padding: 15px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.palette-category {
+    margin-bottom: 20px;
+}
+
+.palette-node {
+    background: #2d3238;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+    cursor: move;
+    transition: all 0.2s;
+}
+
+.palette-node:hover {
+    background: #363c44;
+    border-color: #0d6efd;
+}
+
+.workflow-node {
+    position: absolute;
+    background: #2d3238;
+    border: 2px solid #444;
+    border-radius: 8px;
+    padding: 12px;
+    min-width: 150px;
+    cursor: move;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.workflow-node.trigger { border-color: #198754; }
+.workflow-node.action { border-color: #0d6efd; }
+.workflow-node.logic { border-color: #ffc107; }
+.workflow-node.exit { border-color: #dc3545; }
+
+.workflow-node.selected {
+    border-width: 3px;
+    box-shadow: 0 0 15px rgba(13, 110, 253, 0.5);
+}
+
+.node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.node-title {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.node-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.node-description {
+    font-size: 12px;
+    color: #adb5bd;
+}
+
+.connection-point {
+    width: 12px;
+    height: 12px;
+    background: #0d6efd;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    position: absolute;
+    cursor: crosshair;
+}
+
+.connection-point.input { top: -6px; left: 50%; margin-left: -6px; }
+.connection-point.output { bottom: -6px; left: 50%; margin-left: -6px; }
+
+.workflow-connection {
+    stroke: #0d6efd;
+    stroke-width: 2;
+    fill: none;
+    marker-end: url(#arrowhead);
+}
+
+.workflow-connection.condition-true { stroke: #198754; }
+.workflow-connection.condition-false { stroke: #dc3545; }
+
+.node-config-panel {
+    background: #212529;
+    border-radius: 8px;
+    padding: 20px;
+    display: none;
+}
+
+.node-config-panel.active {
+    display: block;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i data-feather="git-branch"></i> Workflow Builder</h2>
+            <p class="text-muted mb-0">Visual automation with conditional logic</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" onclick="clearCanvas()">
+                <i data-feather="trash-2"></i> Clear
+            </button>
+            <button class="btn btn-outline-primary" onclick="saveWorkflow()">
+                <i data-feather="save"></i> Save Draft
+            </button>
+            <button class="btn btn-success" onclick="activateWorkflow()">
+                <i data-feather="play"></i> Activate
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Node Palette -->
+        <div class="col-md-3">
+            <div class="node-palette">
+                <h5 class="mb-3">Node Palette</h5>
+                
+                <!-- Triggers -->
+                <div class="palette-category">
+                    <h6 class="text-success">Triggers</h6>
+                    <div class="palette-node" draggable="true" data-type="trigger" data-action="contact_added">
+                        <i data-feather="user-plus"></i> Contact Added
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="trigger" data-action="tag_applied">
+                        <i data-feather="tag"></i> Tag Applied
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="trigger" data-action="form_submitted">
+                        <i data-feather="file-text"></i> Form Submitted
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="trigger" data-action="email_opened">
+                        <i data-feather="mail-open"></i> Email Opened
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="palette-category">
+                    <h6 class="text-primary">Actions</h6>
+                    <div class="palette-node" draggable="true" data-type="action" data-action="send_email">
+                        <i data-feather="mail"></i> Send Email
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="action" data-action="send_sms">
+                        <i data-feather="message-square"></i> Send SMS
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="action" data-action="add_tag">
+                        <i data-feather="tag"></i> Add Tag
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="action" data-action="assign_score">
+                        <i data-feather="trending-up"></i> Assign Score
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="action" data-action="post_social">
+                        <i data-feather="share-2"></i> Post to Social
+                    </div>
+                </div>
+
+                <!-- Logic -->
+                <div class="palette-category">
+                    <h6 class="text-warning">Logic & Flow</h6>
+                    <div class="palette-node" draggable="true" data-type="logic" data-action="if_condition">
+                        <i data-feather="git-branch"></i> If/Then
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="logic" data-action="wait">
+                        <i data-feather="clock"></i> Wait
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="logic" data-action="split_test">
+                        <i data-feather="shuffle"></i> A/B Split
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="logic" data-action="goal_check">
+                        <i data-feather="target"></i> Check Goal
+                    </div>
+                </div>
+
+                <!-- Exit -->
+                <div class="palette-category">
+                    <h6 class="text-danger">Exit Points</h6>
+                    <div class="palette-node" draggable="true" data-type="exit" data-action="end_workflow">
+                        <i data-feather="square"></i> End Workflow
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="exit" data-action="goal_achieved">
+                        <i data-feather="check-square"></i> Goal Achieved
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas -->
+        <div class="col-md-6">
+            <div class="workflow-canvas" id="canvas" ondrop="dropNode(event)" ondragover="allowDrop(event)">
+                <svg id="connections-svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#0d6efd" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+            <div class="mt-3 text-center text-muted">
+                <small>Drag nodes from palette to canvas. Click and drag between connection points to create connections.</small>
+            </div>
+        </div>
+
+        <!-- Configuration Panel -->
+        <div class="col-md-3">
+            <div class="node-config-panel" id="config-panel">
+                <h5 class="mb-3">Node Configuration</h5>
+                <p class="text-muted" id="config-empty">Select a node to configure</p>
+                <div id="config-content"></div>
+            </div>
+
+            <!-- Workflow Info -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Workflow Info</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Workflow Name</label>
+                        <input type="text" class="form-control" id="workflow-name" value="New Workflow">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="workflow-description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="workflow-status">
+                            <option value="draft">Draft</option>
+                            <option value="active">Active</option>
+                            <option value="paused">Paused</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+let workflowData = {
+    id: null,
+    nodes: [],
+    connections: [],
+    nodeCounter: 0
+};
+
+let selectedNode = null;
+let connectingFrom = null;
+
+// Drag and Drop
+function allowDrop(ev) {
+    ev.preventDefault();
+}
+
+function dropNode(ev) {
+    ev.preventDefault();
+    const nodeType = ev.dataTransfer.getData('type');
+    const actionType = ev.dataTransfer.getData('action');
+    
+    if (!nodeType || !actionType) return;
+    
+    const canvas = document.getElementById('canvas');
+    const rect = canvas.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const y = ev.clientY - rect.top;
+    
+    createNode(nodeType, actionType, x, y);
+}
+
+// Setup drag events
+document.querySelectorAll('.palette-node').forEach(node => {
+    node.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('type', e.target.dataset.type);
+        e.dataTransfer.setData('action', e.target.dataset.action);
+    });
+});
+
+function createNode(type, action, x, y) {
+    const nodeId = ++workflowData.nodeCounter;
+    const node = {
+        id: nodeId,
+        type: type,
+        action: action,
+        x: x,
+        y: y,
+        config: {}
+    };
+    
+    workflowData.nodes.push(node);
+    renderNode(node);
+}
+
+function renderNode(node) {
+    const canvas = document.getElementById('canvas');
+    const nodeEl = document.createElement('div');
+    nodeEl.className = `workflow-node ${node.type}`;
+    nodeEl.id = `node-${node.id}`;
+    nodeEl.style.left = node.x + 'px';
+    nodeEl.style.top = node.y + 'px';
+    
+    const actionName = node.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    
+    nodeEl.innerHTML = `
+        <div class="node-header">
+            <span class="node-title">${actionName}</span>
+            <button class="btn btn-sm btn-link text-danger p-0" onclick="deleteNode(${node.id})">
+                <i data-feather="x" style="width:16px;height:16px;"></i>
+            </button>
+        </div>
+        <div class="node-description">${node.type}</div>
+        <div class="connection-point input" data-node="${node.id}" data-point="input"></div>
+        <div class="connection-point output" data-node="${node.id}" data-point="output"></div>
+    `;
+    
+    // Make draggable
+    nodeEl.draggable = true;
+    nodeEl.addEventListener('dragstart', handleNodeDragStart);
+    nodeEl.addEventListener('click', () => selectNode(node.id));
+    
+    canvas.appendChild(nodeEl);
+    feather.replace();
+    
+    // Setup connection points
+    setupConnectionPoints(nodeEl);
+}
+
+function handleNodeDragStart(e) {
+    e.dataTransfer.setData('nodeId', e.target.id.replace('node-', ''));
+}
+
+function setupConnectionPoints(nodeEl) {
+    const points = nodeEl.querySelectorAll('.connection-point');
+    points.forEach(point => {
+        point.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            const nodeId = parseInt(point.dataset.node);
+            const pointType = point.dataset.point;
+            
+            if (pointType === 'output') {
+                connectingFrom = nodeId;
+            } else if (pointType === 'input' && connectingFrom) {
+                createConnection(connectingFrom, nodeId);
+                connectingFrom = null;
+            }
+        });
+    });
+}
+
+function createConnection(sourceId, targetId) {
+    const conn = {
+        id: Date.now(),
+        source: sourceId,
+        target: targetId,
+        condition: null
+    };
+    
+    workflowData.connections.push(conn);
+    renderConnections();
+}
+
+function renderConnections() {
+    const svg = document.getElementById('connections-svg');
+    svg.innerHTML = svg.innerHTML.split('<defs>')[0] + '<defs>' + 
+                    svg.innerHTML.split('<defs>')[1].split('</defs>')[0] + '</defs>';
+    
+    workflowData.connections.forEach(conn => {
+        const sourceEl = document.getElementById(`node-${conn.source}`);
+        const targetEl = document.getElementById(`node-${conn.target}`);
+        
+        if (!sourceEl || !targetEl) return;
+        
+        const sourceRect = sourceEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+        
+        const x1 = sourceRect.left - canvasRect.left + sourceRect.width / 2;
+        const y1 = sourceRect.bottom - canvasRect.top;
+        const x2 = targetRect.left - canvasRect.left + targetRect.width / 2;
+        const y2 = targetRect.top - canvasRect.top;
+        
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const d = `M ${x1} ${y1} Q ${x1} ${(y1+y2)/2}, ${x2} ${y2}`;
+        path.setAttribute('d', d);
+        path.setAttribute('class', 'workflow-connection');
+        svg.appendChild(path);
+    });
+}
+
+function selectNode(nodeId) {
+    selectedNode = workflowData.nodes.find(n => n.id === nodeId);
+    
+    // Highlight selected
+    document.querySelectorAll('.workflow-node').forEach(el => el.classList.remove('selected'));
+    document.getElementById(`node-${nodeId}`).classList.add('selected');
+    
+    // Show config panel
+    showNodeConfig(selectedNode);
+}
+
+function showNodeConfig(node) {
+    const panel = document.getElementById('config-panel');
+    const content = document.getElementById('config-content');
+    panel.classList.add('active');
+    
+    let configHtml = `<h6>${node.action.replace(/_/g, ' ')}</h6>`;
+    
+    // Different config forms for different node types
+    if (node.action === 'send_email') {
+        configHtml += `
+            <div class="mb-3">
+                <label class="form-label">Email Template</label>
+                <select class="form-select">
+                    <option>Select template...</option>
+                </select>
+            </div>
+        `;
+    } else if (node.action === 'wait') {
+        configHtml += `
+            <div class="mb-3">
+                <label class="form-label">Wait Duration (minutes)</label>
+                <input type="number" class="form-control" value="60">
+            </div>
+        `;
+    } else if (node.action === 'if_condition') {
+        configHtml += `
+            <div class="mb-3">
+                <label class="form-label">Field</label>
+                <select class="form-select">
+                    <option>email</option>
+                    <option>tags</option>
+                    <option>lead_score</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Operator</label>
+                <select class="form-select">
+                    <option>equals</option>
+                    <option>not_equals</option>
+                    <option>contains</option>
+                    <option>greater_than</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Value</label>
+                <input type="text" class="form-control">
+            </div>
+        `;
+    }
+    
+    content.innerHTML = configHtml;
+}
+
+function deleteNode(nodeId) {
+    workflowData.nodes = workflowData.nodes.filter(n => n.id !== nodeId);
+    workflowData.connections = workflowData.connections.filter(
+        c => c.source !== nodeId && c.target !== nodeId
+    );
+    document.getElementById(`node-${nodeId}`).remove();
+    renderConnections();
+}
+
+function clearCanvas() {
+    if (confirm('Clear all nodes and connections?')) {
+        workflowData = { id: null, nodes: [], connections: [], nodeCounter: 0 };
+        document.getElementById('canvas').innerHTML = document.getElementById('canvas').innerHTML.split('</svg>')[0] + '</svg>';
+    }
+}
+
+function saveWorkflow() {
+    const data = {
+        name: document.getElementById('workflow-name').value,
+        description: document.getElementById('workflow-description').value,
+        status: document.getElementById('workflow-status').value,
+        nodes: workflowData.nodes,
+        connections: workflowData.connections
+    };
+    
+    fetch('/workflow/save', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('Workflow saved!');
+            workflowData.id = result.workflow_id;
+        } else {
+            alert('Error: ' + result.error);
+        }
+    });
+}
+
+function activateWorkflow() {
+    if (!workflowData.id) {
+        alert('Please save workflow first');
+        return;
+    }
+    
+    fetch(`/workflow/${workflowData.id}/activate`, {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('Workflow activated!');
+            document.getElementById('workflow-status').value = 'active';
+        }
+    });
+}
+</script>
+
+{% endblock %}

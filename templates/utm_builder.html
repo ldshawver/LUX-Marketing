@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block title %}UTM Link Builder - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2><i data-feather="link"></i> UTM Link Builder</h2>
+            <p class="text-muted">Create trackable campaign links with UTM parameters</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#utmTemplatesModal">
+                <i data-feather="bookmark"></i> Saved Templates
+            </button>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- UTM Builder Form -->
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Build Your Campaign URL</h5>
+                </div>
+                <div class="card-body">
+                    <form id="utm-builder-form">
+                        <!-- Website URL -->
+                        <div class="mb-3">
+                            <label class="form-label">Website URL <span class="text-danger">*</span></label>
+                            <input type="url" class="form-control" id="website-url" placeholder="https://example.com/page" required>
+                            <small class="text-muted">The full website URL (e.g., https://yoursite.com/landing-page)</small>
+                        </div>
+
+                        <!-- Campaign Source -->
+                        <div class="mb-3">
+                            <label class="form-label">Campaign Source <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="utm-source" placeholder="google, facebook, newsletter" required>
+                            <small class="text-muted">The referrer (e.g., google, newsletter, facebook)</small>
+                        </div>
+
+                        <!-- Campaign Medium -->
+                        <div class="mb-3">
+                            <label class="form-label">Campaign Medium <span class="text-danger">*</span></label>
+                            <select class="form-select" id="utm-medium" required>
+                                <option value="">Select Medium</option>
+                                <option value="email">Email</option>
+                                <option value="cpc">CPC (Paid Search)</option>
+                                <option value="social">Social</option>
+                                <option value="display">Display</option>
+                                <option value="affiliate">Affiliate</option>
+                                <option value="referral">Referral</option>
+                                <option value="organic">Organic</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <small class="text-muted">Marketing medium (e.g., email, cpc, social)</small>
+                        </div>
+
+                        <!-- Campaign Name -->
+                        <div class="mb-3">
+                            <label class="form-label">Campaign Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="utm-campaign" placeholder="spring_sale, product_launch" required>
+                            <small class="text-muted">Product, promo code, or slogan (e.g., spring_sale)</small>
+                        </div>
+
+                        <!-- Campaign Term (Optional) -->
+                        <div class="mb-3">
+                            <label class="form-label">Campaign Term <small class="text-muted">(Optional)</small></label>
+                            <input type="text" class="form-control" id="utm-term" placeholder="running+shoes">
+                            <small class="text-muted">Identify paid search keywords</small>
+                        </div>
+
+                        <!-- Campaign Content (Optional) -->
+                        <div class="mb-3">
+                            <label class="form-label">Campaign Content <small class="text-muted">(Optional)</small></label>
+                            <input type="text" class="form-control" id="utm-content" placeholder="logo_link, text_link">
+                            <small class="text-muted">Differentiate similar content or links (for A/B testing)</small>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i data-feather="link"></i> Generate Link
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="saveTemplate()">
+                                <i data-feather="save"></i> Save as Template
+                            </button>
+                            <button type="reset" class="btn btn-outline-secondary">
+                                <i data-feather="refresh-cw"></i> Reset
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generated URL & Preview -->
+        <div class="col-md-5">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Generated Campaign URL</h5>
+                </div>
+                <div class="card-body">
+                    <div id="generated-url-container" style="display: none;">
+                        <div class="alert alert-success">
+                            <strong>Your trackable URL:</strong>
+                        </div>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="generated-url" readonly>
+                            <button class="btn btn-outline-primary" type="button" onclick="copyUrl()">
+                                <i data-feather="copy"></i> Copy
+                            </button>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <button class="btn btn-sm btn-outline-primary" onclick="shortenUrl()">
+                                <i data-feather="minimize-2"></i> Shorten URL
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="generateQR()">
+                                <i data-feather="grid"></i> Generate QR Code
+                            </button>
+                        </div>
+
+                        <div id="shortened-url" style="display: none;">
+                            <label class="form-label">Shortened URL:</label>
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" id="short-url" readonly>
+                                <button class="btn btn-outline-primary" type="button" onclick="copyShortUrl()">
+                                    <i data-feather="copy"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="qr-code" style="display: none;" class="text-center">
+                            <canvas id="qr-canvas"></canvas>
+                            <button class="btn btn-sm btn-primary mt-2" onclick="downloadQR()">
+                                <i data-feather="download"></i> Download QR
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="empty-state">
+                        <div class="text-center text-muted py-5">
+                            <i data-feather="link" style="width: 64px; height: 64px; opacity: 0.3;"></i>
+                            <p class="mt-3">Fill in the form to generate your campaign URL</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UTM Parameter Reference -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Quick Reference</h6>
+                </div>
+                <div class="card-body">
+                    <small>
+                        <strong>utm_source:</strong> Where traffic originates<br>
+                        <strong>utm_medium:</strong> Marketing channel type<br>
+                        <strong>utm_campaign:</strong> Specific campaign identifier<br>
+                        <strong>utm_term:</strong> Paid search keywords<br>
+                        <strong>utm_content:</strong> A/B testing variants
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Links -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Campaign Links</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Campaign</th>
+                                    <th>Source</th>
+                                    <th>Medium</th>
+                                    <th>URL</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-links">
+                                {% if recent_links %}
+                                    {% for link in recent_links %}
+                                    <tr>
+                                        <td>{{ link.campaign_name }}</td>
+                                        <td>{{ link.utm_source }}</td>
+                                        <td>{{ link.utm_medium }}</td>
+                                        <td>
+                                            <small class="text-muted">{{ link.full_url[:50] }}...</small>
+                                        </td>
+                                        <td>{{ link.created_at.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard('{{ link.full_url }}')">
+                                                <i data-feather="copy"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="reuseLink({{ link.id }})">
+                                                <i data-feather="repeat"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">No recent links</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Saved Templates Modal -->
+<div class="modal fade" id="utmTemplatesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Saved UTM Templates</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="templates-list">
+                    <p class="text-muted">No saved templates yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+// Generate UTM URL
+document.getElementById('utm-builder-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    generateUTMUrl();
+});
+
+function generateUTMUrl() {
+    const baseUrl = document.getElementById('website-url').value.trim();
+    const source = document.getElementById('utm-source').value.trim();
+    const medium = document.getElementById('utm-medium').value.trim();
+    const campaign = document.getElementById('utm-campaign').value.trim();
+    const term = document.getElementById('utm-term').value.trim();
+    const content = document.getElementById('utm-content').value.trim();
+
+    if (!baseUrl || !source || !medium || !campaign) {
+        alert('Please fill in all required fields');
+        return;
+    }
+
+    // Build URL
+    const url = new URL(baseUrl);
+    url.searchParams.set('utm_source', source);
+    url.searchParams.set('utm_medium', medium);
+    url.searchParams.set('utm_campaign', campaign);
+    if (term) url.searchParams.set('utm_term', term);
+    if (content) url.searchParams.set('utm_content', content);
+
+    const generatedUrl = url.toString();
+    
+    // Display generated URL
+    document.getElementById('generated-url').value = generatedUrl;
+    document.getElementById('generated-url-container').style.display = 'block';
+    document.getElementById('empty-state').style.display = 'none';
+    feather.replace();
+
+    // Save to database
+    saveUTMLink(generatedUrl, source, medium, campaign);
+}
+
+function saveUTMLink(url, source, medium, campaign) {
+    fetch('/utm/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            url: url,
+            utm_source: source,
+            utm_medium: medium,
+            utm_campaign: campaign
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('UTM link saved');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function copyUrl() {
+    const url = document.getElementById('generated-url');
+    url.select();
+    document.execCommand('copy');
+    
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i data-feather="check"></i> Copied!';
+    feather.replace();
+    
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        feather.replace();
+    }, 2000);
+}
+
+function copyShortUrl() {
+    const url = document.getElementById('short-url');
+    url.select();
+    document.execCommand('copy');
+    alert('Short URL copied to clipboard!');
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text);
+    alert('Link copied to clipboard!');
+}
+
+function shortenUrl() {
+    const longUrl = document.getElementById('generated-url').value;
+    
+    fetch('/utm/shorten', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ url: longUrl })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('short-url').value = data.short_url;
+            document.getElementById('shortened-url').style.display = 'block';
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function generateQR() {
+    const url = document.getElementById('generated-url').value;
+    document.getElementById('qr-code').style.display = 'block';
+    
+    // Simple QR code placeholder - integrate with QR library
+    alert('QR Code generation will be implemented with qrcode.js');
+}
+
+function downloadQR() {
+    alert('QR code download functionality will be implemented');
+}
+
+function saveTemplate() {
+    const templateName = prompt('Enter template name:');
+    if (!templateName) return;
+    
+    const template = {
+        name: templateName,
+        utm_source: document.getElementById('utm-source').value,
+        utm_medium: document.getElementById('utm-medium').value,
+        utm_campaign: document.getElementById('utm-campaign').value,
+        utm_term: document.getElementById('utm-term').value,
+        utm_content: document.getElementById('utm-content').value
+    };
+    
+    fetch('/utm/templates/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(template)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Template saved!');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function reuseLink(linkId) {
+    fetch(`/utm/link/${linkId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const link = data.link;
+                document.getElementById('website-url').value = link.base_url;
+                document.getElementById('utm-source').value = link.utm_source;
+                document.getElementById('utm-medium').value = link.utm_medium;
+                document.getElementById('utm-campaign').value = link.utm_campaign;
+                document.getElementById('utm-term').value = link.utm_term || '';
+                document.getElementById('utm-content').value = link.utm_content || '';
+            }
+        });
+}
+</script>
+
+{% endblock %}

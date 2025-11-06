@@ -3,170 +3,211 @@
 {% block title %}Dashboard - LUX Marketing{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Dashboard</h1>
+<style>
+  .dashboard-container {
+    min-height: 100vh;
+    background: #000000;
+    padding: 0;
+    margin: -2rem -15px 0;
+  }
+  
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem 3rem;
+    background: #000000;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+  }
+  
+  .lux-logo {
+    font-size: 3rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.5rem;
+    text-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+  }
+  
+  .user-name {
+    font-size: 1.2rem;
+    color: #4ade80;
+    font-weight: 400;
+  }
+  
+  .settings-icon {
+    color: #4ade80;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .settings-icon:hover {
+    color: #22c55e;
+    transform: rotate(90deg);
+  }
+  
+  .tiles-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    padding: 2.5rem 3rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .nav-tile {
+    background: rgba(10, 10, 15, 0.8);
+    border: 2px solid rgba(139, 92, 246, 0.5);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    position: relative;
+    min-height: 160px;
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.25),
+                0 0 20px rgba(139, 92, 246, 0.15),
+                inset 0 -2px 8px rgba(139, 92, 246, 0.1);
+  }
+  
+  .nav-tile:hover {
+    transform: translateY(-4px);
+    border-color: rgba(139, 92, 246, 0.8);
+    box-shadow: 0 12px 48px rgba(139, 92, 246, 0.4),
+                0 0 40px rgba(139, 92, 246, 0.25),
+                inset 0 -2px 12px rgba(139, 92, 246, 0.2);
+    background: rgba(15, 15, 20, 0.9);
+  }
+  
+  .tile-icon {
+    width: 56px;
+    height: 56px;
+    stroke-width: 2.5;
+    transition: all 0.3s ease;
+    color: #8b5cf6;
+    filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.7)) 
+            drop-shadow(0 0 20px rgba(139, 92, 246, 0.4));
+  }
+  
+  .nav-tile:hover .tile-icon {
+    color: #a78bfa;
+    filter: drop-shadow(0 0 15px rgba(167, 139, 250, 0.9)) 
+            drop-shadow(0 0 25px rgba(139, 92, 246, 0.6));
+    transform: scale(1.05);
+  }
+  
+  .tile-label {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #4ade80;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+  
+  .nav-tile:hover .tile-label {
+    color: #5efc82;
+  }
+  
+  @media (max-width: 992px) {
+    .tiles-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      padding: 2rem;
+    }
+    
+    .lux-logo {
+      font-size: 2rem;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .tiles-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .dashboard-header {
+      padding: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+    }
+    
+    .lux-logo {
+      font-size: 1.5rem;
+      letter-spacing: 0.3rem;
+    }
+  }
+</style>
+
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="lux-logo">LUX</div>
+    <div class="user-name">{{ current_user.username }}</div>
     <div>
-        <a href="{{ url_for('main.create_campaign') }}" class="btn btn-primary">
-            <i data-feather="plus"></i> New Campaign
-        </a>
+      <a href="{{ url_for('user.profile') }}">
+        <i data-feather="settings" class="settings-icon"></i>
+      </a>
     </div>
+  </div>
+  
+  <div class="tiles-grid">
+    <a href="{{ url_for('main.campaigns') }}" class="nav-tile">
+      <i data-feather="mail" class="tile-icon"></i>
+      <div class="tile-label">Email</div>
+    </a>
+    
+    <a href="{{ url_for('main.sms_dashboard') }}" class="nav-tile">
+      <i data-feather="message-square" class="tile-icon"></i>
+      <div class="tile-label">Text</div>
+    </a>
+    
+    <a href="{{ url_for('main.social_media') }}" class="nav-tile">
+      <i data-feather="share-2" class="tile-icon"></i>
+      <div class="tile-label">Social</div>
+    </a>
+    
+    <a href="{{ url_for('main.create_campaign') }}" class="nav-tile">
+      <i data-feather="radio" class="tile-icon"></i>
+      <div class="tile-label">Campaign</div>
+    </a>
+    
+    <a href="{{ url_for('main.analytics') }}" class="nav-tile">
+      <i data-feather="trending-up" class="tile-icon"></i>
+      <div class="tile-label">Analytics</div>
+    </a>
+    
+    <a href="{{ url_for('main.marketing_calendar') }}" class="nav-tile">
+      <i data-feather="calendar" class="tile-icon"></i>
+      <div class="tile-label">Calendar</div>
+    </a>
+    
+    <a href="{{ url_for('main.automation_dashboard') }}" class="nav-tile">
+      <i data-feather="git-branch" class="tile-icon"></i>
+      <div class="tile-label">Automations</div>
+    </a>
+    
+    <a href="{{ url_for('main.agents_dashboard') }}" class="nav-tile">
+      <i data-feather="cpu" class="tile-icon"></i>
+      <div class="tile-label">Agents</div>
+    </a>
+    
+    <a href="{{ url_for('main.comprehensive_analytics') }}" class="nav-tile">
+      <i data-feather="award" class="tile-icon"></i>
+      <div class="tile-label">Ads</div>
+    </a>
+  </div>
 </div>
 
-<!-- Statistics Cards -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <i data-feather="users" class="text-primary" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h5 class="card-title mb-0">{{ total_contacts }}</h5>
-                        <p class="card-text text-muted">Total Contacts</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <i data-feather="send" class="text-success" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h5 class="card-title mb-0">{{ total_campaigns }}</h5>
-                        <p class="card-text text-muted">Total Campaigns</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <i data-feather="activity" class="text-warning" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h5 class="card-title mb-0">{{ active_campaigns }}</h5>
-                        <p class="card-text text-muted">Active Campaigns</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <i data-feather="mail" class="text-info" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h5 class="card-title mb-0">{{ total_sent }}</h5>
-                        <p class="card-text text-muted">Emails Sent</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Recent Campaigns -->
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Recent Campaigns</h5>
-            </div>
-            <div class="card-body">
-                {% if recent_campaigns %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Campaign</th>
-                                <th>Status</th>
-                                <th>Recipients</th>
-                                <th>Sent</th>
-                                <th>Created</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for campaign in recent_campaigns %}
-                            <tr>
-                                <td>
-                                    <strong>{{ campaign.name }}</strong><br>
-                                    <small class="text-muted">{{ campaign.subject }}</small>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ campaign.status | campaign_status_color }}">
-                                        {{ campaign.status.title() }}
-                                    </span>
-                                </td>
-                                <td>{{ campaign.total_recipients }}</td>
-                                <td>{{ campaign.sent_count }}</td>
-                                <td>{{ campaign.created_at.strftime('%Y-%m-%d') }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="text-center py-4">
-                    <i data-feather="inbox" class="text-muted" style="width: 3rem; height: 3rem;"></i>
-                    <p class="text-muted mt-2">No campaigns yet. Create your first campaign!</p>
-                    <a href="{{ url_for('main.create_campaign') }}" class="btn btn-primary">
-                        <i data-feather="plus"></i> Create Campaign
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Quick Stats</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between">
-                        <span>Emails Sent</span>
-                        <strong class="text-success">{{ total_sent }}</strong>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between">
-                        <span>Failed Deliveries</span>
-                        <strong class="text-danger">{{ total_failed }}</strong>
-                    </div>
-                </div>
-                
-                <hr>
-                
-                <div class="d-grid gap-2">
-                    <a href="{{ url_for('main.contacts') }}" class="btn btn-outline-primary btn-sm">
-                        <i data-feather="users"></i> Manage Contacts
-                    </a>
-                    <a href="{{ url_for('main.templates') }}" class="btn btn-outline-secondary btn-sm">
-                        <i data-feather="file-text"></i> Email Templates
-                    </a>
-                    <a href="{{ url_for('main.analytics') }}" class="btn btn-outline-info btn-sm">
-                        <i data-feather="bar-chart-2"></i> View Analytics
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<script>
+  feather.replace();
+</script>
 {% endblock %}

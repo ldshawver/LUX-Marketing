@@ -40,13 +40,23 @@ def dashboard():
     total_sent = db.session.query(CampaignRecipient).filter_by(status='sent').count()
     total_failed = db.session.query(CampaignRecipient).filter_by(status='failed').count()
     
+    # Version 4.1 & 4.2 Feature Metrics
+    ai_campaigns = Campaign.query.filter_by(ai_generated=True).count()
+    utm_campaigns = Campaign.query.filter(Campaign.utm_keyword.isnot(None)).count()
+    social_with_media = SocialPost.query.filter(SocialPost.media_urls.isnot(None)).count()
+    total_social_posts = SocialPost.query.count()
+    
     return render_template('dashboard.html',
                          total_contacts=total_contacts,
                          total_campaigns=total_campaigns,
                          active_campaigns=active_campaigns,
                          recent_campaigns=recent_campaigns,
                          total_sent=total_sent,
-                         total_failed=total_failed)
+                         total_failed=total_failed,
+                         ai_campaigns=ai_campaigns,
+                         utm_campaigns=utm_campaigns,
+                         social_with_media=social_with_media,
+                         total_social_posts=total_social_posts)
 
 @main_bp.route('/contacts')
 @login_required

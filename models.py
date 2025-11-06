@@ -73,6 +73,7 @@ class Campaign(db.Model):
     sent_at = db.Column(db.DateTime)
     revenue_generated = db.Column(db.Float, default=0.0)
     utm_keyword = db.Column(db.String(100))  # UTM tracking keyword
+    ai_generated = db.Column(db.Boolean, default=False)  # Track AI-generated campaigns (v4.1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

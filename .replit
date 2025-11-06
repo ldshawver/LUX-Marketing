@@ -1,14 +1,9 @@
-modules = ["python-3.11", "postgresql-16", "python3"]
+amodules = ["python-3.11", "postgresql-16", "python3"]
+modules = ["python-3.11", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
-<<<<<<< HEAD
-packages = ["openssl", "postgresql", "rsync", "u-root-cmds"]
-
-packages = ["glibcLocales", "openssl", "postgresql", "rsync", "u-root-cmds", "tecoc"]
-=======
-packages = ["freetype", "glibcLocales", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "postgresql", "rsync", "tcl", "tecoc", "tk", "u-root-cmds", "zlib"]
->>>>>>> 601d41e (relese2 of 6)
+packages = ["freetype", "glibcLocales", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "postgresql", "rsync", "u-root-cmds"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -38,7 +33,3 @@ waitForPort = 5000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8080
-externalPort = 8080

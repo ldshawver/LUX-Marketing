@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Social Media Marketing - LUX Marketing{% endblock %}
+
+{% block page_header %}
+<span style="color: #c0c0c0;">Social Media Marketing</span>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i data-feather="share-2"></i> Social Media Marketing</h1>
@@ -8,44 +13,57 @@
     </button>
 </div>
 
+{% if connected_accounts %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5>Connected Accounts</h5>
+    <form method="POST" action="{{ url_for('main.refresh_social_followers') }}" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-outline-primary">
+            <i data-feather="refresh-cw" style="width: 14px; height: 14px;"></i> Refresh Follower Counts
+        </button>
+    </form>
+</div>
 <div class="row mb-4">
+    {% for account in connected_accounts %}
     <div class="col-md-3">
-        <div class="card">
+        <div class="card" style="border: 1px solid #00ffb4;">
             <div class="card-body text-center">
+                {% if account.platform == 'facebook' %}
                 <i data-feather="facebook" class="text-primary mb-2" style="width: 2rem; height: 2rem;"></i>
                 <h5>Facebook</h5>
-                <small class="text-muted">Connect to schedule</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body text-center">
+                {% elif account.platform == 'instagram' %}
                 <i data-feather="instagram" class="text-danger mb-2" style="width: 2rem; height: 2rem;"></i>
                 <h5>Instagram</h5>
-                <small class="text-muted">Connect to schedule</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body text-center">
+                {% elif account.platform == 'linkedin' %}
                 <i data-feather="linkedin" class="text-info mb-2" style="width: 2rem; height: 2rem;"></i>
                 <h5>LinkedIn</h5>
-                <small class="text-muted">Connect to schedule</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body text-center">
+                {% elif account.platform == 'twitter' %}
                 <i data-feather="twitter" class="text-primary mb-2" style="width: 2rem; height: 2rem;"></i>
                 <h5>Twitter/X</h5>
-                <small class="text-muted">Connect to schedule</small>
+                {% else %}
+                <i data-feather="share-2" class="text-success mb-2" style="width: 2rem; height: 2rem;"></i>
+                <h5>{{ account.platform.title() }}</h5>
+                {% endif %}
+                <small class="text-success"><i data-feather="check-circle"></i> Connected as @{{ account.account_name }}</small>
+                <div class="mt-2">
+                    <strong class="text-light">{{ account.follower_count or 0 }}</strong>
+                    <small class="text-muted d-block">followers</small>
+                    {% if account.last_synced_at %}
+                    <small class="text-muted" style="font-size: 0.7rem;">Last updated: {{ account.last_synced_at.strftime('%m/%d %H:%M') }}</small>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
+    {% endfor %}
 </div>
+{% else %}
+<div class="alert alert-info">
+    <h5><i data-feather="info"></i> No Social Media Accounts Connected</h5>
+    <p>Connect your social media accounts to start scheduling posts across multiple platforms.</p>
+    <button class="btn btn-primary"><i data-feather="link"></i> Connect Accounts</button>
+</div>
+{% endif %}
 
 <div class="card">
     <div class="card-header">
@@ -59,10 +77,20 @@
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
+                            <div class="d-flex align-items-center gap-1">
                                 {% if post.platforms %}
                                     {% for platform in post.platforms %}
-                                    <span class="badge bg-secondary me-1">{{ platform }}</span>
+                                        {% if platform == 'facebook' %}
+                                        <i data-feather="facebook" style="width: 16px; height: 16px;" class="text-primary" title="Facebook"></i>
+                                        {% elif platform == 'instagram' %}
+                                        <i data-feather="instagram" style="width: 16px; height: 16px;" class="text-danger" title="Instagram"></i>
+                                        {% elif platform == 'linkedin' %}
+                                        <i data-feather="linkedin" style="width: 16px; height: 16px;" class="text-info" title="LinkedIn"></i>
+                                        {% elif platform == 'twitter' %}
+                                        <i data-feather="twitter" style="width: 16px; height: 16px;" class="text-primary" title="Twitter/X"></i>
+                                        {% else %}
+                                        <i data-feather="share-2" style="width: 16px; height: 16px;" class="text-success" title="{{ platform }}"></i>
+                                        {% endif %}
                                     {% endfor %}
                                 {% endif %}
                             </div>

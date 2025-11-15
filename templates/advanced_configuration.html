@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}API & Integrations - LUX Marketing{% endblock %}
+
+{% block page_header %}
+<span style="color: #c0c0c0;">API & Integrations</span>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="background: #000000; min-height: 100vh; padding: 2rem;">
+  <div class="row mb-4">
+    <div class="col-12">
+      <p class="lead" style="color: #00ffb4;">Configure API keys and integrations for {{ company.name }}</p>
+    </div>
+  </div>
+
+  {% for category, services in services_by_category.items() %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <h3 style="color: #bc00ed; margin-bottom: 1.5rem;">{{ category }}</h3>
+      <div class="row g-3">
+        {% for service in services %}
+        <div class="col-md-4">
+          <div class="card" style="background: #1a1a1a; border: 1px solid {% if configured.get(service.slug) %}#00ffb4{% else %}#333{% endif %};">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <h5 class="card-title" style="color: #ffffff;">{{ service.name }}</h5>
+                  <p class="card-text" style="color: #999; font-size: 0.9rem;">{{ service.description }}</p>
+                </div>
+                {% if configured.get(service.slug) %}
+                <span class="badge bg-success">Connected</span>
+                {% else %}
+                <span class="badge bg-secondary">Not Configured</span>
+                {% endif %}
+              </div>
+              
+              {% if configured.get(service.slug) %}
+              <div class="mb-3">
+                <small style="color: #00ffb4;">
+                  <i data-feather="check-circle" style="width: 14px; height: 14px;"></i>
+                  Configured {{ configured.get(service.slug).updated_at.strftime('%Y-%m-%d') }}
+                </small>
+              </div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-warning" onclick="editIntegration('{{ service.slug }}')">
+                  <i data-feather="edit-2"></i> Edit
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteIntegration('{{ service.slug }}')">
+                  <i data-feather="trash-2"></i> Remove
+                </button>
+              </div>
+              {% else %}
+              <button class="btn btn-primary btn-sm" onclick="configureIntegration('{{ service.slug }}')">
+                <i data-feather="plus"></i> Configure
+              </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Configuration Modal -->
+<div class="modal fade" id="integrationModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="background: #1a1a1a; border: 1px solid #333;">
+      <div class="modal-header" style="border-bottom: 1px solid #333;">
+        <h5 class="modal-title" style="color: #00ffb4;" id="integrationModalTitle">Configure Integration</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="integrationModalBody">
+        <div class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+feather.replace();
+
+function configureIntegration(slug) {
+  const modal = new bootstrap.Modal(document.getElementById('integrationModal'));
+  const modalTitle = document.getElementById('integrationModalTitle');
+  const modalBody = document.getElementById('integrationModalBody');
+  
+  modalTitle.textContent = 'Configure ' + slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  modalBody.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+  
+  modal.show();
+  
+  fetch(`/api/integrations/${slug}`)
+    .then(response => response.json())
+    .then(data => {
+      // Store service metadata globally for use in save function
+      currentServiceMetadata = data.service;
+      
+      let html = '<form id="integrationForm" onsubmit="saveIntegration(event, \'' + slug + '\')">';
+      
+      // Process config fields
+      const configFields = data.service.config_fields || {};
+      const secretFields = data.service.secret_fields || {};
+      
+      // Helper function to create field HTML
+      function createFieldHTML(fieldName, fieldDef, isSecret, currentValue) {
+        let fieldHTML = '<div class="mb-3">';
+        fieldHTML += '<label class="form-label" style="color: #00ffb4;">' + fieldDef.label + '</label>';
+        
+        const inputType = isSecret ? 'password' : (fieldDef.type || 'text');
+        const value = currentValue || '';
+        const placeholder = fieldDef.placeholder || '';
+        
+        if (fieldDef.type === 'textarea') {
+          fieldHTML += '<textarea class="form-control" name="' + fieldName + '" ' + 
+                       (fieldDef.required ? 'required' : '') + ' rows="4" placeholder="' + placeholder + '">' + value + '</textarea>';
+        } else if (fieldDef.type === 'select') {
+          fieldHTML += '<select class="form-select" name="' + fieldName + '" ' + (fieldDef.required ? 'required' : '') + '>';
+          (fieldDef.options || []).forEach(opt => {
+            const selected = value === opt ? 'selected' : '';
+            fieldHTML += '<option value="' + opt + '" ' + selected + '>' + opt + '</option>';
+          });
+          fieldHTML += '</select>';
+        } else {
+          fieldHTML += '<input type="' + inputType + '" class="form-control" name="' + fieldName + '" ' + 
+                       (fieldDef.required ? 'required' : '') + ' placeholder="' + placeholder + '" value="' + value + '">';
+        }
+        
+        if (fieldDef.help_text) {
+          fieldHTML += '<small class="form-text d-block mt-1" style="color: #999;">' + fieldDef.help_text + '</small>';
+        }
+        fieldHTML += '</div>';
+        return fieldHTML;
+      }
+      
+      // Add config fields
+      Object.keys(configFields).forEach(fieldName => {
+        const fieldDef = configFields[fieldName];
+        const currentValue = (data.config && data.config[fieldName]) || '';
+        html += createFieldHTML(fieldName, fieldDef, false, currentValue);
+      });
+      
+      // Add secret fields
+      Object.keys(secretFields).forEach(fieldName => {
+        const fieldDef = secretFields[fieldName];
+        const currentValue = (data.secrets && data.secrets[fieldName]) || '';
+        html += createFieldHTML(fieldName, fieldDef, true, currentValue);
+      });
+      
+      html += '<div class="d-flex justify-content-end gap-2">';
+      html += '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>';
+      html += '<button type="submit" class="btn btn-primary">Save Configuration</button>';
+      html += '</div>';
+      html += '</form>';
+      
+      modalBody.innerHTML = html;
+    })
+    .catch(error => {
+      console.error('Error loading integration:', error);
+      modalBody.innerHTML = '<div class="alert alert-danger">Failed to load configuration. Please try again.</div>';
+    });
+}
+
+function editIntegration(slug) {
+  configureIntegration(slug);
+}
+
+let currentServiceMetadata = null;
+
+function saveIntegration(event, slug) {
+  event.preventDefault();
+  const form = event.target;
+  const formData = new FormData(form);
+  const allData = Object.fromEntries(formData);
+  
+  // Separate config from secrets based on service metadata
+  const config = {};
+  const secrets = {};
+  
+  if (currentServiceMetadata) {
+    const configFields = currentServiceMetadata.config_fields || {};
+    const secretFields = currentServiceMetadata.secret_fields || {};
+    
+    // Sort fields into config and secrets
+    Object.keys(allData).forEach(key => {
+      if (secretFields[key]) {
+        secrets[key] = allData[key];
+      } else if (configFields[key]) {
+        config[key] = allData[key];
+      }
+    });
+  }
+  
+  fetch(`/api/integrations/${slug}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token() }}'
+    },
+    body: JSON.stringify({ config, secrets })
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + (result.message || result.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error saving integration:', error);
+    alert('Failed to save configuration. Please try again.');
+  });
+}
+
+function deleteIntegration(slug) {
+  if (confirm('Are you sure you want to remove this integration?')) {
+    fetch(`/api/integrations/${slug}`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token() }}'
+      }
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        location.reload();
+      } else {
+        alert('Error: ' + result.message);
+      }
+    });
+  }
+}
+</script>
+
+{% endblock %}

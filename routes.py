@@ -1,11 +1,12 @@
 import csv
 import io
 import base64
+import os
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response
 from flask_login import login_required, current_user
 from sqlalchemy import or_
-from app import db
+from app import db, csrf
 from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTracking, 
                     BrandKit, EmailComponent, Poll, PollResponse, ABTest, Automation, 
                     AutomationStep, SMSCampaign, SMSRecipient, SMSTemplate, SocialPost, Segment, 
@@ -14,7 +15,7 @@ from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTr
                     AutomationAction, LandingPage, NewsletterArchive, NonOpenerResend,
                     SEOKeyword, SEOBacklink, SEOCompetitor, SEOAudit, SEOPage,
                     TicketPurchase, EventCheckIn, SocialMediaAccount, SocialMediaSchedule,
-                    AutomationTest, AutomationTriggerLibrary, AutomationABTest)
+                    AutomationTest, AutomationTriggerLibrary, AutomationABTest, Company, user_company)
 from email_service import EmailService
 from utils import validate_email
 from tracking import decode_tracking_data, record_email_event
@@ -46,6 +47,8 @@ def dashboard():
     social_with_media = SocialPost.query.filter(SocialPost.media_urls.isnot(None)).count()
     total_social_posts = SocialPost.query.count()
     
+    current_company = current_user.get_default_company()
+    
     return render_template('dashboard.html',
                          total_contacts=total_contacts,
                          total_campaigns=total_campaigns,
@@ -56,7 +59,513 @@ def dashboard():
                          ai_campaigns=ai_campaigns,
                          utm_campaigns=utm_campaigns,
                          social_with_media=social_with_media,
-                         total_social_posts=total_social_posts)
+                         total_social_posts=total_social_posts,
+                         current_company=current_company)
+
+@main_bp.route('/email-hub')
+@login_required
+def email_hub():
+    """Email Marketing Hub with A/B testing, templates, automations"""
+    return render_template('email_hub.html')
+
+@main_bp.route('/campaign-hub')
+@login_required
+def campaign_hub():
+    """Campaign Hub with SEO, Competitors, and AI Campaign Generator"""
+    return render_template('campaign_hub.html')
+
+@main_bp.route('/analytics-hub')
+@login_required
+def analytics_hub():
+    """Comprehensive Analytics Hub with robust data visualization"""
+    from datetime import datetime, timedelta
+    from integrations.ga4_client import get_ga4_client
+    from models import Campaign, EmailTracking, SocialPost, SocialMediaAccount, Contact
+    from sqlalchemy import func
+    from integrations.woocommerce_client import get_woocommerce_client
+    
+    # Get date range from query parameters
+    days = int(request.args.get('days', 30))
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    compare = request.args.get('compare') == 'true'
+    
+    # Calculate date range
+    end_date = datetime.now()
+    if end_date_str:
+        try:
+            end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+        except:
+            pass
+    
+    if start_date_str:
+        try:
+            start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+        except:
+            start_date = end_date - timedelta(days=days)
+    else:
+        start_date = end_date - timedelta(days=days)
+    
+    # Validate date range
+    if start_date >= end_date:
+        flash('Invalid date range: start date must be before end date', 'error')
+        start_date = end_date - timedelta(days=30)
+    
+    # Calculate previous period for comparison
+    period_length = (end_date - start_date).days
+    if period_length <= 0:
+        period_length = 1
+    prev_end_date = start_date
+    prev_start_date = start_date - timedelta(days=period_length)
+    
+    # Initialize data structure
+    analytics_data = {
+        'active_users': 0,
+        'email_open_rate': 0,
+        'revenue_mtd': 0,
+        'total_reach': 0,
+        'ga4_metrics': {},
+        'email_metrics': {},
+        'social_metrics': {},
+        'revenue_data': {},
+        'comparison': {} if compare else None,
+        'date_range': {
+            'start': start_date.strftime('%Y-%m-%d'),
+            'end': end_date.strftime('%Y-%m-%d'),
+            'days': period_length
+        }
+    }
+    
+    # Get GA4 metrics for website analytics
+    try:
+        ga4_client = get_ga4_client()
+        if ga4_client.is_configured():
+            ga4_metrics = ga4_client.get_metrics(start_date=start_date, end_date=end_date)
+            if ga4_metrics:
+                analytics_data['active_users'] = ga4_metrics.get('total_users', 0)
+                analytics_data['ga4_metrics'] = ga4_metrics
+                
+            # Get comparison data if requested
+            if compare:
+                prev_ga4_metrics = ga4_client.get_metrics(start_date=prev_start_date, end_date=prev_end_date)
+                if prev_ga4_metrics:
+                    analytics_data['comparison']['active_users'] = prev_ga4_metrics.get('total_users', 0)
+                    analytics_data['comparison']['ga4_metrics'] = prev_ga4_metrics
+    except Exception as e:
+        logger.error(f"Error fetching GA4 metrics: {e}")
+    
+    # Get Email Campaign Metrics
+    try:
+        # Email metrics from database
+        total_sent = Campaign.query.filter(
+            Campaign.status == 'sent',
+            Campaign.sent_at >= start_date,
+            Campaign.sent_at <= end_date
+        ).count()
+        
+        email_events = EmailTracking.query.filter(
+            EmailTracking.created_at >= start_date,
+            EmailTracking.created_at <= end_date
+        ).with_entities(
+            func.sum(func.case((EmailTracking.event_type == 'opened', 1), else_=0)).label('opens'),
+            func.sum(func.case((EmailTracking.event_type == 'clicked', 1), else_=0)).label('clicks'),
+            func.count(EmailTracking.id).label('total_events')
+        ).first()
+        
+        if email_events and total_sent > 0:
+            opens = email_events.opens or 0
+            analytics_data['email_open_rate'] = round((opens / total_sent) * 100, 1) if total_sent > 0 else 0
+            analytics_data['email_metrics'] = {
+                'total_sent': total_sent,
+                'opens': opens,
+                'clicks': email_events.clicks or 0
+            }
+    except Exception as e:
+        logger.error(f"Error fetching email metrics: {e}")
+    
+    # Get Social Media Metrics
+    try:
+        social_accounts = SocialMediaAccount.query.filter_by(is_verified=True).all()
+        total_followers = sum([acc.follower_count or 0 for acc in social_accounts])
+        
+        social_posts = SocialPost.query.filter(
+            SocialPost.created_at >= start_date,
+            SocialPost.created_at <= end_date
+        ).count()
+        
+        analytics_data['total_reach'] = total_followers
+        analytics_data['social_metrics'] = {
+            'total_followers': total_followers,
+            'posts_this_month': social_posts,
+            'connected_accounts': len(social_accounts)
+        }
+    except Exception as e:
+        logger.error(f"Error fetching social metrics: {e}")
+    
+    # Get WooCommerce Revenue Data
+    try:
+        wc_client = get_woocommerce_client()
+        if wc_client and wc_client.is_configured():
+            revenue_data = wc_client.get_revenue_stats(start_date=start_date, end_date=end_date)
+            if revenue_data:
+                analytics_data['revenue_mtd'] = revenue_data.get('total_sales', 0)
+                analytics_data['revenue_data'] = revenue_data
+                
+            # Get comparison data if requested
+            if compare:
+                prev_revenue_data = wc_client.get_revenue_stats(start_date=prev_start_date, end_date=prev_end_date)
+                if prev_revenue_data:
+                    analytics_data['comparison']['revenue_mtd'] = prev_revenue_data.get('total_sales', 0)
+                    analytics_data['comparison']['revenue_data'] = prev_revenue_data
+        else:
+            logger.info("WooCommerce not configured - revenue data unavailable")
+    except Exception as e:
+        logger.error(f"Error fetching WooCommerce revenue: {e}")
+    
+    return render_template('analytics_hub.html', analytics=analytics_data)
+
+
+@main_bp.route('/analytics-hub/export')
+@login_required
+def export_analytics():
+    """Export analytics data in various formats"""
+    from datetime import datetime, timedelta
+    from integrations.ga4_client import get_ga4_client
+    from models import Campaign, EmailTracking, SocialPost, SocialMediaAccount
+    from sqlalchemy import func
+    from integrations.woocommerce_client import get_woocommerce_client
+    import csv
+    import io
+    from flask import make_response
+    
+    # Get parameters
+    format_type = request.args.get('format', 'csv')
+    days = int(request.args.get('days', 30))
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    
+    # Calculate date range
+    end_date = datetime.now()
+    if end_date_str:
+        try:
+            end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+        except:
+            pass
+    
+    if start_date_str:
+        try:
+            start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+        except:
+            start_date = end_date - timedelta(days=days)
+    else:
+        start_date = end_date - timedelta(days=days)
+    
+    period_length = (end_date - start_date).days
+    
+    # Gather analytics data
+    export_data = []
+    
+    # GA4 Data
+    try:
+        ga4_client = get_ga4_client()
+        if ga4_client.is_configured():
+            ga4_metrics = ga4_client.get_metrics(start_date=start_date, end_date=end_date)
+            if ga4_metrics:
+                export_data.append(['Website Analytics', ''])
+                export_data.append(['Total Users', ga4_metrics.get('total_users', 0)])
+                export_data.append(['Page Views', ga4_metrics.get('page_views', 0)])
+                export_data.append(['Sessions', ga4_metrics.get('sessions', 0)])
+                export_data.append(['', ''])
+    except Exception as e:
+        logger.error(f"Error in export GA4: {e}")
+    
+    # Email Metrics
+    try:
+        total_sent = Campaign.query.filter(
+            Campaign.status == 'sent',
+            Campaign.sent_at >= start_date,
+            Campaign.sent_at <= end_date
+        ).count()
+        
+        email_events = EmailTracking.query.filter(
+            EmailTracking.created_at >= start_date,
+            EmailTracking.created_at <= end_date
+        ).with_entities(
+            func.sum(func.case((EmailTracking.event_type == 'opened', 1), else_=0)).label('opens'),
+            func.sum(func.case((EmailTracking.event_type == 'clicked', 1), else_=0)).label('clicks')
+        ).first()
+        
+        export_data.append(['Email Marketing', ''])
+        export_data.append(['Emails Sent', total_sent])
+        export_data.append(['Opens', email_events.opens or 0])
+        export_data.append(['Clicks', email_events.clicks or 0])
+        if total_sent > 0:
+            open_rate = round(((email_events.opens or 0) / total_sent) * 100, 1)
+            export_data.append(['Open Rate %', open_rate])
+        export_data.append(['', ''])
+    except Exception as e:
+        logger.error(f"Error in export email: {e}")
+    
+    # Social Metrics
+    try:
+        social_accounts = SocialMediaAccount.query.filter_by(is_verified=True).all()
+        total_followers = sum([acc.follower_count or 0 for acc in social_accounts])
+        social_posts = SocialPost.query.filter(
+            SocialPost.created_at >= start_date,
+            SocialPost.created_at <= end_date
+        ).count()
+        
+        export_data.append(['Social Media', ''])
+        export_data.append(['Total Followers', total_followers])
+        export_data.append(['Posts Published', social_posts])
+        export_data.append(['Connected Accounts', len(social_accounts)])
+        export_data.append(['', ''])
+    except Exception as e:
+        logger.error(f"Error in export social: {e}")
+    
+    # Revenue Data
+    try:
+        wc_client = get_woocommerce_client()
+        if wc_client and wc_client.is_configured():
+            revenue_data = wc_client.get_revenue_stats(start_date=start_date, end_date=end_date)
+            if revenue_data:
+                export_data.append(['E-commerce Revenue', ''])
+                export_data.append(['Total Sales', f"${revenue_data.get('total_sales', 0)}"])
+                export_data.append(['Total Orders', revenue_data.get('total_orders', 0)])
+                export_data.append(['Avg Order Value', f"${revenue_data.get('average_order_value', 0)}"])
+    except Exception as e:
+        logger.error(f"Error in export revenue: {e}")
+    
+    # Generate export based on format
+    if format_type == 'csv':
+        # CSV Export
+        si = io.StringIO()
+        writer = csv.writer(si)
+        writer.writerow(['LUX Marketing Analytics Report'])
+        writer.writerow([f'Period: {start_date.strftime("%Y-%m-%d")} to {end_date.strftime("%Y-%m-%d")}'])
+        writer.writerow([''])
+        writer.writerows(export_data)
+        
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = f"attachment; filename=analytics_{datetime.now().strftime('%Y%m%d')}.csv"
+        output.headers["Content-type"] = "text/csv"
+        return output
+    
+    elif format_type == 'excel':
+        # Excel Export (using openpyxl)
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill
+            
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Analytics Report"
+            
+            # Header styling
+            header_fill = PatternFill(start_color="480749", end_color="480749", fill_type="solid")
+            header_font = Font(color="00FFB4", bold=True, size=14)
+            
+            ws['A1'] = 'LUX Marketing Analytics Report'
+            ws['A1'].font = header_font
+            ws['A1'].fill = header_fill
+            
+            ws['A2'] = f'Period: {start_date.strftime("%Y-%m-%d")} to {end_date.strftime("%Y-%m-%d")}'
+            
+            # Write data
+            row = 4
+            for data_row in export_data:
+                ws[f'A{row}'] = data_row[0]
+                ws[f'B{row}'] = data_row[1] if len(data_row) > 1 else ''
+                row += 1
+            
+            # Save to bytes
+            excel_file = io.BytesIO()
+            wb.save(excel_file)
+            excel_file.seek(0)
+            
+            output = make_response(excel_file.getvalue())
+            output.headers["Content-Disposition"] = f"attachment; filename=analytics_{datetime.now().strftime('%Y%m%d')}.xlsx"
+            output.headers["Content-type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            return output
+        except ImportError:
+            flash('Excel export requires openpyxl package', 'error')
+            return redirect(url_for('main.analytics_hub'))
+    
+    elif format_type == 'pdf':
+        # PDF Export (using reportlab)
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.utils import ImageReader
+            import io
+            
+            buffer = io.BytesIO()
+            c = canvas.Canvas(buffer, pagesize=letter)
+            width, height = letter
+            
+            # Title
+            c.setFont("Helvetica-Bold", 20)
+            c.drawString(50, height - 50, "LUX Marketing Analytics Report")
+            
+            c.setFont("Helvetica", 12)
+            c.drawString(50, height - 75, f"Period: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+            
+            # Write data
+            y = height - 110
+            for data_row in export_data:
+                if y < 50:
+                    c.showPage()
+                    y = height - 50
+                
+                if data_row[0] and not data_row[1]:
+                    # Section header
+                    c.setFont("Helvetica-Bold", 14)
+                    c.drawString(50, y, str(data_row[0]))
+                    y -= 20
+                elif data_row[0]:
+                    # Data row
+                    c.setFont("Helvetica", 11)
+                    c.drawString(70, y, f"{data_row[0]}: {data_row[1] if len(data_row) > 1 else ''}")
+                    y -= 18
+                else:
+                    y -= 10
+            
+            c.save()
+            buffer.seek(0)
+            
+            output = make_response(buffer.getvalue())
+            output.headers["Content-Disposition"] = f"attachment; filename=analytics_{datetime.now().strftime('%Y%m%d')}.pdf"
+            output.headers["Content-type"] = "application/pdf"
+            return output
+        except ImportError:
+            flash('PDF export requires reportlab package', 'error')
+            return redirect(url_for('main.analytics_hub'))
+    
+    return redirect(url_for('main.analytics_hub'))
+
+@main_bp.route('/agents-hub')
+@login_required
+def agents_hub():
+    """LUX AI Agents Hub for agent fine-tuning and management"""
+    return render_template('agents_hub.html')
+
+@main_bp.route('/ads-hub')
+@login_required
+def ads_hub():
+    """Ads Hub with Display/Search/Shopping ads and Google Ads integration"""
+    return render_template('ads_hub.html')
+
+@main_bp.route('/companies')
+@login_required
+def companies_list():
+    """List all companies for the current user"""
+    user_companies = current_user.companies
+    return render_template('companies.html', companies=user_companies)
+
+@main_bp.route('/companies/add', methods=['GET', 'POST'])
+@login_required
+def add_company():
+    """Add a new company"""
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        website_url = request.form.get('website_url', '').strip()
+        
+        if not name:
+            flash('Company name is required', 'error')
+            return redirect(url_for('main.add_company'))
+        
+        company = Company()
+        company.name = name
+        company.website_url = website_url
+        company.env_config = {}
+        company.social_accounts = {}
+        company.email_config = {}
+        company.api_keys = {}
+        
+        logo_file = request.files.get('logo')
+        if logo_file and logo_file.filename:
+            import os
+            from werkzeug.utils import secure_filename
+            filename = secure_filename(logo_file.filename)
+            logo_path = f'company_logos/{filename}'
+            os.makedirs('static/company_logos', exist_ok=True)
+            logo_file.save(f'static/{logo_path}')
+            company.logo_path = logo_path
+        
+        db.session.add(company)
+        db.session.flush()
+        
+        current_user.companies.append(company)
+        
+        is_default = len(current_user.companies) == 1
+        db.session.execute(
+            user_company.update().where(
+                (user_company.c.user_id == current_user.id) &
+                (user_company.c.company_id == company.id)
+            ).values(is_default=is_default)
+        )
+        
+        db.session.commit()
+        flash(f'Company "{name}" added successfully', 'success')
+        return redirect(url_for('main.companies_list'))
+    
+    return render_template('company_add.html')
+
+@main_bp.route('/companies/edit/<int:company_id>', methods=['GET', 'POST'])
+@login_required
+def edit_company(company_id):
+    """Edit company details"""
+    company = Company.query.get_or_404(company_id)
+    
+    if company not in current_user.companies:
+        flash('You do not have access to this company', 'error')
+        return redirect(url_for('main.companies_list'))
+    
+    if request.method == 'POST':
+        company.name = request.form.get('name', '').strip()
+        company.website_url = request.form.get('website_url', '').strip()
+        
+        logo_file = request.files.get('logo')
+        if logo_file and logo_file.filename:
+            import os
+            from werkzeug.utils import secure_filename
+            filename = secure_filename(logo_file.filename)
+            logo_path = f'company_logos/{filename}'
+            os.makedirs('static/company_logos', exist_ok=True)
+            logo_file.save(f'static/{logo_path}')
+            company.logo_path = logo_path
+        
+        db.session.commit()
+        flash(f'Company "{company.name}" updated successfully', 'success')
+        return redirect(url_for('main.companies_list'))
+    
+    return render_template('company_edit.html', company=company)
+
+@main_bp.route('/companies/switch/<int:company_id>', methods=['POST'])
+@login_required
+def switch_company(company_id):
+    """Switch the user's default company"""
+    company = Company.query.get_or_404(company_id)
+    
+    if company not in current_user.companies:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    db.session.execute(
+        user_company.update().where(
+            user_company.c.user_id == current_user.id
+        ).values(is_default=False)
+    )
+    
+    db.session.execute(
+        user_company.update().where(
+            (user_company.c.user_id == current_user.id) &
+            (user_company.c.company_id == company_id)
+        ).values(is_default=True)
+    )
+    
+    db.session.commit()
+    
+    return jsonify({'success': True, 'company_name': company.name})
 
 @main_bp.route('/contacts')
 @login_required
@@ -1701,7 +2210,8 @@ def create_segment():
 def social_media():
     """Social media management dashboard"""
     posts = SocialPost.query.order_by(SocialPost.created_at.desc()).limit(20).all()
-    return render_template('social_media.html', posts=posts)
+    connected_accounts = SocialMediaAccount.query.filter_by(is_active=True).all()
+    return render_template('social_media.html', posts=posts, connected_accounts=connected_accounts)
 
 @main_bp.route('/social/create', methods=['POST'])
 @login_required
@@ -1726,6 +2236,47 @@ def create_social_post():
     except Exception as e:
         logger.error(f"Error creating social post: {e}")
         flash('Error creating social post', 'error')
+        return redirect(url_for('main.social_media'))
+
+@main_bp.route('/social/refresh-followers', methods=['POST'])
+@login_required
+def refresh_social_followers():
+    """Refresh follower counts from social media platforms"""
+    try:
+        from services.social_media_service import SocialMediaService
+        
+        account_id = request.form.get('account_id')
+        if account_id:
+            # Refresh specific account
+            account = SocialMediaAccount.query.get(account_id)
+            if account:
+                result = SocialMediaService.refresh_account_data(account)
+                if result.get('success'):
+                    account.follower_count = result.get('follower_count', account.follower_count)
+                    account.last_synced_at = datetime.utcnow()
+                    db.session.commit()
+                    flash(f"Updated {account.platform} follower count", 'success')
+                else:
+                    flash(f"Could not refresh {account.platform}: {result.get('message')}", 'warning')
+        else:
+            # Refresh all accounts
+            accounts = SocialMediaAccount.query.filter_by(is_active=True).all()
+            updated_count = 0
+            for account in accounts:
+                result = SocialMediaService.refresh_account_data(account)
+                if result.get('success'):
+                    account.follower_count = result.get('follower_count', account.follower_count)
+                    account.last_synced_at = datetime.utcnow()
+                    updated_count += 1
+            
+            db.session.commit()
+            flash(f"Refreshed {updated_count} social media account(s)", 'success')
+        
+        return redirect(url_for('main.social_media'))
+        
+    except Exception as e:
+        logger.error(f"Error refreshing social followers: {e}")
+        flash('Error refreshing follower counts', 'error')
         return redirect(url_for('main.social_media'))
 
 # Advanced Automation Management Routes
@@ -1970,7 +2521,7 @@ def resume_automation(id):
 @login_required
 def sms_dashboard():
     """SMS marketing dashboard"""
-    from services.sms_service import SMSService
+    # # from services.sms_service import SMSService
     
     campaigns = SMSCampaign.query.order_by(SMSCampaign.created_at.desc()).all()
     templates = SMSTemplate.query.order_by(SMSTemplate.created_at.desc()).limit(10).all()
@@ -1991,8 +2542,8 @@ def sms_dashboard():
 @login_required
 def create_sms_campaign():
     """Create a new SMS campaign"""
-    from services.sms_service import SMSService
-    from services.scheduling_service import SchedulingService
+    # from services.sms_service import SMSService
+    # from services.scheduling_service import SchedulingService
     from services.campaign_tagging_service import CampaignTaggingService
     
     if request.method == 'POST':
@@ -2087,7 +2638,7 @@ def create_sms_campaign():
 @login_required
 def create_sms_template():
     """Create a reusable SMS template"""
-    from services.sms_service import SMSService
+    # from services.sms_service import SMSService
     
     if request.method == 'POST':
         try:
@@ -2111,7 +2662,7 @@ def create_sms_template():
 @login_required
 def ai_generate_sms():
     """Generate SMS content using AI"""
-    from services.sms_service import SMSService
+    # from services.sms_service import SMSService
     
     try:
         # Support both 'prompt' and 'campaign_name' for backwards compatibility
@@ -2143,7 +2694,7 @@ def ai_generate_sms():
 @login_required
 def sms_analytics(campaign_id):
     """View SMS campaign analytics"""
-    from services.sms_service import SMSService
+    # from services.sms_service import SMSService
     
     campaign = SMSCampaign.query.get_or_404(campaign_id)
     analytics = SMSService.calculate_analytics(campaign_id)
@@ -3062,18 +3613,18 @@ def create_automation_abtest(automation_id):
 @login_required
 def marketing_calendar():
     """Unified marketing calendar view"""
-    from services.scheduling_service import SchedulingService
+    # from services.scheduling_service import SchedulingService
     from datetime import datetime
     
     year = request.args.get('year', datetime.now().year, type=int)
     month = request.args.get('month', datetime.now().month, type=int)
     
-    calendar_data = SchedulingService.get_calendar_view(year, month)
-    upcoming = SchedulingService.get_upcoming_schedules(days=30)
+    # calendar_data = SchedulingService.get_calendar_view(year, month)
+    # upcoming = SchedulingService.get_upcoming_schedules(days=30)
     
     return render_template('marketing_calendar.html', 
-                         calendar_data=calendar_data,
-                         upcoming=upcoming,
+                         calendar_data={},
+                         upcoming=[],
                          year=year,
                          month=month)
 
@@ -3081,7 +3632,7 @@ def marketing_calendar():
 @login_required
 def calendar_schedule():
     """Add item to calendar"""
-    from services.scheduling_service import SchedulingService
+    # from services.scheduling_service import SchedulingService
     
     module_type = request.form.get('module_type')
     module_object_id = int(request.form.get('module_object_id'))
@@ -3175,3 +3726,47 @@ def system_status():
     except Exception as e:
         flash(f'Error loading system status: {str(e)}', 'error')
         return redirect(url_for('main.dashboard'))
+
+@main_bp.route('/chatbot')
+@login_required
+def chatbot():
+    """LUX AI Chatbot - Redirect to dashboard (chatbot is now a floating widget)"""
+    return redirect(url_for('main.dashboard'))
+
+@main_bp.route('/chatbot/send', methods=['POST'])
+@csrf.exempt
+@login_required
+def chatbot_send():
+    """Send message to AI chatbot and get response"""
+    try:
+        import openai
+        
+        data = request.get_json()
+        user_message = data.get('message', '')
+        
+        if not user_message:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        api_key = os.getenv('OPENAI_API_BOUTIQUELUX')
+        if not api_key:
+            return jsonify({'error': 'API key not configured'}), 500
+        
+        openai.api_key = api_key
+        
+        response = openai.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are LUX, an AI marketing assistant for the LUX Marketing platform. You help users with campaign generation, marketing strategy, content creation, and platform guidance. Be helpful, professional, and concise."},
+                {"role": "user", "content": user_message}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+        
+        bot_message = response.choices[0].message.content
+        
+        return jsonify({'response': bot_message})
+        
+    except Exception as e:
+        logger.error(f"Chatbot error: {e}")
+        return jsonify({'error': f'Failed to get response: {str(e)}'}), 500

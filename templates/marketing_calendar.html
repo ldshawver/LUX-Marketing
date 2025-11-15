@@ -2,6 +2,10 @@
 
 {% block title %}Marketing Calendar - LUX Marketing{% endblock %}
 
+{% block page_header %}
+<span style="color: #c0c0c0;">Marketing Calendar</span>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="row">
@@ -11,6 +15,7 @@
         </div>
     </div>
 
+    <!-- Month Calendar Grid -->
     <div class="row mt-4">
         <div class="col-md-12">
             <div class="card">
@@ -22,17 +27,54 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <h6>Upcoming Activities (Next 30 Days)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Sun</th>
+                                    <th>Mon</th>
+                                    <th>Tue</th>
+                                    <th>Wed</th>
+                                    <th>Thu</th>
+                                    <th>Fri</th>
+                                    <th>Sat</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Calendar grid - requires scheduling service integration -->
+                                <tr>
+                                    <td class="text-center text-muted" style="padding: 2rem;" colspan="7">
+                                        <i data-feather="calendar" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                                        <p class="mt-2">Calendar grid view requires scheduling service integration.</p>
+                                        <small>See activities list below for scheduled items.</small>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- List View Below Calendar -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card" style="background: #1a1a1a; border: 1px solid #bc00ed;">
+                <div class="card-header" style="background: #000; border-bottom: 1px solid #00ffb4;">
+                    <h5 style="color: #00ffb4; margin: 0;">📋 Upcoming Activities (Next 30 Days)</h5>
+                </div>
+                <div class="card-body">
                     {% if upcoming %}
-                    <div class="list-group mt-3">
+                    <div class="list-group">
                         {% for item in upcoming %}
-                        <div class="list-group-item">
+                        <div class="list-group-item" style="background: #0f0f0f; border: 1px solid #333; margin-bottom: 0.5rem;">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h6 class="mb-1">{{ item.title }}</h6>
-                                    <p class="mb-1 text-muted">{{ item.description }}</p>
-                                    <small class="text-muted">
-                                        <i data-feather="calendar"></i> 
+                                    <h6 class="mb-1" style="color: #00ffb4;">{{ item.title }}</h6>
+                                    <p class="mb-1" style="color: #999;">{{ item.description }}</p>
+                                    <small style="color: #666;">
+                                        <i data-feather="calendar" style="width: 14px; height: 14px;"></i> 
                                         {{ item.scheduled_at.strftime('%Y-%m-%d %H:%M') }}
                                         <span class="badge bg-secondary ms-2">{{ item.module_type }}</span>
                                     </small>
@@ -48,7 +90,7 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <p class="text-center text-muted mt-3">No upcoming activities scheduled</p>
+                    <p class="text-center text-muted mt-3">No upcoming activities scheduled. Schedule campaigns, social posts, and events to see them here.</p>
                     {% endif %}
                 </div>
             </div>

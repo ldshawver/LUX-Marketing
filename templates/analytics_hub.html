@@ -1,0 +1,605 @@
+{% extends "base_simple.html" %}
+
+{% block title %}Analytics Hub - LUX Marketing{% endblock %}
+
+{% block page_header %}
+<span style="color: #c0c0c0;">Analytics Hub</span>
+{% endblock %}
+
+{% block content %}
+<style>
+  .analytics-card {
+    background: linear-gradient(135deg, #480749 0%, #004845 100%);
+    border: 1px solid;
+    border-image: linear-gradient(135deg, #bc00ed, #00ffb4) 1;
+    transition: all 0.3s ease;
+  }
+  
+  .analytics-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 255, 180, 0.2);
+  }
+  
+  .metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #bc00ed, #00ffb4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .metric-label {
+    color: #00ffb4;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .chart-container {
+    position: relative;
+    height: 300px;
+    padding: 1rem;
+  }
+</style>
+
+<div class="container-fluid" style="background: #000000; min-height: 100vh; padding: 2rem;">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h1 class="display-4" style="background: linear-gradient(135deg, #bc00ed, #00ffb4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Analytics Hub</h1>
+      <p class="lead" style="color: #00ffb4;">Comprehensive visual insights across all marketing channels</p>
+    </div>
+  </div>
+  
+  <!-- Date Filter & Export Controls -->
+  <div class="row mb-4">
+    <div class="col-lg-8">
+      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
+        <div class="card-body">
+          <div class="row align-items-end g-3">
+            <div class="col-md-3">
+              <label style="color: #00ffb4; font-size: 0.9rem;">Time Period</label>
+              <select id="periodSelector" class="form-select bg-dark text-light" style="border: 1px solid #bc00ed;" onchange="updateAnalytics()">
+                <option value="7">This Week</option>
+                <option value="30" selected>This Month</option>
+                <option value="90">This Quarter</option>
+                <option value="365">This Year</option>
+                <option value="custom">Custom Range</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label style="color: #00ffb4; font-size: 0.9rem;">Start Date</label>
+              <input type="date" id="startDate" class="form-control bg-dark text-light" style="border: 1px solid #bc00ed;" onchange="updateAnalytics()">
+            </div>
+            <div class="col-md-3">
+              <label style="color: #00ffb4; font-size: 0.9rem;">End Date</label>
+              <input type="date" id="endDate" class="form-control bg-dark text-light" style="border: 1px solid #bc00ed;" onchange="updateAnalytics()">
+            </div>
+            <div class="col-md-3">
+              <div class="form-check form-switch" style="padding-top: 1rem;">
+                <input class="form-check-input" type="checkbox" id="comparisonToggle" onchange="updateAnalytics()">
+                <label class="form-check-label" style="color: #00ffb4; font-size: 0.9rem;">
+                  Compare to Previous Period
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
+        <div class="card-body">
+          <label style="color: #00ffb4; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Export Reports</label>
+          <button class="btn btn-sm me-2 mb-2" style="background: linear-gradient(135deg, #bc00ed, #0044ff); color: #fff;" onclick="exportAnalytics('pdf')">
+            <i data-feather="file-text"></i> PDF
+          </button>
+          <button class="btn btn-sm me-2 mb-2" style="background: linear-gradient(135deg, #00ffb4, #004845); color: #000;" onclick="exportAnalytics('csv')">
+            <i data-feather="grid"></i> CSV
+          </button>
+          <button class="btn btn-sm mb-2" style="background: linear-gradient(135deg, #e4055c, #bc00ed); color: #fff;" onclick="exportAnalytics('excel')">
+            <i data-feather="table"></i> Excel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Metrics Dashboard -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="card analytics-card">
+        <div class="card-body text-center">
+          <i data-feather="activity" class="mb-3" style="width: 48px; height: 48px; color: #00ffb4;"></i>
+          <div class="metric-value">{{ analytics.active_users|default(0)|int }}</div>
+          <p class="metric-label">Active Users</p>
+          <small style="color: #666;">Last 30 days</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card analytics-card">
+        <div class="card-body text-center">
+          <i data-feather="mail" class="mb-3" style="width: 48px; height: 48px; color: #bc00ed;"></i>
+          <div class="metric-value">{{ analytics.email_open_rate|default(0)|round(1) }}%</div>
+          <p class="metric-label">Email Open Rate</p>
+          <small style="color: #666;">{{ analytics.email_metrics.total_sent|default(0) }} emails sent</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card analytics-card">
+        <div class="card-body text-center">
+          <i data-feather="dollar-sign" class="mb-3" style="width: 48px; height: 48px; color: #e4055c;"></i>
+          <div class="metric-value">${{ analytics.revenue_mtd|default(0)|round(2) }}</div>
+          <p class="metric-label">Revenue (MTD)</p>
+          <small style="color: #666;">Month to date</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card analytics-card">
+        <div class="card-body text-center">
+          <i data-feather="users" class="mb-3" style="width: 48px; height: 48px; color: #0044ff;"></i>
+          <div class="metric-value">{{ (analytics.total_reach|default(0)/1000)|round(1) }}K</div>
+          <p class="metric-label">Total Reach</p>
+          <small style="color: #666;">Social media followers</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Website Analytics (GA4 Metrics) -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-8">
+      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
+        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
+          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="trending-up"></i> Website Traffic & Engagement</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="trafficChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-4">
+      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
+        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
+          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="pie-chart"></i> Traffic Sources</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container" style="height: 300px;">
+            <canvas id="sourcesChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email & Social Analytics -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
+        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
+          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="mail"></i> Email Campaign Performance</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="emailChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
+        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
+          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="share-2"></i> Social Media Engagement</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="socialChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Website Metrics -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-12">
+      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
+        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
+          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="globe"></i> Company Website Metrics</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="p-3 rounded" style="background: rgba(0, 255, 180, 0.1); border: 1px solid #00ffb4;">
+                <h6 style="color: #00ffb4;">Page Views</h6>
+                <h3 class="mb-0" style="color: #fff;">18,542</h3>
+                <small style="color: #4ade80;">Last 30 days</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 rounded" style="background: rgba(188, 0, 237, 0.1); border: 1px solid #bc00ed;">
+                <h6 style="color: #bc00ed;">Avg. Session Duration</h6>
+                <h3 class="mb-0" style="color: #fff;">4:23</h3>
+                <small style="color: #4ade80;">Minutes:Seconds</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 rounded" style="background: rgba(228, 5, 92, 0.1); border: 1px solid #e4055c;">
+                <h6 style="color: #e4055c;">Bounce Rate</h6>
+                <h3 class="mb-0" style="color: #fff;">32.7%</h3>
+                <small style="color: #4ade80;">-5.3% improvement</small>
+              </div>
+            </div>
+          </div>
+          <div class="row g-3 mt-2">
+            <div class="col-md-3">
+              <div class="p-3 rounded" style="background: rgba(0, 68, 255, 0.1); border: 1px solid #0044ff;">
+                <h6 style="color: #0044ff;">Conversions</h6>
+                <h3 class="mb-0" style="color: #fff;">487</h3>
+                <small style="color: #4ade80;">+15.2%</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3 rounded" style="background: rgba(0, 255, 180, 0.1); border: 1px solid #00ffb4;">
+                <h6 style="color: #00ffb4;">Top Page</h6>
+                <h3 class="mb-0" style="font-size: 1.2rem; color: #fff;">/products</h3>
+                <small style="color: #4ade80;">2,341 views</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3 rounded" style="background: rgba(188, 0, 237, 0.1); border: 1px solid #bc00ed;">
+                <h6 style="color: #bc00ed;">New Visitors</h6>
+                <h3 class="mb-0" style="color: #fff;">64.2%</h3>
+                <small style="color: #4ade80;">High quality</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3 rounded" style="background: rgba(228, 5, 92, 0.1); border: 1px solid #e4055c;">
+                <h6 style="color: #e4055c;">Mobile Users</h6>
+                <h3 class="mb-0" style="color: #fff;">58.9%</h3>
+                <small style="color: #4ade80;">Majority mobile</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conversion Funnel -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
+        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
+          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="filter"></i> Conversion Funnel</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="funnelChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-6">
+      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
+        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
+          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="bar-chart-2"></i> Campaign ROI Comparison</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="roiChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
+        <div class="card-body text-center">
+          <h4 style="color: #00ffb4;"><i data-feather="download"></i> Export Analytics Reports</h4>
+          <p style="color: #c0c0c0;">Download comprehensive reports with visual charts and data tables</p>
+          <button class="btn me-2" style="background: linear-gradient(135deg, #bc00ed, #0044ff); color: #fff;"><i data-feather="file-text"></i> PDF Report</button>
+          <button class="btn me-2" style="background: linear-gradient(135deg, #00ffb4, #004845); color: #000;"><i data-feather="grid"></i> CSV Export</button>
+          <button class="btn" style="background: linear-gradient(135deg, #e4055c, #bc00ed); color: #fff;"><i data-feather="table"></i> Excel Workbook</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  feather.replace();
+  
+  // Brand colors
+  const colors = {
+    purple: '#bc00ed',
+    darkPurple: '#480749',
+    cyan: '#00ffb4',
+    darkCyan: '#004845',
+    pink: '#e4055c',
+    blue: '#0044ff',
+    gray: '#c0c0c0'
+  };
+  
+  // Chart.js default config
+  Chart.defaults.color = '#fff';
+  Chart.defaults.borderColor = '#333';
+  
+  // Website Traffic Chart
+  const trafficCtx = document.getElementById('trafficChart').getContext('2d');
+  new Chart(trafficCtx, {
+    type: 'line',
+    data: {
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      datasets: [{
+        label: 'Page Views',
+        data: [2400, 2950, 3200, 2800, 3500, 2900, 3100],
+        borderColor: colors.cyan,
+        backgroundColor: `${colors.cyan}20`,
+        fill: true,
+        tension: 0.4
+      }, {
+        label: 'Sessions',
+        data: [1800, 2100, 2400, 2000, 2600, 2200, 2300],
+        borderColor: colors.purple,
+        backgroundColor: `${colors.purple}20`,
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#fff' }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: '#333' }
+        },
+        x: {
+          grid: { color: '#333' }
+        }
+      }
+    }
+  });
+  
+  // Traffic Sources Pie Chart
+  const sourcesCtx = document.getElementById('sourcesChart').getContext('2d');
+  new Chart(sourcesCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Organic Search', 'Direct', 'Social Media', 'Referral', 'Email'],
+      datasets: [{
+        data: [35, 25, 20, 12, 8],
+        backgroundColor: [colors.cyan, colors.purple, colors.pink, colors.blue, colors.gray],
+        borderWidth: 2,
+        borderColor: '#000'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#fff', padding: 15 }
+        }
+      }
+    }
+  });
+  
+  // Email Performance Chart
+  const emailCtx = document.getElementById('emailChart').getContext('2d');
+  new Chart(emailCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Campaign 1', 'Campaign 2', 'Campaign 3', 'Campaign 4', 'Campaign 5'],
+      datasets: [{
+        label: 'Open Rate %',
+        data: [68, 72, 65, 70, 75],
+        backgroundColor: colors.purple,
+        borderColor: colors.purple,
+        borderWidth: 1
+      }, {
+        label: 'Click Rate %',
+        data: [24, 28, 22, 26, 30],
+        backgroundColor: colors.cyan,
+        borderColor: colors.cyan,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#fff' }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          grid: { color: '#333' }
+        },
+        x: {
+          grid: { color: '#333' }
+        }
+      }
+    }
+  });
+  
+  // Social Media Engagement
+  const socialCtx = document.getElementById('socialChart').getContext('2d');
+  new Chart(socialCtx, {
+    type: 'radar',
+    data: {
+      labels: ['Likes', 'Shares', 'Comments', 'Reach', 'Engagement'],
+      datasets: [{
+        label: 'This Week',
+        data: [85, 70, 65, 80, 75],
+        borderColor: colors.cyan,
+        backgroundColor: `${colors.cyan}30`,
+        pointBackgroundColor: colors.cyan
+      }, {
+        label: 'Last Week',
+        data: [75, 65, 60, 70, 68],
+        borderColor: colors.purple,
+        backgroundColor: `${colors.purple}30`,
+        pointBackgroundColor: colors.purple
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#fff' }
+        }
+      },
+      scales: {
+        r: {
+          beginAtZero: true,
+          max: 100,
+          grid: { color: '#333' },
+          pointLabels: { color: '#fff' },
+          ticks: { color: '#fff' }
+        }
+      }
+    }
+  });
+  
+  // Conversion Funnel
+  const funnelCtx = document.getElementById('funnelChart').getContext('2d');
+  new Chart(funnelCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Website Visit', 'Product View', 'Add to Cart', 'Checkout', 'Purchase'],
+      datasets: [{
+        label: 'Conversions',
+        data: [10000, 6500, 3200, 1800, 1247],
+        backgroundColor: [colors.cyan, colors.purple, colors.blue, colors.pink, colors.gray],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: { color: '#333' }
+        },
+        y: {
+          grid: { color: '#333' }
+        }
+      }
+    }
+  });
+  
+  // ROI Comparison
+  const roiCtx = document.getElementById('roiChart').getContext('2d');
+  new Chart(roiCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Email', 'Social Ads', 'SEO', 'Content', 'PPC'],
+      datasets: [{
+        label: 'ROI %',
+        data: [420, 280, 350, 290, 310],
+        backgroundColor: [colors.cyan, colors.purple, colors.blue, colors.pink, colors.gray],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: '#333' }
+        },
+        x: {
+          grid: { color: '#333' }
+        }
+      }
+    }
+  });
+  
+  // Date filter handling
+  function updateAnalytics() {
+    const period = document.getElementById('periodSelector').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const compare = document.getElementById('comparisonToggle').checked;
+    
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (period !== 'custom') {
+      params.append('days', period);
+    } else {
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+    }
+    if (compare) params.append('compare', 'true');
+    
+    // Reload page with filters
+    window.location.href = `/analytics-hub?${params.toString()}`;
+  }
+  
+  // Export analytics data
+  function exportAnalytics(format) {
+    const period = document.getElementById('periodSelector').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const compare = document.getElementById('comparisonToggle').checked;
+    
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('format', format);
+    if (period !== 'custom') {
+      params.append('days', period);
+    } else {
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+    }
+    if (compare) params.append('compare', 'true');
+    
+    // Trigger download
+    window.location.href = `/analytics-hub/export?${params.toString()}`;
+  }
+  
+  // Initialize date picker with current date
+  document.getElementById('endDate').valueAsDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 30);
+  document.getElementById('startDate').valueAsDate = startDate;
+</script>
+{% endblock %}

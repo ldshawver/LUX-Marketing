@@ -1,8 +1,14 @@
-# Email Marketing Automation Bot
+# LUX Marketing Platform
 
 ## Overview
 
-This is a comprehensive **multi-channel marketing automation platform** built with Flask. The system enables users to manage contacts, create email templates, design marketing campaigns, send SMS messages, schedule social media posts, manage events, and track performance analytics across all channels. It integrates with Microsoft Graph API for email delivery, Twilio for SMS, OpenAI for AI-powered content generation, and provides a complete workflow from contact management to campaign execution and analytics.
+**LUX Marketing** is a comprehensive multi-channel marketing automation platform built for **Lucifer Cruz** organization. Built with Flask, the system enables users to manage contacts, create email templates, design marketing campaigns, send SMS messages, schedule social media posts, manage events, and track performance analytics across all channels. It integrates with Microsoft Graph API for email delivery, Twilio for SMS, OpenAI for AI-powered content generation, and provides a complete workflow from contact management to campaign execution and analytics.
+
+### Project Structure
+- **Organization**: Lucifer Cruz
+- **Platform Name**: LUX Marketing
+- **Deployment Domain**: lux.lucifercruz.com
+- **Repository**: https://github.com/ldshawver/LUX-Marketing
 
 ## User Preferences
 
@@ -127,7 +133,44 @@ All tables successfully created:
 - ABTest (A/B testing campaigns)
 - EmailComponent (template components)
 
+### Brand Identity
+- **Pure Black Background**: #000000
+- **Brand Colors**: 
+  - Purple: #480749 (dark), #bc00ed (bright)
+  - Cyan/Teal: #004845 (dark), #00ffb4 (bright)
+  - Pink/Magenta: #e4055c
+  - Blue: #0044ff
+  - Silver/Gray: #c0c0c0, #808fff
+- **Navigation**: LUX logo + back/forward arrows (simplified)
+- **Dashboard**: Animated tiles with gradient borders, pulse glow animation
+- **User Greeting**: "[Name] Wizard of [Company]" with capitalized first letter
+- **Chatbot**: Animated GIF (chatbot.gif), AI-powered with OpenAI GPT-4o
+
 ### Recent Changes
+
+#### November 13, 2025 - LUX AI Chatbot & Visual Analytics
+- **LUX AI Chatbot Implementation**:
+  - Full chat interface with brand color scheme (purple/cyan gradients)
+  - OpenAI GPT-4o integration using OPENAI_API_BOUTIQUELUX key
+  - Real-time conversation with typing indicators
+  - Animated chatbot GIF icon (80px, transparent background)
+  - Chat opens in dedicated /chatbot route
+  - Responsive design for mobile/desktop
+- **Analytics Hub Visualization**:
+  - Chart.js integration with 6 chart types (line, doughnut, bar, radar, pie)
+  - Website metrics dashboard (GA4-style)
+  - Traffic source analysis, email performance, social engagement charts
+  - Conversion funnel and ROI comparison visualization
+  - All charts use brand color palette
+- **Social Media Filtering**:
+  - Updated social media page to show only connected accounts
+  - Display follower counts and account status
+  - Shows message if no accounts connected
+- **Dashboard Enhancements**:
+  - User name capitalization (text-transform: capitalize)
+  - Fully responsive design with media queries for all screen sizes
+  - Chatbot icon aspect ratio fixed (height: 80px, width: auto)
+  - All brand colors strictly enforced (#000000 background, purple/cyan/pink/blue palette)
 
 #### October 27, 2025 - Complete AI Agent System Implementation
 - **10 AI Marketing Agents Deployed**: Comprehensive marketing automation system

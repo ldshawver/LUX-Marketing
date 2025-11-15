@@ -33,7 +33,7 @@ class BaseAgent:
             raise ValueError(f"{agent_name}: OPENAI_API_KEY environment variable is required")
         
         self.client = OpenAI(api_key=api_key)
-        self.model = "gpt-4o"
+        self.model = "gpt-5-2025-08-07"
         
         self.personality = self._define_personality()
         

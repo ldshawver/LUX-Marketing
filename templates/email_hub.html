@@ -1,0 +1,144 @@
+{% extends "base_simple.html" %}
+
+{% block title %}Email Marketing Hub - LUX Marketing{% endblock %}
+
+{% block page_header %}
+<span style="color: #c0c0c0;">Email Marketing Hub</span>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="background: #000000; min-height: 100vh; padding: 2rem;">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h1 class="display-4">Email Marketing Hub</h1>
+      <p class="lead">Comprehensive email marketing with A/B testing, templates, and automation</p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card bg-dark border-primary">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="send"></i> Campaigns</h5>
+          <p class="card-text">Create and manage email campaigns</p>
+          <a href="{{ url_for('main.campaigns') }}" class="btn btn-primary">Go to Campaigns</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-success">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="shuffle"></i> A/B Testing</h5>
+          <p class="card-text">Test and optimize your campaigns</p>
+          <a href="{{ url_for('main.ab_tests') }}" class="btn btn-success">Manage A/B Tests</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-info">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="edit-3"></i> Step Editor</h5>
+          <p class="card-text">Create emails with drag & drop</p>
+          <a href="{{ url_for('main.drag_drop_editor') }}" class="btn btn-info">Open Editor</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-warning">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="file-text"></i> Templates</h5>
+          <p class="card-text">Browse and select email templates</p>
+          <a href="{{ url_for('main.templates') }}" class="btn btn-warning">View Templates</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-danger">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="zap"></i> Automations</h5>
+          <p class="card-text">Set up automated workflows</p>
+          <a href="{{ url_for('main.automation_dashboard') }}" class="btn btn-danger">Manage Automations</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-secondary">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="book"></i> Trigger Library</h5>
+          <p class="card-text">Browse automation triggers</p>
+          <a href="{{ url_for('main.automation_triggers') }}" class="btn btn-secondary">View Triggers</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-primary">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="users"></i> Contacts</h5>
+          <p class="card-text">Manage your contact lists</p>
+          <a href="{{ url_for('main.contacts') }}" class="btn btn-primary">View Contacts</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-success">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="filter"></i> Segmentation</h5>
+          <p class="card-text">Create targeted segments</p>
+          <a href="{{ url_for('main.segments') }}" class="btn btn-success">Manage Segments</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-info">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="clipboard"></i> Forms</h5>
+          <p class="card-text">Create web forms for signups</p>
+          <a href="{{ url_for('main.forms_dashboard') }}" class="btn btn-info">Manage Forms</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-warning">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="globe"></i> Landing Pages</h5>
+          <p class="card-text">Build conversion-focused pages</p>
+          <a href="{{ url_for('main.landing_pages') }}" class="btn btn-warning">View Landing Pages</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-danger">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="bar-chart"></i> Polls & Surveys</h5>
+          <p class="card-text">Collect feedback and insights</p>
+          <a href="{{ url_for('main.polls_management') }}" class="btn btn-danger">Manage Polls</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-secondary">
+        <div class="card-body">
+          <h5 class="card-title"><i data-feather="archive"></i> Newsletter</h5>
+          <p class="card-text">Newsletter archive and management</p>
+          <a href="{{ url_for('main.newsletter_archive') }}" class="btn btn-secondary">View Newsletter</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  feather.replace();
+</script>
+{% endblock %}

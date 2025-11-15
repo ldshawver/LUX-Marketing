@@ -1,0 +1,261 @@
+{% extends "base_simple.html" %}
+
+{% block title %}Ads Hub - LUX Marketing{% endblock %}
+
+{% block page_header %}
+<span style="color: #c0c0c0;">Ads Management Hub</span>
+{% endblock %}
+
+{% block content %}
+<style>
+  .ad-type-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+  }
+  
+  .ad-type-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(74, 222, 128, 0.3);
+  }
+  
+  .ad-type-card.display { border-color: #3b82f6; }
+  .ad-type-card.search { border-color: #f59e0b; }
+  .ad-type-card.shopping { border-color: #10b981; }
+  .ad-type-card.press { border-color: #8b5cf6; }
+</style>
+
+<div class="container-fluid" style="background: #000000; min-height: 100vh; padding: 2rem;">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h1 class="display-4">Ads Management Hub</h1>
+      <p class="lead">Manage Display, Search, and Shopping ads with full Google Ads integration</p>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-6 col-lg-3">
+      <div class="card ad-type-card display h-100">
+        <div class="card-body text-center">
+          <i data-feather="image" class="mb-3" style="width: 64px; height: 64px; color: #3b82f6;"></i>
+          <h4>Display Ads</h4>
+          <p class="text-muted">Visual banner ads across the web</p>
+          <button class="btn btn-primary">Manage Display</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <div class="card ad-type-card search h-100">
+        <div class="card-body text-center">
+          <i data-feather="search" class="mb-3" style="width: 64px; height: 64px; color: #f59e0b;"></i>
+          <h4>Search Ads</h4>
+          <p class="text-muted">Text ads in search results</p>
+          <button class="btn btn-warning">Manage Search</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <div class="card ad-type-card shopping h-100">
+        <div class="card-body text-center">
+          <i data-feather="shopping-cart" class="mb-3" style="width: 64px; height: 64px; color: #10b981;"></i>
+          <h4>Shopping Ads</h4>
+          <p class="text-muted">Product listings with images</p>
+          <button class="btn btn-success">Manage Shopping</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <div class="card ad-type-card press h-100">
+        <div class="card-body text-center">
+          <i data-feather="file-text" class="mb-3" style="width: 64px; height: 64px; color: #8b5cf6;"></i>
+          <h4>Press Release</h4>
+          <p class="text-muted">PR Wire distribution</p>
+          <button class="btn btn-secondary">Create PR</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card bg-dark border-primary">
+        <div class="card-header bg-primary">
+          <h5 class="mb-0"><i data-feather="cpu" style="color: gold;"></i> AI Campaign Generator</h5>
+        </div>
+        <div class="card-body">
+          <p class="lead">Let AI create optimized ad campaigns across all platforms</p>
+          
+          <div class="mb-3">
+            <label class="form-label">Campaign Objective</label>
+            <select class="form-select bg-dark text-light">
+              <option>Increase Brand Awareness</option>
+              <option>Drive Website Traffic</option>
+              <option>Generate Leads</option>
+              <option>Boost Sales</option>
+              <option>App Promotion</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Target Audience</label>
+            <input type="text" class="form-control bg-dark text-light" placeholder="Describe your target audience...">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Monthly Budget</label>
+            <div class="input-group">
+              <span class="input-group-text bg-dark text-light">$</span>
+              <input type="number" class="form-control bg-dark text-light" placeholder="1000">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Ad Platforms</label>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="googleAds" checked>
+              <label class="form-check-label" for="googleAds">Google Ads</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="displayNetwork" checked>
+              <label class="form-check-label" for="displayNetwork">Display Network</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="shoppingAds" checked>
+              <label class="form-check-label" for="shoppingAds">Shopping Ads</label>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-lg w-100">
+            <i data-feather="zap" style="color: gold;"></i> Generate AI Campaign
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card bg-dark border-success mb-4">
+        <div class="card-header bg-success">
+          <h5 class="mb-0"><i data-feather="link"></i> Google Ads Integration</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <div class="flex-grow-1">
+              <h6 class="mb-0">Account Status</h6>
+              <small class="text-success"><i data-feather="check-circle"></i> Connected</small>
+            </div>
+            <button class="btn btn-sm btn-outline-success">Manage</button>
+          </div>
+          
+          <hr>
+          
+          <div class="mb-2">
+            <small class="text-muted">Active Campaigns</small>
+            <h4 class="mb-0">12</h4>
+          </div>
+          
+          <div class="mb-2">
+            <small class="text-muted">Total Spend (30d)</small>
+            <h4 class="mb-0">$4,532</h4>
+          </div>
+          
+          <div class="mb-2">
+            <small class="text-muted">Avg. ROAS</small>
+            <h4 class="mb-0">3.8x</h4>
+          </div>
+          
+          <button class="btn btn-success w-100 mt-3">View in Google Ads</button>
+        </div>
+      </div>
+
+      <div class="card bg-dark border-secondary">
+        <div class="card-header bg-secondary">
+          <h5 class="mb-0"><i data-feather="file-text"></i> PR Wire</h5>
+        </div>
+        <div class="card-body">
+          <p>Distribute press releases to major news outlets</p>
+          <ul class="list-unstyled">
+            <li><i data-feather="check"></i> 400+ news sites</li>
+            <li><i data-feather="check"></i> Industry targeting</li>
+            <li><i data-feather="check"></i> SEO benefits</li>
+            <li><i data-feather="check"></i> Performance tracking</li>
+          </ul>
+          <button class="btn btn-secondary w-100 mt-2">Create Press Release</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card bg-dark">
+        <div class="card-header">
+          <h5 class="mb-0"><i data-feather="trending-up"></i> Recent Campaigns</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover">
+              <thead>
+                <tr>
+                  <th>Campaign</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Impressions</th>
+                  <th>Clicks</th>
+                  <th>Spend</th>
+                  <th>ROAS</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Summer Sale 2024</td>
+                  <td><span class="badge bg-primary">Display</span></td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>125,430</td>
+                  <td>3,421</td>
+                  <td>$842</td>
+                  <td>4.2x</td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-primary">Edit</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Black Friday</td>
+                  <td><span class="badge bg-warning">Search</span></td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>89,234</td>
+                  <td>5,612</td>
+                  <td>$1,234</td>
+                  <td>5.1x</td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-primary">Edit</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>New Product Launch</td>
+                  <td><span class="badge bg-success">Shopping</span></td>
+                  <td><span class="badge bg-warning">Paused</span></td>
+                  <td>42,156</td>
+                  <td>1,823</td>
+                  <td>$623</td>
+                  <td>3.3x</td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-primary">Edit</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  feather.replace();
+</script>
+{% endblock %}

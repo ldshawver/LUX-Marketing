@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Company - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h2>Edit Company: {{ company.name }}</h2>
+      <p class="text-muted">Update company profile and configuration</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card bg-dark">
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('main.edit_company', company_id=company.id) }}" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="mb-3">
+              <label for="name" class="form-label">Company Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control bg-dark text-light" id="name" name="name" value="{{ company.name }}" required style="text-transform: capitalize;">
+            </div>
+
+            <div class="mb-3">
+              <label for="website_url" class="form-label">Website URL</label>
+              <input type="url" class="form-control bg-dark text-light" id="website_url" name="website_url" value="{{ company.website_url or '' }}" placeholder="https://example.com">
+            </div>
+
+            <div class="mb-3">
+              <label for="logo" class="form-label">Company Logo</label>
+              <input type="file" class="form-control bg-dark text-light" id="logo" name="logo" accept="image/*">
+              <small class="text-muted">Upload a new logo to replace the current one</small>
+            </div>
+
+            <hr>
+
+            <div class="mb-3">
+              <h5>API & Integrations</h5>
+              <p class="text-muted">Configure API keys and integrations for this company</p>
+              <div class="alert alert-info">
+                Advanced configuration options will be available soon
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <a href="{{ url_for('main.companies_list') }}" class="btn btn-secondary">
+                <i data-feather="arrow-left"></i> Back
+              </a>
+              <button type="submit" class="btn btn-primary">
+                <i data-feather="save"></i> Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-info">
+        <div class="card-header bg-info">
+          <h6 class="mb-0">Company Info</h6>
+        </div>
+        <div class="card-body">
+          <p><strong>Created:</strong><br>{{ company.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+          <p><strong>Last Updated:</strong><br>{{ company.updated_at.strftime('%Y-%m-%d %H:%M') }}</p>
+          <p><strong>Status:</strong><br>
+            {% if company.is_active %}
+            <span class="badge bg-success">Active</span>
+            {% else %}
+            <span class="badge bg-danger">Inactive</span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  feather.replace();
+</script>
+{% endblock %}

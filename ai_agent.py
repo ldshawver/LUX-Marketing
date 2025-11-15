@@ -27,7 +27,7 @@ class LUXAgent:
             
             # Initialize OpenAI client with minimal parameters to avoid conflicts
             self.client = OpenAI(api_key=api_key)
-            self.model = "gpt-4o"  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+            self.model = "gpt-5-2025-08-07"  # Upgraded to GPT-5, launched August 7, 2025
             self.agent_name = "LUX"
             self.agent_personality = """
             You are LUX, an expert email marketing automation agent. You are professional, data-driven, 
@@ -417,7 +417,7 @@ class LUXAgent:
             """
             
             response = self.client.chat.completions.create(
-                model="gpt-4o",
+                model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Generate {content_type} for: {prompt}"}
@@ -461,7 +461,7 @@ class LUXAgent:
             audience_context = f" for {audience}" if audience else ""
             
             response = self.client.chat.completions.create(
-                model="gpt-4o",
+                model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Generate 8 compelling subject lines for a {campaign_type} campaign{audience_context}"}

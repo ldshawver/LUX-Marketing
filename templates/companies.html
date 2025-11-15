@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Companies - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h2>Manage Companies</h2>
+      <p class="text-muted">Manage your company profiles and configurations</p>
+    </div>
+    <div class="col-md-4 text-end">
+      <a href="{{ url_for('main.add_company') }}" class="btn btn-primary">
+        <i data-feather="plus"></i> Add Company
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    {% for company in companies %}
+    <div class="col-md-6 mb-4">
+      <div class="card bg-dark">
+        <div class="card-body">
+          <h5 class="card-title">
+            {{ company.name }}
+            {% if current_user.get_default_company() and company.id == current_user.get_default_company().id %}
+            <span class="badge bg-success">Current</span>
+            {% endif %}
+          </h5>
+          {% if company.website_url %}
+          <p class="text-muted"><i data-feather="globe"></i> {{ company.website_url }}</p>
+          {% endif %}
+          <p class="text-muted">
+            <small>Created: {{ company.created_at.strftime('%Y-%m-%d') }}</small>
+          </p>
+          
+          <div class="mt-3">
+            <a href="{{ url_for('main.edit_company', company_id=company.id) }}" class="btn btn-sm btn-outline-primary me-2">
+              <i data-feather="edit"></i> Edit
+            </a>
+            <button class="btn btn-sm btn-outline-success me-2" onclick="switchCompany({{ company.id }})">
+              <i data-feather="check"></i> Make Default
+            </button>
+            <button class="btn btn-sm btn-outline-info" onclick="switchAndConfigure({{ company.id }})">
+              <i data-feather="sliders"></i> Advanced Config
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+      <div class="alert alert-info">
+        <p class="mb-0">You don't have any companies yet. <a href="{{ url_for('main.add_company') }}">Add your first company</a></p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  feather.replace();
+  
+  function switchCompany(companyId) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    fetch(`/companies/switch/${companyId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Failed to switch company');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred');
+    });
+  }
+  
+  function switchAndConfigure(companyId) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    fetch(`/companies/switch/${companyId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Navigate to advanced config instead of reloading
+        window.location.href = '{{ url_for("advanced_config.integrations_list") }}';
+      } else {
+        alert('Failed to switch company');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred');
+    });
+  }
+</script>
+{% endblock %}

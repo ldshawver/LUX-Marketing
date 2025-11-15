@@ -1,0 +1,199 @@
+{% extends "base_simple.html" %}
+
+{% block title %}LUX AI Agents Hub - LUX Marketing{% endblock %}
+
+{% block page_header %}
+<span style="color: #c0c0c0;">LUX AI Agents</span>
+{% endblock %}
+
+{% block content %}
+<style>
+  .agent-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 2px solid #8b5cf6;
+    transition: all 0.3s ease;
+  }
+  
+  .agent-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+    border-color: #4ade80;
+  }
+  
+  .agent-status-active {
+    color: #4ade80;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+</style>
+
+<div class="container-fluid" style="background: #000000; min-height: 100vh; padding: 2rem;">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h1 class="display-4"><i data-feather="cpu" style="color: gold;"></i> LUX AI Agents</h1>
+      <p class="lead">Intelligent AI assistants powering your marketing automation</p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-4">
+      <div class="card agent-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <h5 class="card-title"><i data-feather="mail"></i> Email Agent</h5>
+            <span class="badge bg-success agent-status-active">Active</span>
+          </div>
+          <p class="card-text">Generates compelling email content, subject lines, and optimizes send times</p>
+          <div class="mt-3">
+            <small class="text-muted">Performance: 94%</small>
+            <div class="progress mt-2" style="height: 5px;">
+              <div class="progress-bar bg-success" style="width: 94%"></div>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-4">
+      <div class="card agent-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <h5 class="card-title"><i data-feather="share-2"></i> Social Agent</h5>
+            <span class="badge bg-success agent-status-active">Active</span>
+          </div>
+          <p class="card-text">Creates engaging social media posts tailored to each platform</p>
+          <div class="mt-3">
+            <small class="text-muted">Performance: 91%</small>
+            <div class="progress mt-2" style="height: 5px;">
+              <div class="progress-bar bg-success" style="width: 91%"></div>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-4">
+      <div class="card agent-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <h5 class="card-title"><i data-feather="search"></i> SEO Agent</h5>
+            <span class="badge bg-success agent-status-active">Active</span>
+          </div>
+          <p class="card-text">Analyzes keywords, suggests optimizations, and tracks rankings</p>
+          <div class="mt-3">
+            <small class="text-muted">Performance: 88%</small>
+            <div class="progress mt-2" style="height: 5px;">
+              <div class="progress-bar bg-success" style="width: 88%"></div>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-4">
+      <div class="card agent-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <h5 class="card-title"><i data-feather="bar-chart-2"></i> Analytics Agent</h5>
+            <span class="badge bg-success agent-status-active">Active</span>
+          </div>
+          <p class="card-text">Provides insights, identifies trends, and suggests improvements</p>
+          <div class="mt-3">
+            <small class="text-muted">Performance: 96%</small>
+            <div class="progress mt-2" style="height: 5px;">
+              <div class="progress-bar bg-success" style="width: 96%"></div>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-4">
+      <div class="card agent-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <h5 class="card-title"><i data-feather="target"></i> Campaign Agent</h5>
+            <span class="badge bg-success agent-status-active">Active</span>
+          </div>
+          <p class="card-text">Builds complete multi-channel campaigns from simple prompts</p>
+          <div class="mt-3">
+            <small class="text-muted">Performance: 93%</small>
+            <div class="progress mt-2" style="height: 5px;">
+              <div class="progress-bar bg-success" style="width: 93%"></div>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-4">
+      <div class="card agent-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <h5 class="card-title"><i data-feather="users"></i> Audience Agent</h5>
+            <span class="badge bg-warning">Training</span>
+          </div>
+          <p class="card-text">Segments audiences and predicts customer behavior</p>
+          <div class="mt-3">
+            <small class="text-muted">Performance: 78%</small>
+            <div class="progress mt-2" style="height: 5px;">
+              <div class="progress-bar bg-warning" style="width: 78%"></div>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-5">
+    <div class="col-12">
+      <div class="card bg-dark border-primary">
+        <div class="card-header">
+          <h4><i data-feather="settings"></i> Agent Configuration</h4>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <h5>Training Data</h5>
+              <ul class="list-group list-group-flush mb-3">
+                <li class="list-group-item bg-dark">Brand voice and tone preferences</li>
+                <li class="list-group-item bg-dark">Historical campaign performance</li>
+                <li class="list-group-item bg-dark">Customer engagement patterns</li>
+                <li class="list-group-item bg-dark">Industry-specific knowledge</li>
+              </ul>
+            </div>
+            <div class="col-md-6">
+              <h5>Agent Capabilities</h5>
+              <ul class="list-group list-group-flush mb-3">
+                <li class="list-group-item bg-dark">Content generation and optimization</li>
+                <li class="list-group-item bg-dark">Predictive analytics</li>
+                <li class="list-group-item bg-dark">Automated A/B test creation</li>
+                <li class="list-group-item bg-dark">Real-time performance monitoring</li>
+              </ul>
+            </div>
+          </div>
+          <div class="text-center mt-4">
+            <a href="{{ url_for('main.lux_agent_dashboard') }}" class="btn btn-primary btn-lg">
+              <i data-feather="zap" style="color: gold;"></i> Open LUX AI Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  feather.replace();
+</script>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Add Company - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container" style="background: #000000; padding: 2rem;">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h2 style="color: #bc00ed;">Add New Company</h2>
+      <p style="color: #00ffb4;">Add a new company profile to manage multiple brands</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('main.add_company') }}" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="mb-3">
+              <label for="name" class="form-label">Company Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control bg-dark text-light" id="name" name="name" required style="text-transform: capitalize;">
+            </div>
+
+            <div class="mb-3">
+              <label for="website_url" class="form-label">Website URL</label>
+              <input type="url" class="form-control bg-dark text-light" id="website_url" name="website_url" placeholder="https://example.com">
+            </div>
+
+            <div class="mb-3">
+              <label for="logo" class="form-label">Company Logo</label>
+              <input type="file" class="form-control bg-dark text-light" id="logo" name="logo" accept="image/*">
+              <small class="text-muted">Upload your company logo (PNG, JPG, or SVG)</small>
+            </div>
+
+            <hr>
+
+            <div class="mb-3">
+              <h5>Configuration</h5>
+              <p class="text-muted">Additional configuration can be set after creating the company</p>
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <a href="{{ url_for('main.companies_list') }}" class="btn btn-secondary">
+                <i data-feather="x"></i> Cancel
+              </a>
+              <button type="submit" class="btn btn-primary">
+                <i data-feather="save"></i> Create Company
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  feather.replace();
+</script>
+{% endblock %}

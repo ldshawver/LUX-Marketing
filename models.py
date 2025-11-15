@@ -3,6 +3,13 @@ from app import db
 from flask_login import UserMixin
 from sqlalchemy import JSON, Text
 
+user_company = db.Table('user_company',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('company_id', db.Integer, db.ForeignKey('company.id'), primary_key=True),
+    db.Column('is_default', db.Boolean, default=False),
+    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+)
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
@@ -11,8 +18,53 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    companies = db.relationship('Company', secondary=user_company, backref=db.backref('users', lazy='dynamic'))
+    
     def __repr__(self):
         return f'<User {self.username}>'
+    
+    def get_default_company(self):
+        """Get the user's default company"""
+        result = db.session.execute(
+            db.select(user_company).where(
+                user_company.c.user_id == self.id,
+                user_company.c.is_default == True
+            )
+        ).first()
+        if result:
+            return Company.query.get(result.company_id)
+        companies_list = list(self.companies)
+        return companies_list[0] if companies_list else None
+
+class Company(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    logo_path = db.Column(db.String(255))
+    website_url = db.Column(db.String(255))
+    
+    # Configuration stored as JSON for flexibility
+    env_config = db.Column(JSON)  # Stores environment-specific configs
+    social_accounts = db.Column(JSON)  # Social media account details
+    email_config = db.Column(JSON)  # Email settings (from, reply-to, etc.)
+    api_keys = db.Column(JSON)  # API keys and secrets (encrypted)
+    
+    # Brand Kit association
+    brandkit_id = db.Column(db.Integer, db.ForeignKey('brand_kit.id'))
+    
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Company {self.name}>'
+    
+    @property
+    def user_count(self):
+        return db.session.execute(
+            db.select(db.func.count(user_company.c.user_id)).where(
+                user_company.c.company_id == self.id
+            )
+        ).scalar()
 
 class Contact(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1181,3 +1233,65 @@ class WorkflowExecution(db.Model):
     
     def __repr__(self):
         return f'<WorkflowExecution {self.workflow_id}:{self.contact_id}:{self.status}>'
+
+# Advanced Configuration (Company Integration Management)
+class CompanyIntegrationConfig(db.Model):
+    """Store company-specific integration configurations"""
+    __tablename__ = 'company_integration_config'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    service_slug = db.Column(db.String(50), nullable=False)  # openai, google_ads, exoclick, etc.
+    display_name = db.Column(db.String(100), nullable=False)
+    
+    # Configuration data
+    config_json = db.Column(JSON)  # Non-sensitive config (URLs, usernames, etc.)
+    encrypted_secrets_json = db.Column(db.Text)  # Encrypted API keys, tokens, passwords
+    
+    # Metadata
+    is_active = db.Column(db.Boolean, default=True)
+    status = db.Column(db.String(20), default='active')  # active, disabled, error
+    last_tested_at = db.Column(db.DateTime)
+    test_status = db.Column(db.String(20))  # success, failed, pending
+    test_message = db.Column(db.Text)
+    
+    # Audit
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    company = db.relationship('Company', backref='integration_configs')
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+    updated_by = db.relationship('User', foreign_keys=[updated_by_id])
+    
+    # Unique constraint: one config per service per company
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'service_slug', name='uq_company_service'),
+    )
+    
+    def __repr__(self):
+        return f'<CompanyIntegrationConfig {self.company_id}:{self.service_slug}>'
+
+class IntegrationAuditLog(db.Model):
+    """Audit trail for integration configuration changes"""
+    __tablename__ = 'integration_audit_log'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    config_id = db.Column(db.Integer, db.ForeignKey('company_integration_config.id'))
+    service_slug = db.Column(db.String(50), nullable=False)
+    action = db.Column(db.String(20), nullable=False)  # created, updated, deleted, tested
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    changes = db.Column(JSON)  # Changed fields (secrets redacted)
+    ip_address = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    company = db.relationship('Company', backref='integration_audit_logs')
+    config = db.relationship('CompanyIntegrationConfig', backref='audit_logs')
+    user = db.relationship('User', backref='integration_audit_logs')
+    
+    def __repr__(self):
+        return f'<IntegrationAuditLog {self.service_slug}:{self.action}>'

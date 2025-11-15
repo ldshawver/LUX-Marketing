@@ -33,33 +33,57 @@ class GA4Client:
         
         if GA4_AVAILABLE and self.property_id:
             try:
-                self.client = BetaAnalyticsDataClient()
-                logger.info(f"GA4 Client initialized for property: {self.property_id}")
+                from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+                
+                def init_client():
+                    return BetaAnalyticsDataClient()
+                
+                executor = ThreadPoolExecutor(max_workers=1)
+                future = executor.submit(init_client)
+                try:
+                    self.client = future.result(timeout=3.0)
+                    logger.info(f"GA4 Client initialized for property: {self.property_id}")
+                    executor.shutdown(wait=True)
+                except FutureTimeoutError:
+                    logger.warning("GA4 client initialization timed out after 3 seconds - using fallback mode")
+                    self.client = None
+                    executor.shutdown(wait=False, cancel_futures=True)
             except Exception as e:
                 logger.error(f"Failed to initialize GA4 client: {e}")
+                self.client = None
     
     def is_configured(self) -> bool:
         """Check if GA4 is properly configured"""
-        return self.client is not None and self.property_id is not None
+        return self.client is not None and self.property_id is not None and self.property_id != ''
     
-    def get_metrics(self, days: int = 30) -> Dict[str, Any]:
+    def get_metrics(self, days: int = 30, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> Dict[str, Any]:
         """
         Fetch key metrics from GA4
         
         Args:
-            days: Number of days to look back
+            days: Number of days to look back (used if start_date/end_date not provided)
+            start_date: Explicit start date for the query
+            end_date: Explicit end date for the query
             
         Returns:
             Dictionary of GA4 metrics
         """
-        if not self.is_configured():
-            logger.warning("GA4 not configured, returning empty metrics")
+        if not self.is_configured() or self.client is None:
+            logger.warning("GA4 not configured or client not initialized, returning empty metrics")
             return {}
+        
+        # Calculate date range
+        if start_date and end_date:
+            start_str = start_date.strftime('%Y-%m-%d')
+            end_str = end_date.strftime('%Y-%m-%d')
+        else:
+            start_str = f"{days}daysAgo"
+            end_str = "today"
         
         try:
             request = RunReportRequest(
                 property=f"properties/{self.property_id}",
-                date_ranges=[DateRange(start_date=f"{days}daysAgo", end_date="today")],
+                date_ranges=[DateRange(start_date=start_str, end_date=end_str)],
                 metrics=[
                     Metric(name="sessions"),
                     Metric(name="totalUsers"),
@@ -95,15 +119,24 @@ class GA4Client:
             logger.error(f"Error fetching GA4 metrics: {e}")
             return {}
     
-    def get_traffic_sources(self, days: int = 30) -> Dict[str, int]:
+    def get_traffic_sources(self, days: int = 30, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> Dict[str, int]:
         """Get traffic by source/medium"""
-        if not self.is_configured():
+        if not self.is_configured() or self.client is None:
+            logger.warning("GA4 not configured or client not initialized")
             return {}
+        
+        # Calculate date range
+        if start_date and end_date:
+            start_str = start_date.strftime('%Y-%m-%d')
+            end_str = end_date.strftime('%Y-%m-%d')
+        else:
+            start_str = f"{days}daysAgo"
+            end_str = "today"
         
         try:
             request = RunReportRequest(
                 property=f"properties/{self.property_id}",
-                date_ranges=[DateRange(start_date=f"{days}daysAgo", end_date="today")],
+                date_ranges=[DateRange(start_date=start_str, end_date=end_str)],
                 dimensions=[Dimension(name="sessionDefaultChannelGroup")],
                 metrics=[Metric(name="sessions")],
             )
@@ -124,7 +157,8 @@ class GA4Client:
     
     def get_top_pages(self, days: int = 30, limit: int = 10) -> list:
         """Get top pages by views"""
-        if not self.is_configured():
+        if not self.is_configured() or self.client is None:
+            logger.warning("GA4 not configured or client not initialized")
             return []
         
         try:
@@ -153,7 +187,8 @@ class GA4Client:
     
     def get_engagement_metrics(self, days: int = 30) -> Dict[str, Any]:
         """Get detailed engagement metrics"""
-        if not self.is_configured():
+        if not self.is_configured() or self.client is None:
+            logger.warning("GA4 not configured or client not initialized")
             return {}
         
         try:

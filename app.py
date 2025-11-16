@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask
+from flask import Flask, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
@@ -8,7 +8,9 @@ from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 @app.route("/")
 def index():
-    return "DEPLOY_TEST_2025_11_15"  # temporary
+    # Send people to the login page as the main entry point
+    return redirect(url_for("auth.login"))
+
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 

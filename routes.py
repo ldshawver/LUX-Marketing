@@ -3,7 +3,7 @@ import io
 import base64
 import os
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response, send_file
 from flask_login import login_required, current_user
 from sqlalchemy import or_
 from app import db, csrf
@@ -15,7 +15,8 @@ from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTr
                     AutomationAction, LandingPage, NewsletterArchive, NonOpenerResend,
                     SEOKeyword, SEOBacklink, SEOCompetitor, SEOAudit, SEOPage,
                     TicketPurchase, EventCheckIn, SocialMediaAccount, SocialMediaSchedule,
-                    AutomationTest, AutomationTriggerLibrary, AutomationABTest, Company, user_company)
+                    AutomationTest, AutomationTriggerLibrary, AutomationABTest, Company, user_company,
+                    Deal, LeadScore, PersonalizationRule, KeywordResearch)
 from email_service import EmailService
 from utils import validate_email
 from tracking import decode_tracking_data, record_email_event
@@ -73,6 +74,119 @@ def email_hub():
 def campaign_hub():
     """Campaign Hub with SEO, Competitors, and AI Campaign Generator"""
     return render_template('campaign_hub.html')
+
+@main_bp.route('/ai-dashboard')
+@login_required
+def ai_dashboard():
+    """LUX AI Dashboard - Monitor and control all AI agents"""
+    from agent_scheduler import get_agent_scheduler, agent_execution_history, agent_health_status
+    from models import AgentTask
+    from sqlalchemy import func
+    from datetime import datetime, timedelta
+    
+    scheduler = get_agent_scheduler()
+    
+    # Get all agents
+    agents = scheduler.agents
+    
+    # Get scheduled jobs
+    jobs = scheduler.get_scheduled_jobs()
+    
+    # Get recent agent tasks (last 7 days)
+    recent_tasks = AgentTask.query.filter(
+        AgentTask.created_at >= datetime.now() - timedelta(days=7)
+    ).order_by(AgentTask.created_at.desc()).limit(50).all()
+    
+    # Calculate agent statistics
+    agent_stats = db.session.query(
+        AgentTask.agent_type,
+        func.count(AgentTask.id).label('total_tasks'),
+        func.sum(func.case((AgentTask.status == 'completed', 1), else_=0)).label('completed'),
+        func.sum(func.case((AgentTask.status == 'failed', 1), else_=0)).label('failed')
+    ).filter(
+        AgentTask.created_at >= datetime.now() - timedelta(days=30)
+    ).group_by(AgentTask.agent_type).all()
+    
+    # Format stats for template
+    stats_dict = {}
+    for stat in agent_stats:
+        stats_dict[stat.agent_type] = {
+            'total': stat.total_tasks,
+            'completed': stat.completed,
+            'failed': stat.failed,
+            'success_rate': (stat.completed / stat.total_tasks * 100) if stat.total_tasks > 0 else 0
+        }
+    
+    # Get APP Agent metrics if available
+    app_agent = agents.get('app_intelligence')
+    app_metrics = None
+    if app_agent:
+        app_metrics = {
+            'bugs_tracked': len(getattr(app_agent, 'bug_reports', [])),
+            'improvements_queued': len(getattr(app_agent, 'improvement_queue', [])),
+            'last_health_check': 'Available'
+        }
+    
+    return render_template('ai_dashboard.html',
+                         agents=agents,
+                         jobs=jobs,
+                         recent_tasks=recent_tasks,
+                         agent_stats=stats_dict,
+                         app_metrics=app_metrics)
+
+@main_bp.route('/ai-dashboard/agent/<agent_type>')
+@login_required
+def ai_agent_detail(agent_type):
+    """Detailed view of a specific AI agent"""
+    from agent_scheduler import get_agent_scheduler
+    from models import AgentTask
+    
+    scheduler = get_agent_scheduler()
+    agent = scheduler.agents.get(agent_type)
+    
+    if not agent:
+        flash('Agent not found', 'error')
+        return redirect(url_for('main.ai_dashboard'))
+    
+    # Get agent tasks
+    tasks = AgentTask.query.filter_by(agent_type=agent_type).order_by(
+        AgentTask.created_at.desc()
+    ).limit(100).all()
+    
+    return render_template('ai_agent_detail.html', agent=agent, tasks=tasks, agent_type=agent_type)
+
+@main_bp.route('/ai-dashboard/execute/<agent_type>', methods=['POST'])
+@login_required
+def execute_agent_task(agent_type):
+    """Manually execute an agent task"""
+    from agent_scheduler import get_agent_scheduler
+    
+    scheduler = get_agent_scheduler()
+    agent = scheduler.agents.get(agent_type)
+    
+    if not agent:
+        return jsonify({'success': False, 'error': 'Agent not found'}), 404
+    
+    task_type = request.json.get('task_type')
+    task_data = request.json.get('task_data', {})
+    
+    try:
+        # Create task
+        task_id = agent.create_task(task_type, task_data)
+        
+        # Execute
+        result = agent.execute({'task_type': task_type, **task_data})
+        
+        # Complete task
+        agent.complete_task(task_id, result)
+        
+        return jsonify({
+            'success': True,
+            'task_id': task_id,
+            'result': result
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @main_bp.route('/analytics-hub')
 @login_required
@@ -446,10 +560,10 @@ def export_analytics():
 @main_bp.route('/agents-hub')
 @login_required
 def agents_hub():
-    """LUX AI Agents Hub for agent fine-tuning and management"""
-    return render_template('agents_hub.html')
+    """Redirect to unified Automations & Agents dashboard"""
+    return redirect(url_for('main.automation_dashboard'))
 
-@main_bp.route('/ads-hub')
+@main_bp.route('/ads')
 @login_required
 def ads_hub():
     """Ads Hub with Display/Search/Shopping ads and Google Ads integration"""
@@ -535,6 +649,21 @@ def edit_company(company_id):
             logo_file.save(f'static/{logo_path}')
             company.logo_path = logo_path
         
+        icon_file = request.files.get('icon')
+        if icon_file and icon_file.filename:
+            import os
+            from werkzeug.utils import secure_filename
+            filename = secure_filename(icon_file.filename)
+            icon_path = f'company_logos/{filename}'
+            os.makedirs('static/company_logos', exist_ok=True)
+            icon_file.save(f'static/{icon_path}')
+            company.icon_path = icon_path
+        
+        company.primary_color = request.form.get('primary_color', '#bc00ed')
+        company.secondary_color = request.form.get('secondary_color', '#00ffb4')
+        company.accent_color = request.form.get('accent_color', '#e4055c')
+        company.font_family = request.form.get('font_family', 'Inter, sans-serif')
+        
         db.session.commit()
         flash(f'Company "{company.name}" updated successfully', 'success')
         return redirect(url_for('main.companies_list'))
@@ -542,30 +671,35 @@ def edit_company(company_id):
     return render_template('company_edit.html', company=company)
 
 @main_bp.route('/companies/switch/<int:company_id>', methods=['POST'])
+@csrf.exempt
 @login_required
 def switch_company(company_id):
     """Switch the user's default company"""
-    company = Company.query.get_or_404(company_id)
-    
-    if company not in current_user.companies:
-        return jsonify({'error': 'Access denied'}), 403
-    
-    db.session.execute(
-        user_company.update().where(
-            user_company.c.user_id == current_user.id
-        ).values(is_default=False)
-    )
-    
-    db.session.execute(
-        user_company.update().where(
-            (user_company.c.user_id == current_user.id) &
-            (user_company.c.company_id == company_id)
-        ).values(is_default=True)
-    )
-    
-    db.session.commit()
-    
-    return jsonify({'success': True, 'company_name': company.name})
+    try:
+        company = Company.query.get_or_404(company_id)
+        
+        if company not in current_user.companies:
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+        
+        db.session.execute(
+            user_company.update().where(
+                user_company.c.user_id == current_user.id
+            ).values(is_default=False)
+        )
+        
+        db.session.execute(
+            user_company.update().where(
+                (user_company.c.user_id == current_user.id) &
+                (user_company.c.company_id == company_id)
+            ).values(is_default=True)
+        )
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'company_name': company.name})
+    except Exception as e:
+        logger.error(f"Error switching company: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @main_bp.route('/contacts')
 @login_required
@@ -2117,6 +2251,42 @@ def respond_to_poll(poll_id):
         logger.error(f"Error submitting poll response: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
+@main_bp.route('/polls/<int:poll_id>/results')
+@login_required
+def view_poll_results(poll_id):
+    """View poll results"""
+    poll = Poll.query.get_or_404(poll_id)
+    responses = poll.responses.all()
+    
+    # Calculate results
+    results = {}
+    if poll.poll_type == 'multiple_choice':
+        for response in responses:
+            answer = response.response_data.get('answer', '')
+            results[answer] = results.get(answer, 0) + 1
+    elif poll.poll_type == 'rating':
+        ratings = [response.response_data.get('rating', 0) for response in responses]
+        if ratings:
+            results['average'] = sum(ratings) / len(ratings)
+            results['total'] = len(ratings)
+    
+    return render_template('poll_results.html', poll=poll, responses=responses, results=results)
+
+@main_bp.route('/polls/<int:poll_id>/delete', methods=['POST'])
+@login_required
+def delete_poll(poll_id):
+    """Delete a poll"""
+    try:
+        poll = Poll.query.get_or_404(poll_id)
+        poll.is_active = False
+        db.session.commit()
+        flash('Poll deleted successfully!', 'success')
+    except Exception as e:
+        logger.error(f"Error deleting poll: {e}")
+        flash('Error deleting poll', 'error')
+    
+    return redirect(url_for('main.polls_management'))
+
 # A/B Testing Routes
 @main_bp.route('/ab-tests')
 @login_required
@@ -2205,7 +2375,7 @@ def create_segment():
         return redirect(url_for('main.segments'))
 
 # Social Media Management Routes
-@main_bp.route('/social')
+@main_bp.route('/social-media')
 @login_required
 def social_media():
     """Social media management dashboard"""
@@ -2283,15 +2453,22 @@ def refresh_social_followers():
 @main_bp.route('/automations')
 @login_required
 def automation_dashboard():
-    """Advanced automation management dashboard"""
+    """Unified Automations & AI Agents dashboard"""
+    from agent_scheduler import get_agent_scheduler
+    
     automations = Automation.query.all()
     templates = AutomationTemplate.query.filter_by(is_predefined=True).all()
     active_executions = AutomationExecution.query.filter_by(status='active').count()
     
+    # Get AI agents info
+    scheduler = get_agent_scheduler()
+    agents = scheduler.agents if scheduler else {}
+    
     return render_template('automation_dashboard.html', 
                          automations=automations, 
                          templates=templates,
-                         active_executions=active_executions)
+                         active_executions=active_executions,
+                         agents=agents)
 
 @main_bp.route('/automations/create', methods=['GET', 'POST'])
 @login_required
@@ -2531,12 +2708,13 @@ def sms_dashboard():
     sent_campaigns = SMSCampaign.query.filter_by(status='sent').count()
     scheduled_campaigns = SMSCampaign.query.filter_by(status='scheduled').count()
     
-    return render_template('sms_dashboard.html',
+    return render_template('sms_campaigns.html',
                          campaigns=campaigns,
                          templates=templates,
                          total_campaigns=total_campaigns,
                          sent_campaigns=sent_campaigns,
-                         scheduled_campaigns=scheduled_campaigns)
+                         scheduled_campaigns=scheduled_campaigns,
+                         sms_enabled=True)
 
 @main_bp.route('/sms/create', methods=['GET', 'POST'])
 @login_required
@@ -2883,6 +3061,45 @@ def newsletter_archive():
     newsletters = NewsletterArchive.query.filter_by(is_public=True).order_by(NewsletterArchive.published_at.desc()).all()
     
     return render_template('newsletter_archive_public.html', newsletters=newsletters)
+
+@main_bp.route('/newsletter-subscribe', methods=['POST'])
+@csrf.exempt
+def newsletter_subscribe():
+    """Public newsletter subscription"""
+    data = request.get_json() if request.is_json else request.form
+    email = data.get('email', '').strip().lower()
+    
+    if not email or not validate_email(email):
+        return jsonify({'success': False, 'message': 'Please enter a valid email address'}), 400
+    
+    # Check if contact already exists
+    contact = Contact.query.filter_by(email=email).first()
+    
+    if contact:
+        if 'newsletter' not in (contact.tags or ''):
+            # Add newsletter tag
+            existing_tags = contact.tags.split(',') if contact.tags else []
+            if 'newsletter' not in existing_tags:
+                existing_tags.append('newsletter')
+                contact.tags = ','.join(existing_tags)
+                contact.updated_at = datetime.utcnow()
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'You have been subscribed to our newsletter!'}), 200
+        return jsonify({'success': True, 'message': 'You are already subscribed to our newsletter!'}), 200
+    
+    # Create new contact
+    contact = Contact(
+        email=email,
+        source='newsletter_archive',
+        tags='newsletter',
+        is_active=True,
+        is_subscribed=True
+    )
+    
+    db.session.add(contact)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Thank you for subscribing to our newsletter!'}), 200
 
 @main_bp.route('/newsletter-archive/<slug>')
 def view_newsletter(slug):
@@ -3609,7 +3826,7 @@ def create_automation_abtest(automation_id):
     return redirect(url_for('main.edit_automation', id=automation_id))
 
 # ===== PHASE 6: UNIFIED MARKETING CALENDAR =====
-@main_bp.route('/calendar')
+@main_bp.route('/marketing-calendar')
 @login_required
 def marketing_calendar():
     """Unified marketing calendar view"""
@@ -3735,7 +3952,6 @@ def chatbot():
 
 @main_bp.route('/chatbot/send', methods=['POST'])
 @csrf.exempt
-@login_required
 def chatbot_send():
     """Send message to AI chatbot and get response"""
     try:
@@ -3770,3 +3986,794 @@ def chatbot_send():
     except Exception as e:
         logger.error(f"Chatbot error: {e}")
         return jsonify({'error': f'Failed to get response: {str(e)}'}), 500
+
+@main_bp.route('/content-generator')
+def content_generator():
+    """AI Content Generator Page - Public Access"""
+    return render_template('content_generator.html')
+
+@main_bp.route('/api/content/generate', methods=['POST'])
+@csrf.exempt
+def generate_content():
+    """Generate marketing content using AI
+    
+    Content types supported:
+    - blog_post: Long-form blog content
+    - social_media: Social media posts (Twitter, LinkedIn, Facebook, Instagram)
+    - email_campaign: Email marketing copy
+    - ad_copy: Advertisement copy (Google Ads, Facebook Ads)
+    - seo_content: SEO-optimized content
+    - product_description: E-commerce product descriptions
+    """
+    try:
+        import openai
+        
+        data = request.get_json()
+        content_type = data.get('type', 'blog_post')
+        topic = data.get('topic', '')
+        tone = data.get('tone', 'professional')
+        length = data.get('length', 'medium')
+        keywords = data.get('keywords', [])
+        additional_context = data.get('context', '')
+        
+        if not topic:
+            return jsonify({'error': 'Topic is required'}), 400
+        
+        # Get API key
+        api_key = os.getenv('OPENAI_API_KEY') or os.getenv('OPENAI_API_BOUTIQUELUX')
+        if not api_key:
+            return jsonify({'error': 'OpenAI API key not configured'}), 500
+        
+        openai.api_key = api_key
+        
+        # Define prompts for different content types
+        prompts = {
+            'blog_post': f"""Create a comprehensive blog post about: {topic}
+Tone: {tone}
+Length: {length} (short=300-500 words, medium=500-800 words, long=800-1200 words)
+{f'Keywords to include: {", ".join(keywords)}' if keywords else ''}
+{f'Additional context: {additional_context}' if additional_context else ''}
+
+Format the response as a complete blog post with:
+- Engaging headline
+- Introduction
+- Main body with subheadings
+- Conclusion
+- Call-to-action""",
+            
+            'social_media': f"""Create engaging social media posts about: {topic}
+Tone: {tone}
+Platform: {additional_context or 'general'}
+{f'Keywords: {", ".join(keywords)}' if keywords else ''}
+
+Generate 3 variations:
+1. Short post (Twitter/X style, 280 chars max)
+2. Medium post (LinkedIn/Facebook style)
+3. Visual post (Instagram style with hashtags)""",
+            
+            'email_campaign': f"""Create an email marketing campaign about: {topic}
+Tone: {tone}
+{f'Keywords: {", ".join(keywords)}' if keywords else ''}
+{f'Context: {additional_context}' if additional_context else ''}
+
+Include:
+- Subject line (with 2-3 variations)
+- Preview text
+- Email body
+- Call-to-action
+- P.S. section""",
+            
+            'ad_copy': f"""Create advertisement copy for: {topic}
+Tone: {tone}
+Platform: {additional_context or 'Google Ads'}
+{f'Keywords: {", ".join(keywords)}' if keywords else ''}
+
+Generate:
+- 3 headline variations (30 chars max)
+- 2 description variations (90 chars max)
+- Call-to-action suggestions""",
+            
+            'seo_content': f"""Create SEO-optimized content about: {topic}
+Tone: {tone}
+Target keywords: {", ".join(keywords) if keywords else topic}
+{f'Context: {additional_context}' if additional_context else ''}
+
+Include:
+- SEO-friendly title (60 chars max)
+- Meta description (155 chars max)
+- H1, H2, H3 structure
+- Content optimized for keywords
+- Internal linking suggestions""",
+            
+            'product_description': f"""Create a compelling product description for: {topic}
+Tone: {tone}
+{f'Key features: {", ".join(keywords)}' if keywords else ''}
+{f'Additional details: {additional_context}' if additional_context else ''}
+
+Include:
+- Catchy product title
+- Short description (1-2 sentences)
+- Key features and benefits
+- Technical specifications
+- Why customers should buy"""
+        }
+        
+        # Get the appropriate prompt
+        system_prompt = "You are LUX AI, an expert marketing content creator. Create high-quality, engaging marketing content that converts. Be creative, persuasive, and professional."
+        user_prompt = prompts.get(content_type, prompts['blog_post'])
+        
+        # Set token limits based on length
+        token_limits = {
+            'short': 800,
+            'medium': 1500,
+            'long': 2500
+        }
+        max_tokens = token_limits.get(length, 1500)
+        
+        # Generate content
+        response = openai.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.8,  # Higher temperature for more creative content
+            max_tokens=max_tokens
+        )
+        
+        generated_content = response.choices[0].message.content
+        
+        return jsonify({
+            'success': True,
+            'content': generated_content,
+            'type': content_type,
+            'topic': topic,
+            'tone': tone,
+            'length': length,
+            'tokens_used': response.usage.total_tokens
+        })
+        
+    except Exception as e:
+        logger.error(f"Content generation error: {e}")
+        return jsonify({'error': f'Failed to generate content: {str(e)}'}), 500
+
+@main_bp.route('/api/content/export/pdf', methods=['POST'])
+@csrf.exempt
+def export_content_pdf():
+    """Export generated content as PDF"""
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from io import BytesIO
+        
+        data = request.get_json()
+        content = data.get('content', '')
+        title = data.get('title', 'Generated Content')
+        content_type = data.get('type', 'content')
+        
+        # Create PDF in memory
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter,
+                                rightMargin=72, leftMargin=72,
+                                topMargin=72, bottomMargin=18)
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor='#bc00ed',
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        content_style = ParagraphStyle(
+            'CustomContent',
+            parent=styles['Normal'],
+            fontSize=12,
+            leading=16,
+            spaceAfter=12,
+            alignment=TA_LEFT
+        )
+        
+        # Build PDF
+        story = []
+        
+        # Add title
+        story.append(Paragraph(title, title_style))
+        story.append(Spacer(1, 12))
+        
+        # Add content (convert line breaks to paragraph breaks)
+        for paragraph in content.split('\n\n'):
+            if paragraph.strip():
+                story.append(Paragraph(paragraph.replace('\n', '<br/>'), content_style))
+                story.append(Spacer(1, 12))
+        
+        doc.build(story)
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'{content_type}_{title[:30].replace(" ", "_")}.pdf'
+        )
+        
+    except Exception as e:
+        logger.error(f"PDF export error: {e}")
+        return jsonify({'error': f'Failed to export as PDF: {str(e)}'}), 500
+
+@main_bp.route('/api/content/export/docx', methods=['POST'])
+@csrf.exempt
+def export_content_docx():
+    """Export generated content as DOCX"""
+    try:
+        from docx import Document
+        from docx.shared import Inches, Pt, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from io import BytesIO
+        
+        data = request.get_json()
+        content = data.get('content', '')
+        title = data.get('title', 'Generated Content')
+        content_type = data.get('type', 'content')
+        
+        # Create document
+        doc = Document()
+        
+        # Add title
+        title_para = doc.add_heading(title, 0)
+        title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        title_run = title_para.runs[0]
+        title_run.font.color.rgb = RGBColor(188, 0, 237)  # Purple
+        
+        # Add spacing
+        doc.add_paragraph()
+        
+        # Add content
+        for paragraph in content.split('\n\n'):
+            if paragraph.strip():
+                p = doc.add_paragraph(paragraph.strip())
+                p.style.font.size = Pt(12)
+        
+        # Save to buffer
+        buffer = BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            as_attachment=True,
+            download_name=f'{content_type}_{title[:30].replace(" ", "_")}.docx'
+        )
+        
+    except Exception as e:
+        logger.error(f"DOCX export error: {e}")
+        return jsonify({'error': f'Failed to export as DOCX: {str(e)}'}), 500
+
+# ============= WORDPRESS / WOOCOMMERCE =============
+@main_bp.route('/wordpress')
+@login_required
+def wordpress_integration():
+    """WordPress and WooCommerce integration management"""
+    from models import WordPressIntegration
+    integrations = WordPressIntegration.query.filter_by(company_id=current_user.get_default_company().id).all()
+    return render_template('wordpress_integration.html', integrations=integrations)
+
+# ============= KEYWORD RESEARCH =============
+@main_bp.route('/keywords')
+@login_required
+def keyword_research():
+    """Keyword research and tracking"""
+    from models import KeywordResearch
+    keywords = KeywordResearch.query.filter_by(company_id=current_user.get_default_company().id).all()
+    return render_template('keyword_research.html', keywords=keywords)
+
+@main_bp.route('/keywords/create', methods=['POST'])
+@login_required
+def create_keyword_research():
+    """Create new keyword research"""
+    from models import KeywordResearch
+    try:
+        data = request.get_json()
+        company = current_user.get_default_company()
+        keyword = KeywordResearch(
+            company_id=company.id,
+            keyword=data.get('keyword'),
+            status='tracking'
+        )
+        db.session.add(keyword)
+        db.session.commit()
+        return jsonify({'success': True, 'keyword_id': keyword.id}), 201
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+# ============= CRM / DEALS =============
+@main_bp.route('/crm')
+@login_required
+def crm_dashboard():
+    """CRM dashboard with deals and pipeline"""
+    from models import Deal
+    from sqlalchemy import func
+    company = current_user.get_default_company()
+    
+    deals = Deal.query.filter_by(company_id=company.id).all()
+    pipeline_data = db.session.query(
+        Deal.stage,
+        func.count(Deal.id).label('count'),
+        func.sum(Deal.value).label('total_value')
+    ).filter_by(company_id=company.id).group_by(Deal.stage).all()
+    
+    return render_template('crm_dashboard.html', deals=deals, pipeline_data=pipeline_data)
+
+@main_bp.route('/crm/deals/<int:deal_id>')
+@login_required
+def deal_detail(deal_id):
+    """View individual deal"""
+    from models import Deal, DealActivity
+    deal = Deal.query.get_or_404(deal_id)
+    activities = DealActivity.query.filter_by(deal_id=deal_id).order_by(DealActivity.activity_date.desc()).all()
+    return render_template('deal_detail.html', deal=deal, activities=activities)
+
+# ============= LEAD SCORING =============
+@main_bp.route('/lead-scoring')
+@login_required
+def lead_scoring():
+    """Lead scoring and nurturing"""
+    from models import Contact, LeadScore
+    company = current_user.get_default_company()
+    
+    contacts_with_scores = db.session.query(Contact, LeadScore).outerjoin(
+        LeadScore, Contact.id == LeadScore.contact_id
+    ).filter(Contact.is_active == True).all()
+    
+    return render_template('lead_scoring.html', contacts_with_scores=contacts_with_scores)
+
+# ============= COMPETITOR ANALYSIS =============
+@main_bp.route('/competitors')
+@login_required
+def competitor_analysis():
+    """Competitor analysis and tracking"""
+    from models import CompetitorProfile
+    company = current_user.get_default_company()
+    competitors = CompetitorProfile.query.filter_by(company_id=company.id).all()
+    return render_template('competitor_analysis.html', competitors=competitors)
+
+# ============= PERSONALIZATION =============
+@main_bp.route('/personalization')
+@login_required
+def personalization_rules():
+    """Content personalization rules"""
+    from models import PersonalizationRule
+    company = current_user.get_default_company()
+    rules = PersonalizationRule.query.filter_by(company_id=company.id).all()
+    return render_template('personalization_rules.html', rules=rules)
+
+# ============= A/B TESTING ENHANCEMENTS =============
+@main_bp.route('/multivariate-tests')
+@login_required
+def multivariate_tests():
+    """Multivariate testing"""
+    from models import MultivariateTest
+    tests = MultivariateTest.query.all()
+    return render_template('multivariate_tests.html', tests=tests)
+
+# ============= ROI TRACKING =============
+@main_bp.route('/roi-analytics')
+@login_required
+def roi_analytics():
+    """ROI tracking and attribution analytics"""
+    from models import Campaign, CampaignCost, AttributionModel
+    from sqlalchemy import func
+    company = current_user.get_default_company()
+    
+    campaigns_roi = db.session.query(
+        Campaign.id,
+        Campaign.name,
+        func.sum(CampaignCost.amount).label('total_cost'),
+        func.sum(AttributionModel.revenue).label('total_revenue')
+    ).outerjoin(CampaignCost).outerjoin(AttributionModel).filter(
+        Campaign.company_id == company.id
+    ).group_by(Campaign.id).all()
+    
+    return render_template('roi_analytics.html', campaigns_roi=campaigns_roi)
+
+# ============= SURVEYS & FEEDBACK =============
+@main_bp.route('/surveys')
+@login_required
+def surveys():
+    """NPS and feedback surveys"""
+    from models import SurveyResponse
+    company = current_user.get_default_company()
+    responses = SurveyResponse.query.all()
+    
+    nps_score = None
+    if responses:
+        promoters = sum(1 for r in responses if r.score >= 9)
+        detractors = sum(1 for r in responses if r.score <= 6)
+        nps_score = ((promoters - detractors) / len(responses) * 100) if responses else 0
+    
+    return render_template('surveys.html', responses=responses, nps_score=nps_score)
+
+# ============= AGENT CONFIGURATION =============
+@main_bp.route('/agent-config')
+@login_required
+def agent_configuration():
+    """Configure AI agents per company"""
+    from models import AgentConfiguration
+    from agent_scheduler import get_agent_scheduler
+    company = current_user.get_default_company()
+    
+    scheduler = get_agent_scheduler()
+    configs = AgentConfiguration.query.filter_by(company_id=company.id).all()
+    available_agents = list(scheduler.agents.keys())
+    
+    return render_template('agent_configuration.html', configs=configs, available_agents=available_agents)
+
+@main_bp.route('/agent-config/save', methods=['POST'])
+@login_required
+def save_agent_config():
+    """Save agent configuration"""
+    from models import AgentConfiguration
+    try:
+        data = request.get_json()
+        company = current_user.get_default_company()
+        
+        agent_type = data.get('agent_type')
+        config = AgentConfiguration.query.filter_by(
+            company_id=company.id,
+            agent_type=agent_type
+        ).first()
+        
+        if not config:
+            config = AgentConfiguration(
+                company_id=company.id,
+                agent_type=agent_type
+            )
+        
+        config.is_enabled = data.get('is_enabled', True)
+        config.schedule_frequency = data.get('schedule_frequency', 'daily')
+        config.task_priority = data.get('task_priority', 5)
+        config.configuration = data.get('configuration', {})
+        
+        db.session.add(config)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Configuration saved'}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+print("✓ All feature routes loaded successfully")
+
+# ============= ADVANCED CONFIG =============
+@main_bp.route('/advanced-config')
+@login_required
+def advanced_config():
+    """Advanced system configuration"""
+    from models import CompanyIntegrationConfig
+    company = current_user.get_default_company()
+    configs = CompanyIntegrationConfig.query.filter_by(company_id=company.id).all()
+    return render_template('advanced_config.html', configs=configs)
+
+
+# ============= WORDPRESS CONNECTION =============
+@main_bp.route('/wordpress/connect', methods=['POST'])
+@login_required
+def connect_wordpress():
+    """Connect to WordPress site"""
+    from models import WordPressIntegration
+    from services.wordpress_service import WordPressService
+    
+    try:
+        data = request.get_json()
+        site_url = data.get('site_url', '').strip()
+        api_key = data.get('api_key', '').strip()
+        company = current_user.get_default_company()
+        
+        if not site_url or not api_key:
+            return jsonify({'success': False, 'error': 'Site URL and API key required'}), 400
+        
+        # Test connection first
+        result = WordPressService.test_connection(site_url, api_key)
+        if not result['success']:
+            return jsonify({'success': False, 'error': result['message']}), 400
+        
+        # Check if already exists
+        existing = WordPressIntegration.query.filter_by(
+            company_id=company.id,
+            site_url=site_url
+        ).first()
+        
+        if existing:
+            existing.api_key = api_key
+            existing.is_active = True
+        else:
+            wp_integration = WordPressIntegration(
+                company_id=company.id,
+                site_url=site_url,
+                api_key=api_key,
+                is_active=True
+            )
+            db.session.add(wp_integration)
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'WordPress connected successfully'}), 201
+        
+    except Exception as e:
+        logger.error(f'WordPress connection error: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/wordpress/sync/<int:wordpress_id>', methods=['POST'])
+@login_required
+def sync_wordpress_data(wordpress_id):
+    """Sync WordPress posts and products"""
+    from models import WordPressIntegration
+    from services.wordpress_service import WordPressService
+    
+    try:
+        wp = WordPressIntegration.query.get_or_404(wordpress_id)
+        company = current_user.get_default_company()
+        
+        if wp.company_id != company.id:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        
+        posts_result = None
+        products_result = None
+        
+        if wp.sync_blog_posts:
+            posts_result = WordPressService.get_posts(wp.site_url, wp.api_key)
+        
+        if wp.sync_products:
+            products_result = WordPressService.get_products(wp.site_url, wp.api_key)
+        
+        wp.last_synced_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'posts_synced': len(posts_result['posts']) if posts_result and posts_result['success'] else 0,
+            'products_synced': len(products_result['products']) if products_result and products_result['success'] else 0
+        }), 200
+        
+    except Exception as e:
+        logger.error(f'WordPress sync error: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+print("✓ WordPress connection routes loaded")
+
+# ============= COMPREHENSIVE LUX CRM =============
+@main_bp.route('/crm-unified')
+@login_required
+def lux_crm():
+    """Unified LUX CRM with all features"""
+    company = current_user.get_default_company()
+    
+    deals = Deal.query.filter_by(company_id=company.id).all()
+    all_contacts = Contact.query.all()
+    lead_scores = LeadScore.query.all()
+    personalization_rules = PersonalizationRule.query.filter_by(company_id=company.id).all()
+    keywords = KeywordResearch.query.filter_by(company_id=company.id).all()
+    
+    return render_template('lux_crm.html', 
+        deals=deals, 
+        all_contacts=all_contacts,
+        lead_scores=lead_scores,
+        personalization_rules=personalization_rules,
+        keywords=keywords
+    )
+
+@main_bp.route('/crm/deals/create', methods=['POST'])
+@login_required
+def create_deal():
+    """Create a new deal in LUX CRM"""
+    try:
+        data = request.get_json()
+        company = current_user.get_default_company()
+        
+        deal = Deal(
+            company_id=company.id,
+            contact_id=data.get('contact_id') or None,
+            title=data.get('title'),
+            description=data.get('description', ''),
+            value=float(data.get('value', 0)),
+            stage=data.get('stage', 'qualification'),
+            probability=float(data.get('probability', 0.5)),
+            expected_close_date=datetime.fromisoformat(data['expected_close_date']) if data.get('expected_close_date') else None,
+            owner_id=current_user.id
+        )
+        db.session.add(deal)
+        db.session.commit()
+        return jsonify({'success': True, 'deal_id': deal.id}), 201
+    except Exception as e:
+        logger.error(f'Deal creation error: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@main_bp.route('/api/contacts/<int:contact_id>')
+@login_required
+def get_contact(contact_id):
+    """Get contact details via API"""
+    try:
+        contact = Contact.query.get(contact_id)
+        if not contact:
+            return jsonify({'error': 'Contact not found'}), 404
+        return jsonify({
+            'id': contact.id,
+            'full_name': contact.full_name,
+            'email': contact.email,
+            'phone': contact.phone or '',
+            'tags': contact.tags or ''
+        }), 200
+    except Exception as e:
+        logger.error(f'Error fetching contact: {e}')
+        return jsonify({'error': str(e)}), 500
+
+print("✓ LUX CRM routes loaded")
+
+# ============= AI AGENT REPORTING & MANAGEMENT =============
+@main_bp.route('/agents/reports')
+@login_required
+def agents_reports_dashboard():
+    """Comprehensive AI Agent Reports Dashboard - Activity, Reports, Deliverables"""
+    from models import AgentLog, AgentTask
+    from agent_scheduler import get_agent_scheduler
+    
+    company = current_user.get_default_company()
+    
+    # Get agent scheduler
+    scheduler = get_agent_scheduler()
+    scheduled_jobs = scheduler.get_scheduled_jobs() if scheduler else []
+    
+    # Get recent agent activities (last 50)
+    recent_activities = AgentLog.query.order_by(AgentLog.created_at.desc()).limit(50).all()
+    
+    # Get agent task statistics
+    total_tasks = AgentTask.query.count()
+    completed_tasks = AgentTask.query.filter_by(status='completed').count()
+    pending_tasks = AgentTask.query.filter_by(status='pending').count()
+    failed_tasks = AgentTask.query.filter_by(status='failed').count()
+    
+    # Agent performance metrics
+    agent_stats = {}
+    agent_types = ['brand_strategy', 'content_seo', 'analytics', 'creative_design', 
+                  'advertising', 'social_media', 'email_crm', 'sales_enablement', 
+                  'retention', 'operations', 'app_intelligence']
+    
+    for agent_type in agent_types:
+        agent_tasks = AgentTask.query.filter_by(agent_type=agent_type).all()
+        agent_completed = len([t for t in agent_tasks if t.status == 'completed'])
+        agent_total = len(agent_tasks)
+        
+        agent_stats[agent_type] = {
+            'total_tasks': agent_total,
+            'completed': agent_completed,
+            'success_rate': (agent_completed / agent_total * 100) if agent_total > 0 else 0,
+            'last_activity': AgentLog.query.filter_by(agent_type=agent_type).order_by(
+                AgentLog.created_at.desc()
+            ).first()
+        }
+    
+    return render_template('agents_dashboard.html',
+                         company=company,
+                         scheduled_jobs=scheduled_jobs,
+                         recent_activities=recent_activities,
+                         agent_stats=agent_stats,
+                         total_tasks=total_tasks,
+                         completed_tasks=completed_tasks,
+                         pending_tasks=pending_tasks,
+                         failed_tasks=failed_tasks)
+
+@main_bp.route('/api/agents/activity')
+@login_required
+def get_agent_activity():
+    """Get real-time agent activity feed"""
+    from models import AgentLog
+    
+    limit = request.args.get('limit', 20, type=int)
+    agent_type = request.args.get('agent_type')
+    
+    query = AgentLog.query
+    
+    if agent_type:
+        query = query.filter_by(agent_type=agent_type)
+    
+    activities = query.order_by(AgentLog.created_at.desc()).limit(limit).all()
+    
+    return jsonify({
+        'success': True,
+        'activities': [{
+            'id': a.id,
+            'agent_name': a.agent_name,
+            'agent_type': a.agent_type,
+            'activity_type': a.activity_type,
+            'status': a.status,
+            'created_at': a.created_at.isoformat() if a.created_at else None,
+            'details': a.details
+        } for a in activities]
+    })
+
+@main_bp.route('/api/agents/<agent_type>/performance')
+@login_required
+def get_agent_performance(agent_type):
+    """Get performance metrics for specific agent"""
+    from models import AgentTask, AgentLog
+    from datetime import datetime, timedelta
+    
+    # Get tasks from last 30 days
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    
+    tasks = AgentTask.query.filter(
+        AgentTask.agent_type == agent_type,
+        AgentTask.created_at >= thirty_days_ago
+    ).all()
+    
+    completed = len([t for t in tasks if t.status == 'completed'])
+    failed = len([t for t in tasks if t.status == 'failed'])
+    total = len(tasks)
+    
+    # Get activity count
+    activities = AgentLog.query.filter(
+        AgentLog.agent_type == agent_type,
+        AgentLog.created_at >= thirty_days_ago
+    ).count()
+    
+    return jsonify({
+        'success': True,
+        'agent_type': agent_type,
+        'period_days': 30,
+        'metrics': {
+            'total_tasks': total,
+            'completed_tasks': completed,
+            'failed_tasks': failed,
+            'success_rate': (completed / total * 100) if total > 0 else 0,
+            'total_activities': activities,
+            'avg_tasks_per_day': total / 30
+        }
+    })
+
+@main_bp.route('/api/agents/trigger/<agent_type>', methods=['POST'])
+@login_required
+def trigger_agent_task(agent_type):
+    """Manually trigger an agent task"""
+    from agent_scheduler import get_agent_scheduler
+    
+    data = request.get_json()
+    task_data = data.get('task_data', {})
+    
+    scheduler = get_agent_scheduler()
+    if not scheduler or agent_type not in scheduler.agents:
+        return jsonify({'success': False, 'error': 'Agent not found'}), 404
+    
+    agent = scheduler.agents[agent_type]
+    
+    try:
+        # Create and execute task
+        task_id = agent.create_task(
+            task_name=f"Manual: {task_data.get('task_type', 'custom')}",
+            task_data=task_data
+        )
+        
+        result = agent.execute(task_data)
+        
+        if task_id:
+            agent.complete_task(
+                task_id,
+                result,
+                status='completed' if result.get('success') else 'failed'
+            )
+        
+        return jsonify({
+            'success': True,
+            'task_id': task_id,
+            'result': result
+        })
+        
+    except Exception as e:
+        logger.error(f"Error triggering agent task: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+print("✓ AI Agent reporting routes loaded")

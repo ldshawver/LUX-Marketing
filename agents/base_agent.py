@@ -92,6 +92,21 @@ class BaseAgent:
             logger.error(f"{self.agent_name} AI generation error: {e}")
             return None
     
+    def generate_response(self, prompt: str, as_json: bool = True) -> Dict[str, Any]:
+        """
+        Generate AI response (helper method for agents)
+        
+        Args:
+            prompt: Prompt for AI generation
+            as_json: Whether to expect JSON response
+            
+        Returns:
+            Generated response as dict
+        """
+        response_format = {"type": "json_object"} if as_json else None
+        result = self.generate_with_ai(prompt, response_format=response_format)
+        return result if result else {}
+    
     def generate_image(self, description: str, style: str = "professional marketing") -> Optional[Dict]:
         """
         Generate images using DALL-E 3

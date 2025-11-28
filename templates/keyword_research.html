@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Keyword Research - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i data-feather="search"></i> Keyword Research</h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
+            <i data-feather="plus"></i> Research Keyword
+        </button>
+    </div>
+
+    <!-- Keywords Grid -->
+    <div class="row">
+        {% for keyword in keywords %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5>{{ keyword.keyword }}</h5>
+                    <div class="mb-3">
+                        <span class="badge bg-primary">{{ keyword.intent or 'Unknown' }}</span>
+                        <span class="badge bg-{{ 'success' if keyword.difficulty_score < 30 else 'warning' if keyword.difficulty_score < 70 else 'danger' }}">
+                            Difficulty: {{ keyword.difficulty_score|int if keyword.difficulty_score else 'N/A' }}
+                        </span>
+                    </div>
+                    <div class="small">
+                        <p class="mb-1"><strong>Search Volume:</strong> {{ keyword.search_volume or 'N/A' }}</p>
+                        <p class="mb-1"><strong>Competition:</strong> {{ keyword.competition or 'Unknown' }}</p>
+                        <p><strong>Status:</strong> {{ keyword.status }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not keywords %}
+    <div class="alert alert-info text-center">No keywords tracked yet. Start researching keywords to optimize your SEO strategy.</div>
+    {% endif %}
+</div>
+
+<!-- Add Keyword Modal -->
+<div class="modal fade" id="addKeywordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Research New Keyword</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addKeywordForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Keyword</label>
+                        <input type="text" class="form-control" id="keywordInput" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Research</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('addKeywordForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const keyword = document.getElementById('keywordInput').value;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    fetch('{{ url_for("main.create_keyword_research") }}', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ keyword: keyword })
+    })
+    .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+    })
+    .then(d => {
+        if (d.success) {
+            alert('✓ Keyword added successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + d.error);
+        }
+    })
+    .catch(e => {
+        console.error('Error:', e);
+        alert('Failed to add keyword: ' + e.message);
+    });
+});
+</script>
+{% endblock %}

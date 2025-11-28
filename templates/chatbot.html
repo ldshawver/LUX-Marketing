@@ -328,17 +328,16 @@
 
 <!-- Floating Chat Button -->
 <div class="chatbot-float-button" id="chatbotToggle" onclick="toggleChatbot()">
-  <img src="{{ url_for('static', filename='chatbot.gif') }}" alt="LUX AI">
+  <img src="{{ url_for('static', filename='lux-ai-assistant.gif') }}" alt="LUX AI">
 </div>
 
 <!-- Floating Chat Window -->
 <div class="chatbot-container" id="chatbotContainer">
   <div class="chatbot-header">
     <button class="chatbot-close" onclick="toggleChatbot()">&times;</button>
-    <img src="{{ url_for('static', filename='chatbot.gif') }}" alt="LUX AI" class="chatbot-header-gif">
+    <img src="{{ url_for('static', filename='lux-ai-assistant.gif') }}" alt="LUX AI" class="chatbot-header-gif">
     <div class="chatbot-header-text">
-      <h1>LUX AI</h1>
-      <h2>Your intelligent assistant</h2>
+      <h2>Your <span style="color: #00ffb4;">AI</span> assistant</h2>
     </div>
   </div>
   

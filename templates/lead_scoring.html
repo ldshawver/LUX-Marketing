@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Lead Scoring - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4"><i data-feather="trending-up"></i> Lead Scoring & Nurturing</h1>
+
+    <!-- Lead Quality Breakdown -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">Hot Leads</h3>
+                    <p class="display-4">{% set hot = contacts_with_scores|selectattr('LeadScore')|selectattr('LeadScore.lead_score', 'ge', 70)|list|length %}{{ hot }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">Warm Leads</h3>
+                    <p class="display-4">{% set warm = contacts_with_scores|selectattr('LeadScore')|selectattr('LeadScore.lead_score', 'ge', 40)|selectattr('LeadScore.lead_score', 'lt', 70)|list|length %}{{ warm }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-muted">Cold Leads</h3>
+                    <p class="display-4">{% set cold = contacts_with_scores|selectattr('LeadScore')|selectattr('LeadScore.lead_score', 'lt', 40)|list|length %}{{ cold }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leads Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Lead Scores</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Contact</th>
+                                    <th>Lead Score</th>
+                                    <th>Engagement</th>
+                                    <th>Behavior</th>
+                                    <th>Fit</th>
+                                    <th>Grade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for contact, lead_score in contacts_with_scores %}
+                                <tr>
+                                    <td><strong>{{ contact.full_name }}</strong><br><small class="text-muted">{{ contact.email }}</small></td>
+                                    <td>{{ (lead_score.lead_score if lead_score else 0)|int }}/100</td>
+                                    <td>{{ (lead_score.engagement_score if lead_score else 0)|int }}</td>
+                                    <td>{{ (lead_score.behavior_score if lead_score else 0)|int }}</td>
+                                    <td>{{ (lead_score.fit_score if lead_score else 0)|int }}</td>
+                                    <td>
+                                        {% set score = lead_score.lead_score if lead_score else 0 %}
+                                        <span class="badge bg-{{ 'success' if score >= 70 else 'warning' if score >= 40 else 'secondary' }}">
+                                            {{ 'A' if score >= 80 else 'B' if score >= 60 else 'C' if score >= 40 else 'D' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

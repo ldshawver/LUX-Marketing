@@ -40,7 +40,14 @@ class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     logo_path = db.Column(db.String(255))
+    icon_path = db.Column(db.String(255))
     website_url = db.Column(db.String(255))
+    
+    # Brand Customization
+    primary_color = db.Column(db.String(7), default='#bc00ed')  # Purple
+    secondary_color = db.Column(db.String(7), default='#00ffb4')  # Teal
+    accent_color = db.Column(db.String(7), default='#e4055c')  # Pink
+    font_family = db.Column(db.String(100), default='Inter, sans-serif')
     
     # Configuration stored as JSON for flexibility
     env_config = db.Column(JSON)  # Stores environment-specific configs
@@ -1294,4 +1301,224 @@ class IntegrationAuditLog(db.Model):
     user = db.relationship('User', backref='integration_audit_logs')
     
     def __repr__(self):
-        return f'<IntegrationAuditLog {self.service_slug}:{self.action}>'
+        return f'<IntegrationAuditLog {self.service_slug}:{self.action}>'"""
+Models for advanced LUX Marketing features
+These extend the main models.py with new features
+"""
+from datetime import datetime
+from app import db
+from sqlalchemy import JSON, Text
+
+# ============= WORDPRESS / WOOCOMMERCE INTEGRATION =============
+class WordPressIntegration(db.Model):
+    """WordPress site integration"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    site_url = db.Column(db.String(255), nullable=False)
+    api_key = db.Column(db.String(255), nullable=False)  # Encrypted
+    is_active = db.Column(db.Boolean, default=True)
+    sync_products = db.Column(db.Boolean, default=True)
+    sync_blog_posts = db.Column(db.Boolean, default=True)
+    last_synced_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='wordpress_integrations')
+
+# ============= KEYWORD RESEARCH & SEO =============
+class KeywordResearch(db.Model):
+    """Keyword research and tracking"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    keyword = db.Column(db.String(255), nullable=False)
+    search_volume = db.Column(db.Integer)
+    difficulty_score = db.Column(db.Float)  # 0-100
+    competition = db.Column(db.String(20))  # low, medium, high
+    seasonal_trend = db.Column(JSON)  # Monthly data
+    intent = db.Column(db.String(50))  # commercial, informational, navigational, transactional
+    related_keywords = db.Column(JSON)  # List of related keywords
+    status = db.Column(db.String(20), default='tracking')  # tracking, targeting, achieved
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='keyword_research')
+
+class Deal(db.Model):
+    """Sales deals/opportunities"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    value = db.Column(db.Float)  # Deal value
+    currency = db.Column(db.String(3), default='USD')
+    stage = db.Column(db.String(50), default='prospecting')  # prospecting, qualification, proposal, negotiation, won, lost
+    probability = db.Column(db.Float, default=0.0)  # 0-1.0
+    expected_close_date = db.Column(db.DateTime)
+    closed_at = db.Column(db.DateTime)
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='deals')
+    contact = db.relationship('Contact', backref='deals')
+    owner = db.relationship('User', backref='deals')
+
+class DealActivity(db.Model):
+    """Activities associated with a deal"""
+    id = db.Column(db.Integer, primary_key=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey('deal.id'), nullable=False)
+    activity_type = db.Column(db.String(50))  # email, call, meeting, note
+    description = db.Column(db.Text)
+    activity_date = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    deal = db.relationship('Deal', backref='activities')
+    user = db.relationship('User', backref='deal_activities')
+
+class CustomerLifecycle(db.Model):
+    """Track customer lifecycle stages"""
+    id = db.Column(db.Integer, primary_key=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    stage = db.Column(db.String(50), default='awareness')  # awareness, consideration, decision, retention, advocacy
+    value_score = db.Column(db.Float, default=0.0)  # How valuable this customer is
+    risk_score = db.Column(db.Float, default=0.0)  # Risk of churn
+    next_action = db.Column(db.String(255))
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    contact = db.relationship('Contact', backref='lifecycle')
+
+# ============= LEAD SCORING & NURTURING =============
+class LeadScore(db.Model):
+    """AI-powered lead scoring"""
+    id = db.Column(db.Integer, primary_key=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    lead_score = db.Column(db.Float)  # 0-100
+    engagement_score = db.Column(db.Float)  # Email opens, clicks, etc.
+    behavior_score = db.Column(db.Float)  # Website visits, time on page, etc.
+    fit_score = db.Column(db.Float)  # Company fit based on ICP
+    last_calculated = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    contact = db.relationship('Contact', backref='lead_score')
+
+class NurtureCampaign(db.Model):
+    """Automated lead nurturing campaigns"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    trigger_condition = db.Column(JSON)  # What triggers the campaign
+    sequence = db.Column(JSON)  # Array of emails/actions
+    is_active = db.Column(db.Boolean, default=True)
+    success_rate = db.Column(db.Float)  # Percentage converted
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='nurture_campaigns')
+
+# ============= COMPETITOR ANALYSIS =============
+class CompetitorProfile(db.Model):
+    """Track competitor information"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    competitor_name = db.Column(db.String(255), nullable=False)
+    website_url = db.Column(db.String(255))
+    strengths = db.Column(JSON)  # Array of strengths
+    weaknesses = db.Column(JSON)  # Array of weaknesses
+    pricing_model = db.Column(db.Text)
+    market_share = db.Column(db.Float)  # Percentage
+    last_analyzed = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='competitor_profiles')
+
+class CompetitorMetric(db.Model):
+    """Track competitor metrics over time"""
+    id = db.Column(db.Integer, primary_key=True)
+    competitor_id = db.Column(db.Integer, db.ForeignKey('competitor_profile.id'), nullable=False)
+    metric_name = db.Column(db.String(100))  # pricing, features, customer_count, etc.
+    metric_value = db.Column(db.String(255))
+    tracked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    competitor = db.relationship('CompetitorProfile', backref='metrics')
+
+# ============= PERSONALIZATION & SEGMENTATION =============
+class PersonalizationRule(db.Model):
+    """Rules for content personalization"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    segment_criteria = db.Column(JSON)  # How to identify segment
+    personalization_config = db.Column(JSON)  # What to personalize
+    priority = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='personalization_rules')
+
+# ============= A/B TESTING ENHANCEMENTS =============
+class MultivariateTest(db.Model):
+    """Multivariate testing with multiple variables"""
+    id = db.Column(db.Integer, primary_key=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('campaign.id'), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    variables = db.Column(JSON)  # Array of test variables
+    variants = db.Column(JSON)  # Array of variant combinations
+    sample_size = db.Column(db.Integer)
+    confidence_level = db.Column(db.Float, default=0.95)  # 0.90, 0.95, 0.99
+    status = db.Column(db.String(20), default='running')  # running, completed, paused
+    winner = db.Column(db.String(50))  # Best performing variant
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    campaign = db.relationship('Campaign', backref='multivariate_tests')
+
+# ============= ROI TRACKING & ATTRIBUTION =============
+class CampaignCost(db.Model):
+    """Track costs associated with campaigns"""
+    id = db.Column(db.Integer, primary_key=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('campaign.id'), nullable=False)
+    cost_type = db.Column(db.String(50))  # ads, content, tools, labor
+    amount = db.Column(db.Float)
+    currency = db.Column(db.String(3), default='USD')
+    cost_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    campaign = db.relationship('Campaign', backref='costs')
+
+class AttributionModel(db.Model):
+    """Track revenue attribution to campaigns"""
+    id = db.Column(db.Integer, primary_key=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('campaign.id'), nullable=False)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    revenue = db.Column(db.Float)  # Revenue attributed to this campaign
+    attribution_model = db.Column(db.String(50))  # first_touch, last_touch, linear, time_decay
+    confidence_score = db.Column(db.Float)  # 0-1.0
+    
+    campaign = db.relationship('Campaign', backref='attributions')
+    contact = db.relationship('Contact', backref='attributions')
+
+# ============= SURVEYS & FEEDBACK =============
+class SurveyResponse(db.Model):
+    """Responses to NPS and feedback surveys"""
+    id = db.Column(db.Integer, primary_key=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    survey_type = db.Column(db.String(50))  # nps, csat, ces, custom
+    score = db.Column(db.Integer)  # NPS: 0-10, CSAT: 1-5, etc.
+    feedback = db.Column(db.Text)  # Open feedback text
+    sentiment = db.Column(db.String(20))  # positive, neutral, negative (AI analyzed)
+    sentiment_score = db.Column(db.Float)  # -1.0 to 1.0
+    topics = db.Column(JSON)  # Extracted topics from feedback
+    responded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    contact = db.relationship('Contact', backref='survey_responses')
+
+# ============= AGENT CONFIGURATION =============
+class AgentConfiguration(db.Model):
+    """Configuration for individual AI agents"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    agent_type = db.Column(db.String(100), nullable=False)  # brand_strategy, analytics, etc.
+    is_enabled = db.Column(db.Boolean, default=True)
+    schedule_frequency = db.Column(db.String(50))  # hourly, daily, weekly, monthly
+    task_priority = db.Column(db.Integer, default=5)  # 1-10, higher = more important
+    configuration = db.Column(JSON)  # Agent-specific settings
+    last_executed = db.Column(db.DateTime)
+    execution_history = db.Column(JSON)  # Array of last executions
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='agent_configurations')
+

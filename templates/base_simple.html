@@ -142,11 +142,11 @@
         <h1 style="font-size: 1.1rem; font-weight: 500; margin: 0;">
           {% block page_header %}
             {% if current_user.is_authenticated %}
-              {% set company = current_user.get_default_company() %}
+              {% set header_company = current_user.get_default_company() %}
               {% set user_name = (current_user.first_name or current_user.username) %}
               <span style="color: #00ffb4;">{{ user_name[0]|upper }}{{ user_name[1:] }}</span>
               <span style="color: #bc00ed;"> Marketing Wizard of </span>
-              <span style="color: #00ffb4;">{{ company.name if company else 'Your Company' }}</span>
+              <span style="color: #00ffb4;">{{ header_company.name if header_company else 'Your Company' }}</span>
             {% endif %}
           {% endblock %}
         </h1>
@@ -176,11 +176,11 @@
             <li><a class="dropdown-item" href="{{ url_for('main.add_company') }}"><i data-feather="plus"></i> Add Company</a></li>
           </ul>
         </div>
-        {% set company = current_user.get_default_company() %}
-        {% if company and company.logo_path %}
-          <img src="{{ url_for('static', filename=company.logo_path) }}" alt="{{ company.name }}" class="company-logo" style="height: 40px; width: auto; border-radius: 8px;">
-        {% elif company %}
-          <img src="{{ url_for('static', filename='lux_logo.png') }}" alt="{{ company.name }}" class="company-logo" style="height: 40px; width: auto; border-radius: 8px;">
+        {% set current_company = current_user.get_default_company() %}
+        {% if current_company and current_company.logo_path %}
+          <img src="{{ url_for('static', filename=current_company.logo_path) }}" alt="{{ current_company.name }}" class="company-logo" style="height: 40px; width: auto; border-radius: 8px;">
+        {% elif current_company %}
+          <img src="{{ url_for('static', filename='lux_logo.png') }}" alt="{{ current_company.name }}" class="company-logo" style="height: 40px; width: auto; border-radius: 8px;">
         {% endif %}
       </div>
       {% endif %}

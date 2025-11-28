@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Surveys & Feedback - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4"><i data-feather="message-circle"></i> Surveys & Feedback</h1>
+
+    <!-- NPS Score -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5>Net Promoter Score (NPS)</h5>
+                    <h1 class="display-3 text-primary">{{ (nps_score if nps_score is not none else 0)|int }}</h1>
+                    <p class="text-muted">Based on {{ responses|length }} responses</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6>Sentiment Distribution</h6>
+                    <p class="text-success">Positive: {{ responses|selectattr('sentiment', 'equalto', 'positive')|list|length }}</p>
+                    <p class="text-warning">Neutral: {{ responses|selectattr('sentiment', 'equalto', 'neutral')|list|length }}</p>
+                    <p class="text-danger">Negative: {{ responses|selectattr('sentiment', 'equalto', 'negative')|list|length }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Responses Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Feedback Responses</h5>
+                </div>
+                <div class="card-body">
+                    {% if responses %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Contact</th>
+                                    <th>Type</th>
+                                    <th>Score</th>
+                                    <th>Sentiment</th>
+                                    <th>Feedback</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for response in responses %}
+                                <tr>
+                                    <td>{{ response.contact.email if response.contact else 'Anonymous' }}</td>
+                                    <td><span class="badge bg-info">{{ response.survey_type }}</span></td>
+                                    <td>{{ response.score }}/10</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if response.sentiment == 'positive' else 'warning' if response.sentiment == 'neutral' else 'danger' }}">
+                                            {{ response.sentiment }}
+                                        </span>
+                                    </td>
+                                    <td>{{ response.feedback[:50] if response.feedback else '-' }}</td>
+                                    <td>{{ response.responded_at.strftime('%Y-%m-%d') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No feedback yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

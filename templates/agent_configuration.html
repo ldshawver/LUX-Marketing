@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Agent Configuration - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4"><i data-feather="settings"></i> AI Agent Configuration</h1>
+    <p class="text-muted">Fine-tune how each AI agent operates for your company</p>
+
+    <!-- Agent Configuration Cards -->
+    <div class="row">
+        {% for agent_type in available_agents %}
+        {% set config = configs|selectattr('agent_type', 'equalto', agent_type)|first %}
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="agent-name">{{ agent_type|replace('_', ' ')|title }}</h5>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input agent-toggle" type="checkbox" data-agent="{{ agent_type }}" {% if config and config.is_enabled %}checked{% endif %}>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Execution Frequency</label>
+                        <select class="form-select form-select-sm agent-frequency" data-agent="{{ agent_type }}">
+                            <option value="hourly" {% if config and config.schedule_frequency == 'hourly' %}selected{% endif %}>Hourly</option>
+                            <option value="daily" {% if config and config.schedule_frequency == 'daily' %}selected{% endif %}>Daily</option>
+                            <option value="weekly" {% if config and config.schedule_frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+                            <option value="monthly" {% if not config or config.schedule_frequency == 'monthly' %}selected{% endif %}>Monthly</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Priority (1-10)</label>
+                        <input type="range" class="form-range agent-priority" min="1" max="10" data-agent="{{ agent_type }}" value="{{ config.task_priority if config else 5 }}">
+                        <small class="text-muted">Current: <span id="priority-{{ agent_type }}">{{ config.task_priority if config else 5 }}</span>/10</small>
+                    </div>
+
+                    <button class="btn btn-sm btn-primary w-100 agent-save-btn" data-agent="{{ agent_type }}">
+                        <i data-feather="save"></i> Save Configuration
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.agent-priority').forEach(input => {
+    input.addEventListener('input', function() {
+        document.getElementById('priority-' + this.dataset.agent).textContent = this.value;
+    });
+});
+
+document.querySelectorAll('.agent-save-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const agent = this.dataset.agent;
+        const config = {
+            agent_type: agent,
+            is_enabled: document.querySelector(`.agent-toggle[data-agent="${agent}"]`).checked,
+            schedule_frequency: document.querySelector(`.agent-frequency[data-agent="${agent}"]`).value,
+            task_priority: parseInt(document.querySelector(`.agent-priority[data-agent="${agent}"]`).value),
+            configuration: {}
+        };
+
+        fetch('{{ url_for("main.save_agent_config") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert('Agent configuration saved!');
+            } else {
+                alert('Error: ' + d.error);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

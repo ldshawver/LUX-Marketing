@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}ROI Analytics - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4"><i data-feather="dollar-sign"></i> ROI & Attribution Analytics</h1>
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>Total Investment</h6>
+                    <h3>{{ '$%.0f'|format(campaigns_roi|map(attribute='total_cost')|sum) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>Total Revenue</h6>
+                    <h3 class="text-success">{{ '$%.0f'|format(campaigns_roi|map(attribute='total_revenue')|sum) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>ROI</h6>
+                    <h3>
+                        {% set total_cost = campaigns_roi|map(attribute='total_cost')|sum %}
+                        {% set total_revenue = campaigns_roi|map(attribute='total_revenue')|sum %}
+                        {{ (((total_revenue - total_cost) / max(total_cost, 1)) * 100)|int }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>ROAS</h6>
+                    <h3>{{ (((total_revenue or 0) / max(total_cost or 1, 1)))|round(2) }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign ROI Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Campaign Performance</h5>
+                </div>
+                <div class="card-body">
+                    {% if campaigns_roi %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Campaign</th>
+                                    <th>Investment</th>
+                                    <th>Revenue</th>
+                                    <th>Profit</th>
+                                    <th>ROI</th>
+                                    <th>ROAS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for campaign in campaigns_roi %}
+                                <tr>
+                                    <td><strong>{{ campaign.name }}</strong></td>
+                                    <td>${{ campaign.total_cost|int if campaign.total_cost else 0 }}</td>
+                                    <td class="text-success">${{ campaign.total_revenue|int if campaign.total_revenue else 0 }}</td>
+                                    <td>{% set profit = (campaign.total_revenue or 0) - (campaign.total_cost or 0) %}${{ profit|int }}</td>
+                                    <td>{% set roi = (profit / max(campaign.total_cost or 1, 1) * 100) %}{{ roi|int }}%</td>
+                                    <td>{{ (((campaign.total_revenue or 0) / max(campaign.total_cost or 1, 1))|round(2) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No campaign data yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

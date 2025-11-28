@@ -6,7 +6,7 @@
 <div class="container">
   <div class="row mb-4">
     <div class="col-12">
-      <h2>Edit Company: {{ company.name }}</h2>
+      <h2>Edit Company: {{ company.name }} <small class="text-muted">(ID: {{ company.id }})</small></h2>
       <p class="text-muted">Update company profile and configuration</p>
     </div>
   </div>
@@ -15,7 +15,7 @@
     <div class="col-md-8">
       <div class="card bg-dark">
         <div class="card-body">
-          <form method="POST" action="{{ url_for('main.edit_company', company_id=company.id) }}" enctype="multipart/form-data">
+          <form method="POST" action="{{ url_for('main.edit_company', company_id=company.id) }}" enctype="multipart/form-data" id="companyEditForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="mb-3">
               <label for="name" class="form-label">Company Name <span class="text-danger">*</span></label>
@@ -31,6 +31,55 @@
               <label for="logo" class="form-label">Company Logo</label>
               <input type="file" class="form-control bg-dark text-light" id="logo" name="logo" accept="image/*">
               <small class="text-muted">Upload a new logo to replace the current one</small>
+              {% if company.logo_path %}
+              <div class="mt-2">
+                <img src="{{ url_for('static', filename=company.logo_path) }}" alt="Current Logo" style="max-height: 50px;">
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="icon" class="form-label">Company Icon</label>
+              <input type="file" class="form-control bg-dark text-light" id="icon" name="icon" accept="image/*">
+              <small class="text-muted">Upload a small icon for compact displays</small>
+              {% if company.icon_path %}
+              <div class="mt-2">
+                <img src="{{ url_for('static', filename=company.icon_path) }}" alt="Current Icon" style="max-height: 40px;">
+              </div>
+              {% endif %}
+            </div>
+
+            <hr>
+
+            <h5 class="mb-3">Brand Colors</h5>
+            
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label for="primary_color" class="form-label">Primary Color</label>
+                <input type="color" class="form-control form-control-color bg-dark" id="primary_color" name="primary_color" value="{{ company.primary_color or '#bc00ed' }}">
+              </div>
+              <div class="col-md-4">
+                <label for="secondary_color" class="form-label">Secondary Color</label>
+                <input type="color" class="form-control form-control-color bg-dark" id="secondary_color" name="secondary_color" value="{{ company.secondary_color or '#00ffb4' }}">
+              </div>
+              <div class="col-md-4">
+                <label for="accent_color" class="form-label">Accent Color</label>
+                <input type="color" class="form-control form-control-color bg-dark" id="accent_color" name="accent_color" value="{{ company.accent_color or '#e4055c' }}">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="font_family" class="form-label">Font Family</label>
+              <select class="form-select bg-dark text-light" id="font_family" name="font_family">
+                <option value="Inter, sans-serif" {% if company.font_family == 'Inter, sans-serif' %}selected{% endif %}>Inter</option>
+                <option value="Roboto, sans-serif" {% if company.font_family == 'Roboto, sans-serif' %}selected{% endif %}>Roboto</option>
+                <option value="Open Sans, sans-serif" {% if company.font_family == 'Open Sans, sans-serif' %}selected{% endif %}>Open Sans</option>
+                <option value="Poppins, sans-serif" {% if company.font_family == 'Poppins, sans-serif' %}selected{% endif %}>Poppins</option>
+                <option value="Montserrat, sans-serif" {% if company.font_family == 'Montserrat, sans-serif' %}selected{% endif %}>Montserrat</option>
+                <option value="Lato, sans-serif" {% if company.font_family == 'Lato, sans-serif' %}selected{% endif %}>Lato</option>
+                <option value="Georgia, serif" {% if company.font_family == 'Georgia, serif' %}selected{% endif %}>Georgia</option>
+                <option value="Times New Roman, serif" {% if company.font_family == 'Times New Roman, serif' %}selected{% endif %}>Times New Roman</option>
+              </select>
             </div>
 
             <hr>
@@ -38,9 +87,9 @@
             <div class="mb-3">
               <h5>API & Integrations</h5>
               <p class="text-muted">Configure API keys and integrations for this company</p>
-              <div class="alert alert-info">
-                Advanced configuration options will be available soon
-              </div>
+              <a href="{{ url_for('advanced_config.integrations_list') }}" class="btn btn-outline-primary">
+                <i data-feather="settings"></i> Configure API & Integrations
+              </a>
             </div>
 
             <div class="d-flex justify-content-between">

@@ -19,30 +19,50 @@
   <div class="row">
     {% for company in companies %}
     <div class="col-md-6 mb-4">
-      <div class="card bg-dark">
+      <div class="card bg-dark" style="border: 2px solid {{ company.primary_color or '#bc00ed' }}; font-family: {{ company.font_family or 'Inter, sans-serif' }};">
         <div class="card-body">
-          <h5 class="card-title">
-            {{ company.name }}
-            {% if current_user.get_default_company() and company.id == current_user.get_default_company().id %}
-            <span class="badge bg-success">Current</span>
+          <div class="d-flex align-items-center mb-3">
+            {% if company.icon_path %}
+            <img src="{{ url_for('static', filename=company.icon_path) }}" alt="{{ company.name }} Icon" style="width: 40px; height: 40px; object-fit: contain; margin-right: 12px; border-radius: 8px;">
+            {% elif company.logo_path %}
+            <img src="{{ url_for('static', filename=company.logo_path) }}" alt="{{ company.name }} Logo" style="max-width: 40px; max-height: 40px; object-fit: contain; margin-right: 12px;">
             {% endif %}
-          </h5>
+            <div class="flex-grow-1">
+              <h5 class="card-title mb-0" style="color: {{ company.primary_color or '#bc00ed' }};">
+                {{ company.name }}
+                {% if current_user.get_default_company() and company.id == current_user.get_default_company().id %}
+                <span class="badge" style="background: {{ company.secondary_color or '#00ffb4' }}; color: #000;">Current</span>
+                {% endif %}
+              </h5>
+            </div>
+          </div>
+          
           {% if company.website_url %}
-          <p class="text-muted"><i data-feather="globe"></i> {{ company.website_url }}</p>
+          <p class="text-muted mb-2"><i data-feather="globe"></i> {{ company.website_url }}</p>
           {% endif %}
-          <p class="text-muted">
-            <small>Created: {{ company.created_at.strftime('%Y-%m-%d') }}</small>
+          
+          <div class="mb-3">
+            <small class="text-muted">Brand Colors: </small>
+            <div class="d-inline-flex gap-2">
+              <span style="display: inline-block; width: 20px; height: 20px; background: {{ company.primary_color or '#bc00ed' }}; border-radius: 4px; border: 1px solid #555;" title="Primary"></span>
+              <span style="display: inline-block; width: 20px; height: 20px; background: {{ company.secondary_color or '#00ffb4' }}; border-radius: 4px; border: 1px solid #555;" title="Secondary"></span>
+              <span style="display: inline-block; width: 20px; height: 20px; background: {{ company.accent_color or '#e4055c' }}; border-radius: 4px; border: 1px solid #555;" title="Accent"></span>
+            </div>
+          </div>
+          
+          <p class="text-muted mb-3">
+            <small><i data-feather="calendar"></i> Created: {{ company.created_at.strftime('%Y-%m-%d') }}</small>
           </p>
           
           <div class="mt-3">
-            <a href="{{ url_for('main.edit_company', company_id=company.id) }}" class="btn btn-sm btn-outline-primary me-2">
-              <i data-feather="edit"></i> Edit
+            <a href="{{ url_for('main.edit_company', company_id=company.id) }}" class="btn btn-sm me-2" style="background: transparent; border: 1px solid {{ company.primary_color or '#bc00ed' }}; color: {{ company.primary_color or '#bc00ed' }};">
+              <i data-feather="edit"></i> Edit Brand
             </a>
-            <button class="btn btn-sm btn-outline-success me-2" onclick="switchCompany({{ company.id }})">
+            <button class="btn btn-sm me-2" onclick="switchCompany({{ company.id }})" style="background: transparent; border: 1px solid {{ company.secondary_color or '#00ffb4' }}; color: {{ company.secondary_color or '#00ffb4' }};">
               <i data-feather="check"></i> Make Default
             </button>
-            <button class="btn btn-sm btn-outline-info" onclick="switchAndConfigure({{ company.id }})">
-              <i data-feather="sliders"></i> Advanced Config
+            <button class="btn btn-sm" onclick="switchAndConfigure({{ company.id }})" style="background: transparent; border: 1px solid {{ company.accent_color or '#e4055c' }}; color: {{ company.accent_color or '#e4055c' }};">
+              <i data-feather="sliders"></i> Config
             </button>
           </div>
         </div>

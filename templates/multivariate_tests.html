@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Multivariate Testing - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4"><i data-feather="git-branch"></i> Multivariate Testing</h1>
+
+    <!-- Tests Grid -->
+    <div class="row">
+        {% for test in tests %}
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <h5>{{ test.name }}</h5>
+                        <span class="badge bg-{{ 'success' if test.status == 'completed' else 'info' if test.status == 'running' else 'secondary' }}">{{ test.status }}</span>
+                    </div>
+                    
+                    <p class="text-muted small">Campaign: {{ test.campaign.name if test.campaign else 'N/A' }}</p>
+                    
+                    {% if test.winner %}
+                    <div class="alert alert-success">
+                        <strong>Winner:</strong> {{ test.winner }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="small">
+                        <p><strong>Sample Size:</strong> {{ test.sample_size or 'Auto' }}</p>
+                        <p><strong>Confidence Level:</strong> {{ (test.confidence_level * 100)|int }}%</p>
+                        <p><strong>Variants:</strong> {{ test.variants|length if test.variants else 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not tests %}
+    <div class="alert alert-info text-center">Create multivariate tests to optimize your campaigns with multiple variable combinations.</div>
+    {% endif %}
+</div>
+{% endblock %}

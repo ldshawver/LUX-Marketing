@@ -54,7 +54,7 @@
               <div class="progress-bar bg-success" style="width: 94%"></div>
             </div>
           </div>
-          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('Email')">Fine-tune Agent</button>
         </div>
       </div>
     </div>
@@ -73,7 +73,7 @@
               <div class="progress-bar bg-success" style="width: 91%"></div>
             </div>
           </div>
-          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('Social')">Fine-tune Agent</button>
         </div>
       </div>
     </div>
@@ -92,7 +92,7 @@
               <div class="progress-bar bg-success" style="width: 88%"></div>
             </div>
           </div>
-          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('SEO')">Fine-tune Agent</button>
         </div>
       </div>
     </div>
@@ -111,7 +111,7 @@
               <div class="progress-bar bg-success" style="width: 96%"></div>
             </div>
           </div>
-          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('Analytics')">Fine-tune Agent</button>
         </div>
       </div>
     </div>
@@ -130,7 +130,7 @@
               <div class="progress-bar bg-success" style="width: 93%"></div>
             </div>
           </div>
-          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('Campaign')">Fine-tune Agent</button>
         </div>
       </div>
     </div>
@@ -149,7 +149,7 @@
               <div class="progress-bar bg-warning" style="width: 78%"></div>
             </div>
           </div>
-          <button class="btn btn-sm btn-outline-primary mt-3">Fine-tune Agent</button>
+          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('Audience')">Fine-tune Agent</button>
         </div>
       </div>
     </div>
@@ -195,5 +195,9 @@
 
 <script>
   feather.replace();
+  
+  function fineTuneAgent(agentName) {
+    alert(`🎯 Fine-tuning ${agentName} Agent...\n\nThis feature allows you to customize the agent's behavior, training data, and performance parameters. Fine-tuning options will be available in the Advanced Configuration section.`);
+  }
 </script>
 {% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}CRM Dashboard - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4"><i data-feather="briefcase"></i> CRM Dashboard</h1>
+    
+    <!-- Pipeline Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Sales Pipeline</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for stage in pipeline_data %}
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6>{{ stage.stage }}</h6>
+                                    <h3>${{ stage.total_value or 0|int }}</h3>
+                                    <small class="text-muted">{{ stage.count }} deals</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deals Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Active Deals</h5>
+                    <button class="btn btn-sm btn-primary"><i data-feather="plus"></i> New Deal</button>
+                </div>
+                <div class="card-body">
+                    {% if deals %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Deal</th>
+                                    <th>Contact</th>
+                                    <th>Stage</th>
+                                    <th>Value</th>
+                                    <th>Probability</th>
+                                    <th>Expected Close</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for deal in deals %}
+                                <tr>
+                                    <td><strong>{{ deal.title }}</strong></td>
+                                    <td>{{ deal.contact.email if deal.contact else '-' }}</td>
+                                    <td><span class="badge bg-info">{{ deal.stage }}</span></td>
+                                    <td>${{ deal.value|int }}</td>
+                                    <td>{{ (deal.probability * 100)|int }}%</td>
+                                    <td>{{ deal.expected_close_date.strftime('%Y-%m-%d') if deal.expected_close_date else '-' }}</td>
+                                    <td><a href="{{ url_for('main.deal_detail', deal_id=deal.id) }}" class="btn btn-sm btn-outline-primary">View</a></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No deals yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

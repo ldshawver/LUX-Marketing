@@ -10,6 +10,10 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 logger = logging.getLogger(__name__)
 
+# Track agent execution history
+agent_execution_history = []
+agent_health_status = {}
+
 
 class AgentScheduler:
     """Scheduler for automated agent tasks"""
@@ -227,6 +231,45 @@ class AgentScheduler:
             )
             logger.info("Operations Agent scheduled")
     
+    def schedule_app_agent(self):
+        """Schedule APP Agent - Continuous monitoring and improvement"""
+        if 'app_intelligence' not in self.agents:
+            return
+        
+        agent = self.agents['app_intelligence']
+        
+        # Hourly health check
+        self.scheduler.add_job(
+            func=lambda: self._run_agent_task(agent, {'task_type': 'health_check'}),
+            trigger=IntervalTrigger(hours=1),
+            id='app_hourly_health_check',
+            name='APP Agent - Hourly Health Check'
+        )
+        
+        # Daily usage analysis
+        self.scheduler.add_job(
+            func=lambda: self._run_agent_task(agent, {
+                'task_type': 'usage_analysis',
+                'period_days': 1
+            }),
+            trigger=CronTrigger(hour=23, minute=30),
+            id='app_daily_usage_analysis',
+            name='APP Agent - Daily Usage Analysis'
+        )
+        
+        # Weekly improvement suggestions
+        self.scheduler.add_job(
+            func=lambda: self._run_agent_task(agent, {
+                'task_type': 'suggest_improvements',
+                'context': 'weekly_review'
+            }),
+            trigger=CronTrigger(day_of_week='sun', hour=18),
+            id='app_weekly_improvements',
+            name='APP Agent - Weekly Improvement Suggestions'
+        )
+        
+        logger.info("APP Agent scheduled")
+    
     def _run_agent_task(self, agent, task_data: dict):
         """Execute an agent task and log results"""
         try:
@@ -305,10 +348,11 @@ def initialize_agent_scheduler():
         from agents.sales_enablement_agent import SalesEnablementAgent
         from agents.retention_agent import RetentionAgent
         from agents.operations_agent import OperationsAgent
+        from agents.app_agent import AppAgent
         
         scheduler = get_agent_scheduler()
         
-        # Register all 10 agents
+        # Register all 11 agents (including APP Agent)
         scheduler.register_agent('brand_strategy', BrandStrategyAgent())
         scheduler.register_agent('content_seo', ContentSEOAgent())
         scheduler.register_agent('analytics', AnalyticsAgent())
@@ -319,6 +363,7 @@ def initialize_agent_scheduler():
         scheduler.register_agent('sales_enablement', SalesEnablementAgent())
         scheduler.register_agent('retention', RetentionAgent())
         scheduler.register_agent('operations', OperationsAgent())
+        scheduler.register_agent('app_intelligence', AppAgent())
         
         # Schedule all agents
         scheduler.schedule_brand_strategy_agent()
@@ -326,11 +371,12 @@ def initialize_agent_scheduler():
         scheduler.schedule_analytics_agent()
         scheduler.schedule_creative_agent()
         scheduler.schedule_additional_agents()
+        scheduler.schedule_app_agent()
         
         # Start scheduler
         scheduler.start()
         
-        logger.info("All 10 AI agents initialized and scheduled successfully")
+        logger.info("All 11 AI agents (including APP Agent) initialized and scheduled successfully")
         return scheduler
         
     except Exception as e:

@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}LUX AI Dashboard - Agent Control Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-6 fw-bold">
+                        <i data-feather="cpu" class="text-primary"></i> LUX AI Dashboard
+                    </h1>
+                    <p class="text-muted">Autonomous AI Agent Control Center</p>
+                </div>
+                <div>
+                    <span class="badge bg-success fs-6">
+                        <i data-feather="zap"></i> {{ agents|length }} Agents Active
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP Agent Quick Stats -->
+    {% if app_metrics %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i data-feather="shield"></i> APP Agent - Application Intelligence</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 class="text-primary">{{ app_metrics.bugs_tracked }}</h3>
+                                <p class="text-muted">Bugs Tracked</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 class="text-warning">{{ app_metrics.improvements_queued }}</h3>
+                                <p class="text-muted">Improvements Queued</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 class="text-success"><i data-feather="check-circle"></i></h3>
+                                <p class="text-muted">Health Status: Active</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- AI Agents Grid -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">AI Agent Fleet</h4>
+        </div>
+        {% for agent_type, agent in agents.items() %}
+        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 agent-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="card-title">{{ agent.agent_name }}</h5>
+                            <span class="badge bg-info">{{ agent_type }}</span>
+                        </div>
+                        <div class="agent-status">
+                            <i data-feather="check-circle" class="text-success"></i>
+                        </div>
+                    </div>
+                    
+                    <p class="card-text text-muted small">{{ agent.description }}</p>
+                    
+                    {% if agent_stats.get(agent_type) %}
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Success Rate:</small>
+                            <strong>{{ "%.1f"|format(agent_stats[agent_type].success_rate) }}%</strong>
+                        </div>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ agent_stats[agent_type].success_rate }}%"></div>
+                        </div>
+                        <div class="mt-2 small text-muted">
+                            <div>Tasks: {{ agent_stats[agent_type].total }}</div>
+                            <div>Completed: {{ agent_stats[agent_type].completed }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="mt-3 small text-muted">
+                        No recent activity
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <a href="{{ url_for('main.ai_agent_detail', agent_type=agent_type) }}" 
+                           class="btn btn-sm btn-outline-primary w-100">
+                            <i data-feather="eye"></i> View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Scheduled Jobs -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i data-feather="clock"></i> Scheduled Tasks</h5>
+                </div>
+                <div class="card-body">
+                    {% if jobs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Task Name</th>
+                                    <th>Schedule</th>
+                                    <th>Next Run</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in jobs %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ job.name }}</strong>
+                                    </td>
+                                    <td><code class="small">{{ job.trigger }}</code></td>
+                                    <td>
+                                        {% if job.next_run %}
+                                            {{ job.next_run }}
+                                        {% else %}
+                                            <span class="text-muted">Not scheduled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">Active</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No scheduled tasks</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i data-feather="activity"></i> Recent Agent Activity</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_tasks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Agent</th>
+                                    <th>Task</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in recent_tasks %}
+                                <tr>
+                                    <td><span class="badge bg-info">{{ task.agent_type }}</span></td>
+                                    <td>{{ task.task_name }}</td>
+                                    <td>
+                                        {% if task.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif task.status == 'failed' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                        {% elif task.status == 'pending' %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ task.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ task.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if task.completed_at and task.created_at %}
+                                            {{ ((task.completed_at - task.created_at).total_seconds())|int }}s
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i data-feather="inbox" class="text-muted" style="width: 3rem; height: 3rem;"></i>
+                        <p class="text-muted mt-3">No recent agent activity</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.agent-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border-left: 4px solid var(--bs-primary);
+}
+
+.agent-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.agent-status {
+    width: 24px;
+    height: 24px;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh dashboard every 30 seconds
+setInterval(function() {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Personalization Rules - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i data-feather="zap"></i> Content Personalization Rules</h1>
+        <button class="btn btn-primary"><i data-feather="plus"></i> Create Rule</button>
+    </div>
+
+    <!-- Personalization Rules -->
+    <div class="row">
+        {% for rule in rules %}
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5>{{ rule.name }}</h5>
+                        <span class="badge bg-{{ 'success' if rule.is_active else 'secondary' }}">{{ 'Active' if rule.is_active else 'Inactive' }}</span>
+                    </div>
+                    <p class="text-muted small">Priority: {{ rule.priority }}</p>
+                    <p class="small">
+                        <strong>Segments:</strong> 
+                        {% if rule.segment_criteria %}
+                            {% for criteria in rule.segment_criteria %}
+                                <span class="badge bg-info">{{ criteria }}</span>
+                            {% endfor %}
+                        {% else %}
+                            All users
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not rules %}
+    <div class="alert alert-info text-center">Create personalization rules to deliver tailored content to different audience segments.</div>
+    {% endif %}
+</div>
+{% endblock %}

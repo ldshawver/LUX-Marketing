@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Competitor Analysis - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i data-feather="shield"></i> Competitor Analysis</h1>
+        <button class="btn btn-primary"><i data-feather="plus"></i> Add Competitor</button>
+    </div>
+
+    <!-- Competitor Cards -->
+    <div class="row">
+        {% for competitor in competitors %}
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5>{{ competitor.competitor_name }}</h5>
+                    {% if competitor.website_url %}
+                    <p class="text-muted small"><a href="{{ competitor.website_url }}" target="_blank">{{ competitor.website_url }}</a></p>
+                    {% endif %}
+                    
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <h6>Strengths</h6>
+                            {% if competitor.strengths %}
+                                <ul class="small">
+                                    {% for strength in competitor.strengths %}
+                                    <li><i data-feather="check-circle" class="text-success"></i> {{ strength }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                            <p class="text-muted small">-</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-6">
+                            <h6>Weaknesses</h6>
+                            {% if competitor.weaknesses %}
+                                <ul class="small">
+                                    {% for weakness in competitor.weaknesses %}
+                                    <li><i data-feather="x-circle" class="text-danger"></i> {{ weakness }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                            <p class="text-muted small">-</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <small class="text-muted">Last analyzed: {{ competitor.last_analyzed.strftime('%Y-%m-%d') if competitor.last_analyzed else 'Never' }}</small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not competitors %}
+    <div class="alert alert-info text-center">Add competitors to track their positioning and stay ahead of the market.</div>
+    {% endif %}
+</div>
+{% endblock %}

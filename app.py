@@ -31,6 +31,10 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
 }
 
+# File upload configuration
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
+app.config["UPLOAD_FOLDER"] = "static/company_logos"
+
 # Microsoft Graph API configuration
 app.config["MS_CLIENT_ID"] = os.environ.get("MS_CLIENT_ID", "")
 app.config["MS_CLIENT_SECRET"] = os.environ.get("MS_CLIENT_SECRET", "")
@@ -39,8 +43,18 @@ app.config["MS_TENANT_ID"] = os.environ.get("MS_TENANT_ID", "")
 # Initialize extensions
 db.init_app(app)
 
-# Setup CSRF Protection
+# Setup CSRF Protection  
+app.config['WTF_CSRF_ENABLED'] = True
+app.config['WTF_CSRF_CHECK_DEFAULT'] = True
+app.config['WTF_CSRF_METHODS'] = ['POST', 'PUT', 'PATCH', 'DELETE']
+app.config['WTF_CSRF_FIELD_NAME'] = 'csrf_token'
+app.config['WTF_CSRF_TIME_LIMIT'] = None  # No time limit for CSRF tokens
+app.config['WTF_CSRF_SSL_STRICT'] = False  # Allow non-HTTPS in development
 csrf = CSRFProtect(app)
+
+# Configure session cookie for iframe compatibility
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SECURE'] = True  # Required when SameSite=None
 
 # Setup Flask-Login
 login_manager = LoginManager()

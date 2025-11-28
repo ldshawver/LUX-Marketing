@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Automation - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <h2>Edit Automation</h2>
+      <p class="text-muted">Update your marketing automation workflow</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card bg-dark">
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('main.edit_automation', id=automation.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="mb-3">
+              <label for="name" class="form-label">Automation Name</label>
+              <input type="text" class="form-control bg-dark text-light" id="name" name="name" value="{{ automation.name }}" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="description" class="form-label">Description</label>
+              <textarea class="form-control bg-dark text-light" id="description" name="description" rows="3">{{ automation.description or '' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+              <label for="trigger_type" class="form-label">Trigger</label>
+              <select class="form-select bg-dark text-light" id="trigger_type" name="trigger_type" required>
+                <option value="">Select a trigger...</option>
+                <option value="signup" {% if automation.trigger_type == 'signup' %}selected{% endif %}>New Contact Signup</option>
+                <option value="purchase" {% if automation.trigger_type == 'purchase' %}selected{% endif %}>Purchase Made</option>
+                <option value="abandoned_cart" {% if automation.trigger_type == 'abandoned_cart' %}selected{% endif %}>Abandoned Cart</option>
+                <option value="email_open" {% if automation.trigger_type == 'email_open' %}selected{% endif %}>Email Opened</option>
+                <option value="link_click" {% if automation.trigger_type == 'link_click' %}selected{% endif %}>Link Clicked</option>
+                <option value="date_based" {% if automation.trigger_type == 'date_based' %}selected{% endif %}>Date-Based</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="status" class="form-label">Status</label>
+              <select class="form-select bg-dark text-light" id="status" name="status">
+                <option value="active" {% if automation.status == 'active' %}selected{% endif %}>Active</option>
+                <option value="paused" {% if automation.status == 'paused' %}selected{% endif %}>Paused</option>
+                <option value="inactive" {% if automation.status == 'inactive' %}selected{% endif %}>Inactive</option>
+              </select>
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <a href="{{ url_for('main.automation_dashboard') }}" class="btn btn-secondary">Cancel</a>
+              <div>
+                <a href="{{ url_for('main.delete_automation', id=automation.id) }}" class="btn btn-danger me-2" onclick="return confirm('Delete this automation?')">Delete</a>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card bg-dark border-info">
+        <div class="card-header bg-info">
+          <h6 class="mb-0">Automation Info</h6>
+        </div>
+        <div class="card-body">
+          <p class="small text-muted">
+            <strong>Created:</strong> {{ automation.created_at.strftime('%b %d, %Y') if automation.created_at else 'N/A' }}<br>
+            <strong>Status:</strong> <span class="badge bg-{{ 'success' if automation.status == 'active' else 'warning' if automation.status == 'paused' else 'secondary' }}">{{ automation.status|capitalize }}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  feather.replace();
+</script>
+{% endblock %}

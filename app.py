@@ -6,10 +6,6 @@ from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
-@app.route("/")
-def index():
-    # Send people to the login page as the main entry point
-    return redirect(url_for("auth.login"))
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -77,6 +73,11 @@ app.register_blueprint(main_bp)
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(user_bp, url_prefix='/user')
 app.register_blueprint(advanced_config_bp)
+
+# Root route - redirects to login
+@app.route("/")
+def index():
+    return redirect(url_for("auth.login"))
 
 with app.app_context():
     # Import models to ensure tables are created

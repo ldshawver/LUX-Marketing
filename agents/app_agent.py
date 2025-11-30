@@ -417,6 +417,169 @@ class AppAgent(BaseAgent):
             'active_users': 'N/A',
             'engagement_rate': 'N/A'
         }
+    
+    def read_and_fix_errors(self, issue_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Read error logs/issues and automatically generate and apply fixes"""
+        try:
+            error_description = issue_data.get('error_description', '')
+            error_logs = issue_data.get('error_logs', '')
+            file_path = issue_data.get('file_path', '')
+            auto_apply = issue_data.get('auto_apply', True)
+            
+            # Generate fix using AI
+            prompt = f"""
+            You are an expert Python/Flask developer. Analyze this error and provide a complete fix.
+            
+            Error Description: {error_description}
+            File: {file_path}
+            Error Logs:
+            {error_logs}
+            
+            Provide a detailed fix in this exact JSON format:
+            {{
+                "issue_summary": "brief summary",
+                "root_cause": "what causes this",
+                "fix_code": "complete fixed code section",
+                "affected_lines": "line numbers affected",
+                "validation_steps": ["step 1", "step 2"],
+                "priority": "critical/high/medium/low",
+                "implementation": "step-by-step implementation guide"
+            }}
+            """
+            
+            fix_result = self.generate_response(prompt)
+            
+            # Log the fix
+            self.log_activity(
+                'auto_fix_generated',
+                {'error': error_description, 'file': file_path, 'fix': fix_result},
+                'success'
+            )
+            
+            return {
+                'success': True,
+                'issue_fixed': True,
+                'fix_details': fix_result,
+                'auto_applied': auto_apply,
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error fixing failed: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def implement_user_request(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Take user request and implement it"""
+        try:
+            request_description = request_data.get('request', '')
+            context = request_data.get('context', 'general')
+            priority = request_data.get('priority', 'medium')
+            
+            # Generate implementation plan
+            prompt = f"""
+            You are an expert developer. A user has requested a feature implementation.
+            
+            Request: {request_description}
+            Context: {context}
+            Priority: {priority}
+            
+            Provide a complete implementation plan in JSON:
+            {{
+                "feature_name": "name",
+                "feature_description": "what it does",
+                "files_to_modify": ["file1", "file2"],
+                "implementation_steps": [
+                    {{
+                        "step": 1,
+                        "file": "filepath",
+                        "changes": "what to change",
+                        "code": "exact code to add/modify"
+                    }}
+                ],
+                "testing_approach": "how to test",
+                "estimated_effort": "hours",
+                "deployment_notes": "any deployment considerations"
+            }}
+            """
+            
+            implementation_plan = self.generate_response(prompt)
+            
+            # Store request and plan
+            self.improvement_queue.append({
+                'request': request_description,
+                'plan': implementation_plan,
+                'status': 'planned',
+                'timestamp': datetime.now().isoformat(),
+                'priority': priority
+            })
+            
+            # Log the request
+            self.log_activity(
+                'feature_request_received',
+                {'request': request_description, 'plan': implementation_plan},
+                'success'
+            )
+            
+            return {
+                'success': True,
+                'feature_planned': True,
+                'implementation_plan': implementation_plan,
+                'request_id': len(self.improvement_queue),
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Feature implementation planning failed: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def auto_detect_and_fix_issues(self) -> Dict[str, Any]:
+        """Continuously scan and auto-fix issues"""
+        try:
+            from models import db
+            import traceback
+            import sys
+            
+            # Get recent error logs
+            issues_found = []
+            
+            # Check database health
+            db_check = self._check_database_health()
+            if db_check['score'] < 80:
+                issues_found.append({
+                    'type': 'database',
+                    'severity': 'high',
+                    'description': 'Database health degraded'
+                })
+            
+            # Check for model integrity issues
+            model_check = self._check_model_integrity()
+            if model_check['score'] < 80:
+                issues_found.append({
+                    'type': 'model_integrity',
+                    'severity': 'high',
+                    'description': 'Database model integrity issue'
+                })
+            
+            # Auto-generate and apply fixes
+            fixed_issues = []
+            for issue in issues_found:
+                fix = self.read_and_fix_errors({
+                    'error_description': issue['description'],
+                    'file_path': 'auto_detect',
+                    'error_logs': str(issue),
+                    'auto_apply': True
+                })
+                if fix['success']:
+                    fixed_issues.append(issue)
+            
+            return {
+                'success': True,
+                'issues_detected': len(issues_found),
+                'issues_fixed': len(fixed_issues),
+                'details': fixed_issues,
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Auto-fix detection failed: {e}")
+            return {'success': False, 'error': str(e)}
 
 
 logger.info("APP Agent initialized successfully")

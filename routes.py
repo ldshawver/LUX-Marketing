@@ -27,6 +27,7 @@ from seo_service import seo_service
 from error_logger import log_application_error, ApplicationDiagnostics, ErrorLog
 from log_reader import LogReader
 from auto_repair_service import AutoRepairService
+from error_fixes import ErrorFixService
 
 # Stub services for missing imports (prevents LSP errors and runtime crashes)
 class SMSService:
@@ -4013,6 +4014,50 @@ def clear_resolved_errors():
         logger.error(f"Clear errors endpoint error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@main_bp.route('/api/system/diagnosis', methods=['GET'])
+@login_required
+def system_diagnosis():
+    """Comprehensive system diagnosis for all error types"""
+    try:
+        diagnosis = ErrorFixService.comprehensive_system_diagnosis()
+        return jsonify({'success': True, 'diagnosis': diagnosis})
+    except Exception as e:
+        logger.error(f"System diagnosis error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/system/health', methods=['GET'])
+@login_required
+def system_health():
+    """Check system health and resource usage"""
+    try:
+        health = ErrorFixService.check_server_health()
+        return jsonify({'success': True, 'health': health})
+    except Exception as e:
+        logger.error(f"System health error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/system/validate-openai', methods=['GET'])
+@login_required
+def validate_openai():
+    """Validate OpenAI API key configuration"""
+    try:
+        validation = ErrorFixService.validate_openai_api_key()
+        return jsonify({'success': True, 'validation': validation})
+    except Exception as e:
+        logger.error(f"OpenAI validation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/system/endpoint-check', methods=['GET'])
+@login_required
+def endpoint_check():
+    """Check for 404 errors on key endpoints"""
+    try:
+        results = ErrorFixService.check_404_endpoints()
+        return jsonify({'success': True, 'results': results})
+    except Exception as e:
+        logger.error(f"Endpoint check error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @main_bp.route('/chatbot/send', methods=['POST'])
 @csrf.exempt
 def chatbot_send():
@@ -5656,3 +5701,8 @@ print("✓ AI Chatbot configured for error analysis, auto-repair, and server log
 print("✓ Log reading capability: Nginx, Gunicorn, systemd, and app logs")
 print("✓ Automated error repair and resolution testing enabled")
 print("✓ Auto-repair endpoints: /api/auto-repair/start and /api/auto-repair/clear")
+print("✓ System health and diagnostics endpoints:")
+print("  - /api/system/diagnosis (comprehensive analysis)")
+print("  - /api/system/health (resource usage)")
+print("  - /api/system/validate-openai (API key validation)")
+print("  - /api/system/endpoint-check (404 detection)")

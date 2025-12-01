@@ -26,6 +26,7 @@ from ai_agent import lux_agent
 from seo_service import seo_service
 from error_logger import log_application_error, ApplicationDiagnostics, ErrorLog
 from log_reader import LogReader
+from auto_repair_service import AutoRepairService
 
 # Stub services for missing imports (prevents LSP errors and runtime crashes)
 class SMSService:
@@ -3988,6 +3989,30 @@ def get_system_health():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@main_bp.route('/api/auto-repair/start', methods=['POST'])
+@login_required
+def start_auto_repair():
+    """Start automated error repair and resolution testing"""
+    try:
+        error_id = request.json.get('error_id') if request.is_json else None
+        results = AutoRepairService.execute_auto_repair(error_id=error_id)
+        return jsonify({'success': True, 'results': results})
+    except Exception as e:
+        logger.error(f"Auto-repair endpoint error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/auto-repair/clear', methods=['POST'])
+@login_required
+def clear_resolved_errors():
+    """Clear resolved errors from the log"""
+    try:
+        hours = request.json.get('hours', 24) if request.is_json else 24
+        results = AutoRepairService.clear_resolved_errors(older_than_hours=hours)
+        return jsonify({'success': True, 'results': results})
+    except Exception as e:
+        logger.error(f"Clear errors endpoint error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @main_bp.route('/chatbot/send', methods=['POST'])
 @csrf.exempt
 def chatbot_send():
@@ -4042,6 +4067,7 @@ Recent Database Error Examples:
         
         # Read server logs if diagnose action is requested
         server_logs_context = ""
+        auto_repair_context = ""
         if action == 'diagnose':
             try:
                 all_logs = LogReader.get_all_logs(lines=30)
@@ -4056,6 +4082,21 @@ QUICK ERROR PATTERNS:
             except Exception as log_error:
                 logger.warning(f"Could not read server logs: {log_error}")
                 server_logs_context = "\n(Server logs unavailable)"
+        
+        # Add auto-repair capability to system prompt
+        auto_repair_context = """
+
+SPECIAL CAPABILITIES - AUTO-REPAIR:
+You can trigger automated error repair by responding with:
+ACTION: REPAIR_ERRORS
+This will:
+1. Find all unresolved errors
+2. Generate AI-powered fix plans
+3. Test if errors are resolved
+4. Mark resolved errors and clear them
+5. Return a detailed report
+
+To use this, when appropriate, include "ACTION: REPAIR_ERRORS" in your response."""
         
         # Initialize OpenAI client with explicit error handling
         try:
@@ -4094,8 +4135,15 @@ When analyzing errors:
 Current System Context:
 {diagnostics_context}
 {server_logs_context}
+{auto_repair_context}
 
-Be helpful, professional, concise, and proactive. Always look for ways to improve system health."""
+Be helpful, professional, concise, and proactive. Always look for ways to improve system health.
+
+When users ask you to fix errors, resolve issues, or test the system:
+1. Analyze what the user is asking
+2. If appropriate, suggest running automatic repairs
+3. You can't directly run repairs, but your response can trigger them by including "ACTION: REPAIR_ERRORS"
+4. The system will see this action and execute auto-repair automatically"""
             
             response = client.chat.completions.create(
                 model="gpt-4o",
@@ -4109,10 +4157,23 @@ Be helpful, professional, concise, and proactive. Always look for ways to improv
             
             bot_message = response.choices[0].message.content
             
+            # Check if auto-repair should be triggered
+            trigger_repair = 'ACTION: REPAIR_ERRORS' in bot_message
+            repair_results = None
+            if trigger_repair:
+                try:
+                    repair_results = AutoRepairService.execute_auto_repair()
+                    # Clean up the action from the response
+                    bot_message = bot_message.replace('ACTION: REPAIR_ERRORS', '').strip()
+                except Exception as repair_error:
+                    logger.warning(f"Auto-repair trigger failed: {repair_error}")
+            
             return jsonify({
                 'response': bot_message,
                 'action': action,
-                'has_logs': bool(server_logs_context)
+                'has_logs': bool(server_logs_context),
+                'auto_repair_triggered': trigger_repair,
+                'repair_results': repair_results
             })
             
         except Exception as api_error:
@@ -5593,3 +5654,5 @@ print("✓ Zapier webhook endpoint loaded at /api/webhook/zapier-contact")
 print("✓ Error logging and diagnostics endpoints loaded")
 print("✓ AI Chatbot configured for error analysis, auto-repair, and server log reading")
 print("✓ Log reading capability: Nginx, Gunicorn, systemd, and app logs")
+print("✓ Automated error repair and resolution testing enabled")
+print("✓ Auto-repair endpoints: /api/auto-repair/start and /api/auto-repair/clear")

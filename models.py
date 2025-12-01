@@ -16,12 +16,48 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))
     is_admin = db.Column(db.Boolean, default=False)
+    
+    # User Profile Fields (like Contact)
+    first_name = db.Column(db.String(64))
+    last_name = db.Column(db.String(64))
+    phone = db.Column(db.String(20))
+    avatar_path = db.Column(db.String(255))
+    tags = db.Column(db.String(255))  # Comma-separated tags including 'admin'
+    segment = db.Column(db.String(100), default='user')  # user, admin, moderator, etc.
+    custom_fields = db.Column(JSON)  # Additional custom profile data
+    engagement_score = db.Column(db.Float, default=0.0)
+    last_activity = db.Column(db.DateTime)
+    bio = db.Column(db.Text)  # User bio/description
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     companies = db.relationship('Company', secondary=user_company, backref=db.backref('users', lazy='dynamic'))
     
     def __repr__(self):
         return f'<User {self.username}>'
+    
+    @property
+    def full_name(self):
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        return self.first_name or self.last_name or self.username
+    
+    @property
+    def is_admin_user(self):
+        """Check if user has admin segment or admin tag"""
+        return self.is_admin or self.segment == 'admin' or (self.tags and 'admin' in self.tags.lower())
+    
+    def add_tag(self, tag):
+        """Add a tag to the user"""
+        if not self.tags:
+            self.tags = tag
+        elif tag not in self.tags:
+            self.tags += f",{tag}"
+    
+    def has_tag(self, tag):
+        """Check if user has a specific tag"""
+        return self.tags and tag.lower() in self.tags.lower()
     
     def get_default_company(self):
         """Get the user's default company"""
@@ -81,10 +117,11 @@ class Contact(db.Model):
     company = db.Column(db.String(120))
     phone = db.Column(db.String(20))
     tags = db.Column(db.String(255))  # Comma-separated tags
+    segment = db.Column(db.String(100), default='lead')  # lead, customer, newsletter, vip, etc.
     custom_fields = db.Column(JSON)  # Additional custom data
     engagement_score = db.Column(db.Float, default=0.0)
     last_activity = db.Column(db.DateTime)
-    source = db.Column(db.String(50))  # web_form, manual, import, api
+    source = db.Column(db.String(50))  # web_form, manual, import, api, forminator
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -1043,7 +1080,7 @@ class CustomerSegment(db.Model):
     last_calculated = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    contact = db.relationship('Contact', backref=db.backref('segment', uselist=False))
+    contact = db.relationship('Contact', backref=db.backref('rfm_segment', uselist=False))
     
     def __repr__(self):
         return f'<CustomerSegment {self.segment_name}:{self.rfm_score}>'

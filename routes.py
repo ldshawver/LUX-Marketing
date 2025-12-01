@@ -4776,4 +4776,655 @@ def trigger_agent_task(agent_type):
         logger.error(f"Error triggering agent task: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@main_bp.route('/agent/diagnostics', methods=['GET'])
+@login_required
+def get_agent_diagnostics():
+    """Get live agent diagnostics and error logs"""
+    from agent_scheduler import get_agent_scheduler
+    
+    scheduler = get_agent_scheduler()
+    
+    # Get APP agent
+    app_agent = scheduler.agents.get('app_intelligence') if scheduler else None
+    
+    if not app_agent:
+        return jsonify({'success': False, 'error': 'APP Agent not found'}), 404
+    
+    try:
+        # Get live error logs
+        error_logs = app_agent.read_live_error_logs()
+        
+        # Get runtime state
+        runtime_state = app_agent.get_app_runtime_state()
+        
+        # Get app files status
+        file_status = app_agent.read_app_files('routes.py')
+        
+        return jsonify({
+            'success': True,
+            'timestamp': datetime.now().isoformat(),
+            'error_logs': error_logs,
+            'runtime_state': runtime_state,
+            'app_health': app_agent.perform_health_check({}),
+            'file_analysis': file_status.get('issues_found', [])
+        })
+    except Exception as e:
+        logger.error(f"Diagnostics error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/agent/fix-issues', methods=['POST'])
+@login_required
+def trigger_agent_fix():
+    """Manually trigger agent to scan and fix all issues"""
+    from agent_scheduler import get_agent_scheduler
+    
+    scheduler = get_agent_scheduler()
+    app_agent = scheduler.agents.get('app_intelligence') if scheduler else None
+    
+    if not app_agent:
+        return jsonify({'success': False, 'error': 'APP Agent not found'}), 404
+    
+    try:
+        result = app_agent.auto_detect_and_fix_issues()
+        return jsonify({
+            'success': True,
+            'timestamp': datetime.now().isoformat(),
+            'scan_results': result
+        })
+    except Exception as e:
+        logger.error(f"Auto-fix error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 print("✓ AI Agent reporting routes loaded")
+
+# ============= USER PROFILE MANAGEMENT =============
+@main_bp.route('/user/profile')
+@login_required
+def user_profile():
+    """View current user's profile"""
+    user = current_user
+    company = user.get_default_company()
+    
+    return render_template('user_profile.html', 
+                         user=user, 
+                         company=company)
+
+@main_bp.route('/user/profile/edit', methods=['GET', 'POST'])
+@login_required
+def edit_user_profile():
+    """Edit user profile"""
+    user = current_user
+    
+    if request.method == 'POST':
+        user.first_name = request.form.get('first_name', '')
+        user.last_name = request.form.get('last_name', '')
+        user.phone = request.form.get('phone', '')
+        user.bio = request.form.get('bio', '')
+        user.segment = request.form.get('segment', 'user')
+        user.tags = request.form.get('tags', '')
+        user.updated_at = datetime.now()
+        
+        db.session.commit()
+        flash('Profile updated successfully!', 'success')
+        return redirect(url_for('main.user_profile'))
+    
+    return render_template('edit_user_profile.html', user=user)
+
+@main_bp.route('/api/user/profile')
+@login_required
+def get_user_profile_api():
+    """Get user profile as JSON"""
+    user = current_user
+    
+    return jsonify({
+        'success': True,
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'full_name': user.full_name,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'phone': user.phone,
+            'bio': user.bio,
+            'segment': user.segment,
+            'tags': user.tags.split(',') if user.tags else [],
+            'is_admin': user.is_admin_user,
+            'avatar': user.avatar_path,
+            'engagement_score': user.engagement_score,
+            'last_activity': user.last_activity.isoformat() if user.last_activity else None,
+            'created_at': user.created_at.isoformat(),
+            'updated_at': user.updated_at.isoformat()
+        }
+    })
+
+@main_bp.route('/api/user/profile', methods=['PUT'])
+@login_required
+def update_user_profile_api():
+    """Update user profile via API"""
+    data = request.get_json()
+    user = current_user
+    
+    try:
+        if 'first_name' in data:
+            user.first_name = data['first_name']
+        if 'last_name' in data:
+            user.last_name = data['last_name']
+        if 'phone' in data:
+            user.phone = data['phone']
+        if 'bio' in data:
+            user.bio = data['bio']
+        if 'segment' in data:
+            user.segment = data['segment']
+        if 'tags' in data:
+            user.tags = ','.join(data['tags']) if isinstance(data['tags'], list) else data['tags']
+        
+        user.updated_at = datetime.now()
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Profile updated'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+print("✓ User profile routes loaded")
+
+# ============= CRM HUB =============
+@main_bp.route('/crm/hub')
+@login_required
+def crm_hub():
+    """CRM Features Hub - Showcase all 15 CRM capabilities"""
+    return render_template('crm_hub.html')
+
+print("✓ CRM Hub route loaded")
+
+# ============= FORMINATOR NEWSLETTER IMPORT =============
+@main_bp.route('/admin/import-forminator-newsletter', methods=['GET', 'POST'])
+@login_required
+def import_forminator_newsletter():
+    """Import Forminator form 3482 newsletter signups and assign Newsletter segment"""
+    if not current_user.is_admin_user:
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    if request.method == 'POST':
+        try:
+            # Import newsletter signups from Forminator form ID 3482
+            # In production, this would connect to Forminator API
+            # For now, we provide the import route and structure
+            
+            form_id = 3482
+            import_count = 0
+            
+            # Parse submitted form data (this would come from Forminator webhook/API)
+            submissions = request.get_json() or {}
+            
+            for submission in submissions.get('entries', []):
+                email = submission.get('email')
+                first_name = submission.get('first_name', '')
+                last_name = submission.get('last_name', '')
+                
+                if email:
+                    # Check if contact already exists
+                    contact = Contact.query.filter_by(email=email).first()
+                    
+                    if contact:
+                        # Update existing contact with Newsletter segment
+                        contact.segment = 'newsletter'
+                        if first_name:
+                            contact.first_name = first_name
+                        if last_name:
+                            contact.last_name = last_name
+                        contact.tags = 'newsletter_signup'
+                        contact.source = 'forminator'
+                    else:
+                        # Create new contact with Newsletter segment
+                        contact = Contact(
+                            email=email,
+                            first_name=first_name,
+                            last_name=last_name,
+                            segment='newsletter',
+                            tags='newsletter_signup',
+                            source='forminator',
+                            is_active=True
+                        )
+                        db.session.add(contact)
+                    
+                    import_count += 1
+            
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Successfully imported {import_count} newsletter signups',
+                'imported_count': import_count
+            }), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 500
+    
+    return render_template('import_forminator.html')
+
+@main_bp.route('/admin/forminator-webhook', methods=['POST'])
+def forminator_webhook():
+    """Webhook endpoint for Forminator form submissions (form ID 3482)"""
+    try:
+        data = request.get_json()
+        form_id = data.get('form_id')
+        
+        # Only process form 3482 (Newsletter signup)
+        if form_id != 3482:
+            return jsonify({'status': 'ignored'}), 200
+        
+        email = data.get('email') or data.get('fields', {}).get('email', {}).get('value')
+        first_name = data.get('first_name') or data.get('fields', {}).get('first_name', {}).get('value', '')
+        last_name = data.get('last_name') or data.get('fields', {}).get('last_name', {}).get('value', '')
+        
+        if email:
+            contact = Contact.query.filter_by(email=email).first()
+            
+            if contact:
+                contact.segment = 'newsletter'
+                contact.tags = 'newsletter_signup'
+                contact.source = 'forminator'
+                if first_name:
+                    contact.first_name = first_name
+                if last_name:
+                    contact.last_name = last_name
+            else:
+                contact = Contact(
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    segment='newsletter',
+                    tags='newsletter_signup',
+                    source='forminator',
+                    is_active=True
+                )
+                db.session.add(contact)
+            
+            db.session.commit()
+            return jsonify({'status': 'success', 'email': email}), 200
+        
+        return jsonify({'status': 'error', 'message': 'No email provided'}), 400
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+print("✓ Forminator newsletter import routes loaded")
+
+# ============= WORDPRESS USER IMPORT =============
+@main_bp.route('/admin/import-wordpress-users', methods=['GET', 'POST'])
+@login_required
+def import_wordpress_users():
+    """Import WordPress users with roles as tags and membership-based segmentation"""
+    if not current_user.is_admin_user:
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    if request.method == 'POST':
+        try:
+            data = request.get_json() or {}
+            wordpress_url = data.get('wordpress_url', '')
+            
+            if not wordpress_url:
+                return jsonify({'error': 'WordPress URL required'}), 400
+            
+            import requests
+            import os
+            
+            # Fetch users from WordPress REST API
+            users_endpoint = f"{wordpress_url.rstrip('/')}/wp-json/wp/v2/users"
+            
+            # Try to fetch without auth first
+            try:
+                response = requests.get(users_endpoint, timeout=10)
+                response.raise_for_status()
+                wp_users = response.json()
+            except:
+                # If public endpoint fails, return error
+                return jsonify({'error': 'Could not fetch WordPress users. Ensure REST API is public or provide credentials.'}), 400
+            
+            import_count = 0
+            
+            for wp_user in wp_users:
+                email = wp_user.get('email')
+                username = wp_user.get('slug') or wp_user.get('username')
+                first_name = wp_user.get('name', '').split()[0] if wp_user.get('name') else ''
+                last_name = ' '.join(wp_user.get('name', '').split()[1:]) if wp_user.get('name') else ''
+                
+                if email:
+                    # Get WordPress role(s)
+                    wp_role = wp_user.get('roles', ['subscriber'])[0] if wp_user.get('roles') else 'subscriber'
+                    
+                    # Check for membership (this would integrate with membership plugin)
+                    # For now, we'll mark users with specific roles as members
+                    has_membership = wp_role in ['member', 'premium', 'vip', 'administrator']
+                    
+                    contact = Contact.query.filter_by(email=email).first()
+                    
+                    if contact:
+                        contact.segment = 'member' if has_membership else 'Website Users'
+                        contact.tags = f"{wp_role},wordpress_import,{username}"
+                        contact.first_name = first_name or contact.first_name
+                        contact.last_name = last_name or contact.last_name
+                        contact.source = 'wordpress'
+                    else:
+                        contact = Contact(
+                            email=email,
+                            first_name=first_name,
+                            last_name=last_name,
+                            segment='member' if has_membership else 'Website Users',
+                            tags=f"{wp_role},wordpress_import,{username}",
+                            source='wordpress',
+                            is_active=True
+                        )
+                        db.session.add(contact)
+                    
+                    import_count += 1
+            
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Successfully imported {import_count} WordPress users',
+                'imported_count': import_count
+            }), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 500
+    
+    return render_template('import_wordpress.html')
+
+@main_bp.route('/admin/wordpress-webhook', methods=['POST'])
+def wordpress_webhook():
+    """Webhook for WordPress new user registration"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        username = data.get('username')
+        first_name = data.get('first_name', '')
+        last_name = data.get('last_name', '')
+        wp_role = data.get('role', 'subscriber')
+        
+        if email:
+            has_membership = wp_role in ['member', 'premium', 'vip', 'administrator']
+            
+            contact = Contact.query.filter_by(email=email).first()
+            
+            if contact:
+                contact.segment = 'member' if has_membership else 'Website Users'
+                contact.tags = f"{wp_role},wordpress_user,{username}"
+                if first_name:
+                    contact.first_name = first_name
+                if last_name:
+                    contact.last_name = last_name
+                contact.source = 'wordpress'
+            else:
+                contact = Contact(
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    segment='member' if has_membership else 'Website Users',
+                    tags=f"{wp_role},wordpress_user,{username}",
+                    source='wordpress',
+                    is_active=True
+                )
+                db.session.add(contact)
+            
+            db.session.commit()
+            return jsonify({'status': 'success', 'email': email}), 200
+        
+        return jsonify({'status': 'error', 'message': 'No email provided'}), 400
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+print("✓ WordPress user import routes loaded")
+
+# ============= TEST WORDPRESS IMPORT (AUTO-DEMO) =============
+@main_bp.route('/admin/test-wordpress-import', methods=['GET'])
+@login_required
+def test_wordpress_import():
+    """Auto-import test WordPress users for demo"""
+    if not current_user.is_admin_user:
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    try:
+        # Create sample WordPress users for testing
+        test_users = [
+            {
+                'email': 'john@example.com',
+                'name': 'John Administrator',
+                'slug': 'john_admin',
+                'roles': ['administrator']
+            },
+            {
+                'email': 'jane@example.com',
+                'name': 'Jane Member',
+                'slug': 'jane_member',
+                'roles': ['member']
+            },
+            {
+                'email': 'bob@example.com',
+                'name': 'Bob Subscriber',
+                'slug': 'bob_sub',
+                'roles': ['subscriber']
+            },
+            {
+                'email': 'alice@example.com',
+                'name': 'Alice Premium',
+                'slug': 'alice_premium',
+                'roles': ['premium']
+            }
+        ]
+        
+        import_count = 0
+        
+        for wp_user in test_users:
+            email = wp_user.get('email')
+            name = wp_user.get('name', '')
+            username = wp_user.get('slug')
+            first_name = name.split()[0] if name else ''
+            last_name = ' '.join(name.split()[1:]) if name else ''
+            wp_role = wp_user.get('roles', ['subscriber'])[0]
+            
+            has_membership = wp_role in ['member', 'premium', 'vip', 'administrator']
+            
+            contact = Contact.query.filter_by(email=email).first()
+            
+            if contact:
+                contact.segment = 'member' if has_membership else 'Website Users'
+                contact.tags = f"{wp_role},wordpress_import,{username}"
+                contact.first_name = first_name or contact.first_name
+                contact.last_name = last_name or contact.last_name
+                contact.source = 'wordpress'
+            else:
+                contact = Contact(
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    segment='member' if has_membership else 'Website Users',
+                    tags=f"{wp_role},wordpress_import,{username}",
+                    source='wordpress',
+                    is_active=True
+                )
+                db.session.add(contact)
+            
+            import_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Test WordPress import successful - {import_count} users imported',
+            'imported_count': import_count,
+            'users': [
+                {'email': u['email'], 'name': u['name'], 'role': u['roles'][0]} 
+                for u in test_users
+            ]
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@main_bp.route('/admin/wordpress-imports', methods=['GET'])
+@login_required
+def view_wordpress_imports():
+    """View all WordPress imported contacts"""
+    if not current_user.is_admin_user:
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    try:
+        wp_contacts = Contact.query.filter_by(source='wordpress').all()
+        
+        return jsonify({
+            'success': True,
+            'count': len(wp_contacts),
+            'contacts': [
+                {
+                    'id': c.id,
+                    'email': c.email,
+                    'name': c.full_name,
+                    'segment': c.segment,
+                    'tags': c.tags,
+                    'source': c.source,
+                    'created_at': c.created_at.isoformat()
+                }
+                for c in wp_contacts
+            ]
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============= PUBLIC ZAPIER WEBHOOK ENDPOINT =============
+@main_bp.route('/api/webhook/zapier-contact', methods=['POST'])
+@csrf.exempt
+def zapier_contact_webhook():
+    """
+    Public API endpoint for Zapier webhook integration
+    Receives: email, name, phone, source (flexible payload)
+    Validates, checks duplicates, inserts/updates contact
+    Supports basic auth: luke|Wow548302!
+    """
+    try:
+        # Validate basic auth if provided
+        auth = request.authorization
+        if auth:
+            if auth.username != 'luke' or auth.password != 'Wow548302!':
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid credentials'
+                }), 401
+        
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No JSON payload provided'
+            }), 400
+        
+        # Validate required fields (email and source are required)
+        email = data.get('email', '').strip().lower()
+        name = data.get('name', '').strip()
+        phone = data.get('phone', '').strip() or None
+        source = data.get('source', 'Zapier').strip()
+        
+        # Validate email format
+        if not email or not validate_email(email):
+            return jsonify({
+                'success': False,
+                'error': f'Invalid or missing email: {email}'
+            }), 400
+        
+        if not source:
+            source = 'Zapier'
+        
+        # Parse name into first and last
+        first_name = ''
+        last_name = ''
+        if name:
+            name_parts = name.split(' ', 1)
+            first_name = name_parts[0] if len(name_parts) > 0 else ''
+            last_name = name_parts[1] if len(name_parts) > 1 else ''
+        
+        # Check for duplicate
+        existing_contact = Contact.query.filter_by(email=email).first()
+        
+        if existing_contact:
+            # Update existing contact
+            if first_name:
+                existing_contact.first_name = first_name
+            if last_name:
+                existing_contact.last_name = last_name
+            if phone:
+                existing_contact.phone = phone
+            
+            # Add zapier tag if not present
+            current_tags = existing_contact.tags or ''
+            if 'zapier' not in current_tags.lower():
+                existing_contact.tags = f"{current_tags},zapier".strip(',')
+            
+            # Set/update source to track where it came from
+            if not existing_contact.source:
+                existing_contact.source = source
+            
+            # Ensure Newsletter segment for signup sources
+            if 'newsletter' in source.lower() or 'signup' in source.lower():
+                existing_contact.segment = 'Newsletter'
+            elif not existing_contact.segment:
+                existing_contact.segment = 'lead'
+            
+            existing_contact.updated_at = datetime.utcnow()
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Contact updated successfully',
+                'action': 'updated',
+                'contact_id': existing_contact.id,
+                'email': existing_contact.email,
+                'segment': existing_contact.segment,
+                'source': existing_contact.source
+            }), 200
+        
+        else:
+            # Create new contact
+            new_contact = Contact(
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                segment='Newsletter' if 'newsletter' in source.lower() or 'signup' in source.lower() else 'lead',
+                tags='zapier',
+                source=source,
+                is_active=True
+            )
+            
+            db.session.add(new_contact)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Contact created successfully',
+                'action': 'created',
+                'contact_id': new_contact.id,
+                'email': new_contact.email,
+                'segment': new_contact.segment,
+                'source': new_contact.source
+            }), 201
+    
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Zapier webhook error: {str(e)}')
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
+
+print("✓ WordPress import test and view routes loaded")
+print("✓ Zapier webhook endpoint loaded at /api/webhook/zapier-contact")

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Profile - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card" style="background: linear-gradient(135deg, #000000 0%, #1a001a 100%); border: 2px solid #bc00ed;">
+                <div class="card-header" style="background: #bc00ed; color: white;">
+                    <h2 class="mb-0"><i class="fas fa-edit"></i> Edit Profile</h2>
+                </div>
+                
+                <div class="card-body" style="color: #00ffb4;">
+                    <form method="POST" action="{{ url_for('main.edit_user_profile') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <div class="form-group mb-3">
+                            <label for="first_name" style="color: #bc00ed;"><strong>First Name</strong></label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name or '' }}" style="background: #1a1a1a; color: #00ffb4; border: 1px solid #bc00ed;">
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="last_name" style="color: #bc00ed;"><strong>Last Name</strong></label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name or '' }}" style="background: #1a1a1a; color: #00ffb4; border: 1px solid #bc00ed;">
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="phone" style="color: #bc00ed;"><strong>Phone</strong></label>
+                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ user.phone or '' }}" style="background: #1a1a1a; color: #00ffb4; border: 1px solid #bc00ed;">
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="bio" style="color: #bc00ed;"><strong>Bio</strong></label>
+                            <textarea class="form-control" id="bio" name="bio" rows="4" style="background: #1a1a1a; color: #00ffb4; border: 1px solid #bc00ed;">{{ user.bio or '' }}</textarea>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="segment" style="color: #bc00ed;"><strong>Segment</strong></label>
+                            <select class="form-control" id="segment" name="segment" style="background: #1a1a1a; color: #00ffb4; border: 1px solid #bc00ed;">
+                                <option value="user" {% if user.segment == 'user' %}selected{% endif %}>User</option>
+                                <option value="admin" {% if user.segment == 'admin' %}selected{% endif %}>Admin</option>
+                                <option value="moderator" {% if user.segment == 'moderator' %}selected{% endif %}>Moderator</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="tags" style="color: #bc00ed;"><strong>Tags (comma-separated)</strong></label>
+                            <input type="text" class="form-control" id="tags" name="tags" value="{{ user.tags or '' }}" placeholder="e.g. admin,vip,beta" style="background: #1a1a1a; color: #00ffb4; border: 1px solid #bc00ed;">
+                            <small style="color: #00ffb4;">Include 'admin' tag to mark as admin</small>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn" style="background: #bc00ed; color: white; border: none; margin-right: 10px;">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                            <a href="{{ url_for('main.user_profile') }}" class="btn" style="background: #444; color: #00ffb4; border: 1px solid #00ffb4;">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -26,6 +26,41 @@
                     </div>
                     
                     <div class="mb-3">
+                        <label for="first_name" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name or '' }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="last_name" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name or '' }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" value="{{ user.phone or '' }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="bio" class="form-label">Bio</label>
+                        <textarea class="form-control" id="bio" name="bio" rows="3">{{ user.bio or '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="segment" class="form-label">Segment</label>
+                        <select class="form-control" id="segment" name="segment">
+                            <option value="user" {% if user.segment == 'user' %}selected{% endif %}>User</option>
+                            <option value="admin" {% if user.segment == 'admin' %}selected{% endif %}>Admin</option>
+                            <option value="moderator" {% if user.segment == 'moderator' %}selected{% endif %}>Moderator</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tags" class="form-label">Tags (comma-separated)</label>
+                        <input type="text" class="form-control" id="tags" name="tags" value="{{ user.tags or '' }}" placeholder="e.g. admin,vip,beta">
+                        <div class="form-text">Include 'admin' tag to mark as admin</div>
+                    </div>
+                    
+                    <div class="mb-3">
                         <label for="new_password" class="form-label">New Password (Optional)</label>
                         <input type="password" class="form-control" id="new_password" name="new_password">
                         <div class="form-text">Leave blank to keep current password. If changing, must be at least 6 characters.</div>
@@ -60,3 +95,16 @@
     </div>
 </div>
 {% endblock %}
+<!-- WordPress & Newsletter Import Links -->
+<hr style="border-color: #bc00ed; margin: 2rem 0;">
+<div class="alert alert-secondary" style="background: linear-gradient(135deg, #1a0033 0%, #2d004d 100%); border: 2px solid #bc00ed; color: #00ffb4;">
+    <h5 style="color: #bc00ed;"><i class="fas fa-download"></i> Bulk Imports</h5>
+    <p class="mb-0">
+        <a href="{{ url_for('main.import_wordpress_users') }}" class="btn btn-sm" style="background: #bc00ed; color: white;">
+            <i class="fas fa-wordpress"></i> Import WordPress Users
+        </a>
+        <a href="{{ url_for('main.import_forminator_newsletter') }}" class="btn btn-sm" style="background: #bc00ed; color: white;">
+            <i class="fas fa-envelope"></i> Import Newsletter Signups
+        </a>
+    </p>
+</div>

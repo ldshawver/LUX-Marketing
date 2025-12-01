@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Import Newsletter Signups{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card" style="background: linear-gradient(135deg, #1a0033 0%, #2d004d 100%); border: 2px solid #bc00ed;">
+                <div class="card-header" style="background: #bc00ed; color: white;">
+                    <h3 class="mb-0"><i class="fas fa-envelope"></i> Import Newsletter Signups (Form #3482)</h3>
+                </div>
+                <div class="card-body" style="color: #00ffb4;">
+                    <p>Import Forminator form submissions from newsletter signup form and automatically assign the <strong>Newsletter</strong> segment to customers.</p>
+                    
+                    <form id="importForm" method="POST">
+                        <div class="alert alert-info" style="background: linear-gradient(135deg, #1a0033 0%, #2d004d 100%); border: 2px solid #00ffb4; color: #00ffb4;">
+                            <h5><i class="fas fa-info-circle"></i> Instructions:</h5>
+                            <ol>
+                                <li>Submit JSON array of form submissions</li>
+                                <li>Each entry must have: <code>email</code>, <code>first_name</code>, <code>last_name</code></li>
+                                <li>Contacts will be created with "Newsletter" segment and "newsletter_signup" tag</li>
+                                <li>Existing contacts will be updated with Newsletter segment</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="jsonData" class="form-label" style="color: #bc00ed;">Form Submissions JSON:</label>
+                            <textarea class="form-control" id="jsonData" name="jsonData" rows="10" placeholder='{"entries": [{"email": "user@example.com", "first_name": "John", "last_name": "Doe"}]}' style="background: #000; color: #00ffb4; border: 1px solid #bc00ed;"></textarea>
+                            <small style="color: #c0c0c0;">Paste the JSON array of form submissions</small>
+                        </div>
+                        
+                        <button type="submit" class="btn" style="background: #bc00ed; color: white; width: 100%;">
+                            <i class="fas fa-download"></i> Import Newsletter Signups
+                        </button>
+                    </form>
+                    
+                    <div id="result" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('importForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const jsonData = document.getElementById('jsonData').value;
+    const resultDiv = document.getElementById('result');
+    
+    try {
+        const data = JSON.parse(jsonData);
+        const response = await fetch('/import-forminator-newsletter', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success" style="background: linear-gradient(135deg, #1a3c1a 0%, #2d4d2d 100%); border: 2px solid #00ffb4; color: #00ffb4;">
+                    <i class="fas fa-check-circle"></i> ${result.message}
+                    <br><strong>${result.imported_count}</strong> contacts imported
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger" style="background: linear-gradient(135deg, #3c1a1a 0%, #4d2d2d 100%); border: 2px solid #e4055c; color: #e4055c;">
+                    <i class="fas fa-exclamation-circle"></i> Error: ${result.error}
+                </div>
+            `;
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger" style="background: linear-gradient(135deg, #3c1a1a 0%, #4d2d2d 100%); border: 2px solid #e4055c; color: #e4055c;">
+                <i class="fas fa-exclamation-circle"></i> Invalid JSON: ${error.message}
+            </div>
+        `;
+    }
+});
+</script>
+{% endblock %}

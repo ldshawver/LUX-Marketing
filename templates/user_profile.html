@@ -16,6 +16,18 @@
             <div class="card-body">
                 <table class="table table-borderless">
                     <tr>
+                        <td><strong>Full Name:</strong></td>
+                        <td>{{ user.full_name }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>First Name:</strong></td>
+                        <td>{{ user.first_name or 'Not provided' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Last Name:</strong></td>
+                        <td>{{ user.last_name or 'Not provided' }}</td>
+                    </tr>
+                    <tr>
                         <td><strong>Username:</strong></td>
                         <td>{{ user.username }}</td>
                     </tr>
@@ -24,15 +36,35 @@
                         <td>{{ user.email }}</td>
                     </tr>
                     <tr>
+                        <td><strong>Phone:</strong></td>
+                        <td>{{ user.phone or 'Not provided' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Segment:</strong></td>
+                        <td>
+                            <span class="badge" style="background: {% if user.segment == 'admin' %}#e4055c{% elif user.segment == 'moderator' %}#0044ff{% else %}#00ffb4{% endif %}; color: white;">{{ user.segment.upper() }}</span>
+                        </td>
+                    </tr>
+                    <tr>
                         <td><strong>Role:</strong></td>
                         <td>
-                            {% if user.is_admin %}
-                                <span class="badge bg-primary">Administrator</span>
+                            {% if user.is_admin_user %}
+                                <span class="badge bg-danger">Administrator</span>
                             {% else %}
                                 <span class="badge bg-secondary">User</span>
                             {% endif %}
                         </td>
                     </tr>
+                    {% if user.tags %}
+                    <tr>
+                        <td><strong>Tags:</strong></td>
+                        <td>
+                            {% for tag in user.tags.split(',') %}
+                                <span class="badge bg-info">{{ tag.strip() }}</span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endif %}
                     <tr>
                         <td><strong>Member Since:</strong></td>
                         <td>{{ user.created_at.strftime('%B %d, %Y') }}</td>
@@ -40,7 +72,10 @@
                 </table>
                 
                 <div class="d-grid gap-2 d-md-block">
-                    <a href="{{ url_for('user.change_password') }}" class="btn btn-primary">
+                    <a href="{{ url_for('main.edit_user_profile') }}" class="btn btn-primary">
+                        <i data-feather="edit"></i> Edit Profile
+                    </a>
+                    <a href="{{ url_for('user.change_password') }}" class="btn btn-outline-secondary">
                         <i data-feather="key"></i> Change Password
                     </a>
                     {% if user.is_admin %}

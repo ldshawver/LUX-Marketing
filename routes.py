@@ -25,6 +25,7 @@ import json
 from ai_agent import lux_agent
 from seo_service import seo_service
 from error_logger import log_application_error, ApplicationDiagnostics, ErrorLog
+from log_reader import LogReader
 
 # Stub services for missing imports (prevents LSP errors and runtime crashes)
 class SMSService:
@@ -3990,43 +3991,89 @@ def get_system_health():
 @main_bp.route('/chatbot/send', methods=['POST'])
 @csrf.exempt
 def chatbot_send():
-    """Send message to AI chatbot and get response with error diagnostics"""
+    """Send message to AI chatbot and get response with error diagnostics
+    
+    Supports actions:
+    - action='message': Regular chat (default)
+    - action='diagnose': Read server logs and analyze for issues
+    """
     try:
-        import openai
+        from openai import OpenAI
         
         data = request.get_json()
         user_message = data.get('message', '')
+        action = data.get('action', 'message')  # 'message' or 'diagnose'
         
         if not user_message:
             return jsonify({'error': 'Message is required'}), 400
         
-        api_key = os.getenv('OPENAI_API_KEY')
+        # Retrieve API key from environment
+        api_key = os.environ.get('OPENAI_API_KEY') or os.getenv('OPENAI_API_KEY')
         if not api_key:
-            return jsonify({'error': 'API key not configured'}), 500
+            error_msg = 'OpenAI API key not configured in environment'
+            logger.error(error_msg)
+            log_application_error(
+                error_type='ConfigurationError',
+                error_message=error_msg,
+                endpoint='/chatbot/send',
+                method='POST',
+                severity='critical'
+            )
+            return jsonify({'error': error_msg}), 500
         
         # Get current system diagnostics for context
+        diagnostics_context = ""
         try:
             recent_errors = ApplicationDiagnostics.get_recent_errors(hours=24, limit=5)
             health = ApplicationDiagnostics.get_system_health()
             diagnostics_context = f"""
 
-SYSTEM DIAGNOSTICS (for reference):
-- System Health: {health['status']}
-- Recent Errors (1h): {health['recent_errors_1h']}
-- Unresolved Issues: {health['unresolved_errors']}
+SYSTEM DIAGNOSTICS (Database):
+- System Health: {health.get('status', 'unknown')}
+- Recent Errors (1h): {health.get('recent_errors_1h', 0)}
+- Unresolved Issues: {health.get('unresolved_errors', 0)}
 
-Recent Error Examples:
+Recent Database Error Examples:
 {json.dumps(recent_errors[:3], indent=2) if recent_errors else 'No recent errors'}
 """
-        except:
-            diagnostics_context = ""
+        except Exception as diag_error:
+            logger.warning(f"Could not retrieve diagnostics: {diag_error}")
+            diagnostics_context = "\n(Database diagnostics unavailable)"
         
-        client = openai.OpenAI(api_key=api_key)
+        # Read server logs if diagnose action is requested
+        server_logs_context = ""
+        if action == 'diagnose':
+            try:
+                all_logs = LogReader.get_all_logs(lines=30)
+                server_logs_context = f"""
+
+SERVER LOGS (from VPS):
+{LogReader.format_logs_for_ai(all_logs)}
+
+QUICK ERROR PATTERNS:
+{json.dumps(LogReader.analyze_logs_for_errors(all_logs), indent=2)}
+"""
+            except Exception as log_error:
+                logger.warning(f"Could not read server logs: {log_error}")
+                server_logs_context = "\n(Server logs unavailable)"
         
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": f"""You are LUX, an AI marketing assistant and platform debugger for the LUX Marketing platform. 
+        # Initialize OpenAI client with explicit error handling
+        try:
+            client = OpenAI(api_key=api_key)
+        except Exception as client_error:
+            logger.error(f"Failed to initialize OpenAI client: {client_error}")
+            log_application_error(
+                error_type='OpenAIClientError',
+                error_message=f"Client initialization failed: {str(client_error)}",
+                endpoint='/chatbot/send',
+                method='POST',
+                severity='error'
+            )
+            return jsonify({'error': 'Failed to initialize AI service'}), 500
+        
+        # Make API call with explicit error handling
+        try:
+            system_prompt = f"""You are LUX, an AI marketing assistant and platform debugger for the LUX Marketing platform. 
 
 Your capabilities:
 1. MARKETING: Help with campaign generation, marketing strategy, content creation, audience segmentation
@@ -4035,6 +4082,7 @@ Your capabilities:
 4. TROUBLESHOOTING: Provide step-by-step solutions for platform issues
 5. PLATFORM GUIDANCE: Explain features, workflows, and best practices
 6. AUTO-REPAIR: Suggest code fixes, configuration changes, and implementation steps
+7. LOG ANALYSIS: Read and analyze server logs (Nginx, Gunicorn, systemd, app logs) to diagnose issues
 
 When analyzing errors:
 1. Identify the root cause
@@ -4043,29 +4091,64 @@ When analyzing errors:
 4. Suggest preventive measures
 5. Confirm fixes resolve the issue
 
-Current Platform Status:{diagnostics_context}
+Current System Context:
+{diagnostics_context}
+{server_logs_context}
 
-Be helpful, professional, concise, and proactive. Always look for ways to improve system health."""},
-                {"role": "user", "content": user_message}
-            ],
-            temperature=0.7,
-            max_tokens=1000
-        )
-        
-        bot_message = response.choices[0].message.content
-        
-        return jsonify({'response': bot_message})
+Be helpful, professional, concise, and proactive. Always look for ways to improve system health."""
+            
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=0.7,
+                max_tokens=2000
+            )
+            
+            bot_message = response.choices[0].message.content
+            
+            return jsonify({
+                'response': bot_message,
+                'action': action,
+                'has_logs': bool(server_logs_context)
+            })
+            
+        except Exception as api_error:
+            error_str = str(api_error)
+            logger.error(f"OpenAI API error: {error_str}")
+            
+            # Check if it's an authentication error
+            if 'invalid' in error_str.lower() or '401' in error_str or 'auth' in error_str.lower():
+                log_application_error(
+                    error_type='OpenAIAuthenticationError',
+                    error_message=f"API authentication failed: {error_str[:200]}",
+                    endpoint='/chatbot/send',
+                    method='POST',
+                    severity='critical'
+                )
+            else:
+                log_application_error(
+                    error_type='OpenAIAPIError',
+                    error_message=error_str[:200],
+                    endpoint='/chatbot/send',
+                    method='POST',
+                    severity='error'
+                )
+            
+            return jsonify({'error': 'AI service temporarily unavailable. Please try again.'}), 503
         
     except Exception as e:
         logger.error(f"Chatbot error: {e}")
         log_application_error(
             error_type='ChatbotError',
-            error_message=str(e),
+            error_message=str(e)[:200],
             endpoint='/chatbot/send',
             method='POST',
             severity='error'
         )
-        return jsonify({'error': f'Failed to get response: {str(e)}'}), 500
+        return jsonify({'error': 'An error occurred. Please try again.'}), 500
 
 @main_bp.route('/content-generator')
 def content_generator():
@@ -5508,4 +5591,5 @@ def zapier_contact_webhook():
 print("✓ WordPress import test and view routes loaded")
 print("✓ Zapier webhook endpoint loaded at /api/webhook/zapier-contact")
 print("✓ Error logging and diagnostics endpoints loaded")
-print("✓ AI Chatbot configured for error analysis and auto-repair")
+print("✓ AI Chatbot configured for error analysis, auto-repair, and server log reading")
+print("✓ Log reading capability: Nginx, Gunicorn, systemd, and app logs")

@@ -82,6 +82,7 @@ def index():
 with app.app_context():
     # Import models to ensure tables are created
     import models
+    from error_logger import ErrorLog
     db.create_all()
     
     # Seed automation trigger library (idempotent)
@@ -91,6 +92,14 @@ with app.app_context():
         logging.info("Automation trigger library seeded successfully")
     except Exception as e:
         logging.error(f"Error seeding trigger library: {e}")
+    
+    # Initialize error logging
+    try:
+        from error_logger import setup_error_logging_handler
+        setup_error_logging_handler()
+        logging.info("Error logging system initialized successfully")
+    except Exception as e:
+        logging.error(f"Error initializing error logging: {e}")
 
 # Add Jinja2 filters
 @app.template_filter('campaign_status_color')

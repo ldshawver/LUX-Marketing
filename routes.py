@@ -24,6 +24,7 @@ import logging
 import json
 from ai_agent import lux_agent
 from seo_service import seo_service
+from error_logger import log_application_error, ApplicationDiagnostics, ErrorLog
 
 # Stub services for missing imports (prevents LSP errors and runtime crashes)
 class SMSService:
@@ -3963,10 +3964,33 @@ def chatbot():
     """LUX AI Chatbot - Redirect to dashboard (chatbot is now a floating widget)"""
     return redirect(url_for('main.dashboard'))
 
+@main_bp.route('/api/diagnostics/errors', methods=['GET'])
+@login_required
+def get_recent_errors():
+    """Get recent application errors for chatbot analysis"""
+    try:
+        hours = request.args.get('hours', 24, type=int)
+        limit = request.args.get('limit', 20, type=int)
+        errors = ApplicationDiagnostics.get_recent_errors(hours=hours, limit=limit)
+        return jsonify({'success': True, 'errors': errors})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/diagnostics/health', methods=['GET'])
+@login_required
+def get_system_health():
+    """Get system health status for chatbot analysis"""
+    try:
+        health = ApplicationDiagnostics.get_system_health()
+        error_summary = ApplicationDiagnostics.get_error_summary()
+        return jsonify({'success': True, 'health': health, 'error_summary': error_summary})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @main_bp.route('/chatbot/send', methods=['POST'])
 @csrf.exempt
 def chatbot_send():
-    """Send message to AI chatbot and get response"""
+    """Send message to AI chatbot and get response with error diagnostics"""
     try:
         import openai
         
@@ -3976,16 +4000,33 @@ def chatbot_send():
         if not user_message:
             return jsonify({'error': 'Message is required'}), 400
         
-        api_key = os.getenv('OPENAI_API_BOUTIQUELUX')
+        api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             return jsonify({'error': 'API key not configured'}), 500
         
-        openai.api_key = api_key
+        # Get current system diagnostics for context
+        try:
+            recent_errors = ApplicationDiagnostics.get_recent_errors(hours=24, limit=5)
+            health = ApplicationDiagnostics.get_system_health()
+            diagnostics_context = f"""
+
+SYSTEM DIAGNOSTICS (for reference):
+- System Health: {health['status']}
+- Recent Errors (1h): {health['recent_errors_1h']}
+- Unresolved Issues: {health['unresolved_errors']}
+
+Recent Error Examples:
+{json.dumps(recent_errors[:3], indent=2) if recent_errors else 'No recent errors'}
+"""
+        except:
+            diagnostics_context = ""
         
-        response = openai.chat.completions.create(
+        client = openai.OpenAI(api_key=api_key)
+        
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": """You are LUX, an AI marketing assistant and platform debugger for the LUX Marketing platform. 
+                {"role": "system", "content": f"""You are LUX, an AI marketing assistant and platform debugger for the LUX Marketing platform. 
 
 Your capabilities:
 1. MARKETING: Help with campaign generation, marketing strategy, content creation, audience segmentation
@@ -3993,19 +4034,22 @@ Your capabilities:
 3. DEBUGGING: Analyze error messages, logs, and system behavior to diagnose problems
 4. TROUBLESHOOTING: Provide step-by-step solutions for platform issues
 5. PLATFORM GUIDANCE: Explain features, workflows, and best practices
+6. AUTO-REPAIR: Suggest code fixes, configuration changes, and implementation steps
 
-When users report errors or issues:
-- Ask clarifying questions to understand the problem
-- Explain what the error means in simple terms
-- Suggest solutions and next steps
-- Guide them through fixes
-- Verify the issue is resolved
+When analyzing errors:
+1. Identify the root cause
+2. Explain the issue in simple terms
+3. Provide step-by-step solutions
+4. Suggest preventive measures
+5. Confirm fixes resolve the issue
 
-Be helpful, professional, concise, and proactive about identifying problems. Always look for ways to improve the user's experience and system health."""},
+Current Platform Status:{diagnostics_context}
+
+Be helpful, professional, concise, and proactive. Always look for ways to improve system health."""},
                 {"role": "user", "content": user_message}
             ],
             temperature=0.7,
-            max_tokens=500
+            max_tokens=1000
         )
         
         bot_message = response.choices[0].message.content
@@ -4014,6 +4058,13 @@ Be helpful, professional, concise, and proactive about identifying problems. Alw
         
     except Exception as e:
         logger.error(f"Chatbot error: {e}")
+        log_application_error(
+            error_type='ChatbotError',
+            error_message=str(e),
+            endpoint='/chatbot/send',
+            method='POST',
+            severity='error'
+        )
         return jsonify({'error': f'Failed to get response: {str(e)}'}), 500
 
 @main_bp.route('/content-generator')
@@ -5456,3 +5507,5 @@ def zapier_contact_webhook():
 
 print("✓ WordPress import test and view routes loaded")
 print("✓ Zapier webhook endpoint loaded at /api/webhook/zapier-contact")
+print("✓ Error logging and diagnostics endpoints loaded")
+print("✓ AI Chatbot configured for error analysis and auto-repair")

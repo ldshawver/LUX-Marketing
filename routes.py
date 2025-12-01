@@ -28,6 +28,7 @@ from error_logger import log_application_error, ApplicationDiagnostics, ErrorLog
 from log_reader import LogReader
 from auto_repair_service import AutoRepairService
 from error_fixes import ErrorFixService
+from ai_code_fixer import AICodeFixer
 
 # Stub services for missing imports (prevents LSP errors and runtime crashes)
 class SMSService:
@@ -4058,9 +4059,56 @@ def endpoint_check():
         logger.error(f"Endpoint check error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@main_bp.route('/api/ai-fixer/auto-fix-all', methods=['POST'])
+@login_required
+def ai_auto_fix_all():
+    """AI-powered: Automatically fix ALL errors"""
+    try:
+        results = AICodeFixer.auto_fix_all_errors()
+        return jsonify({'success': True, 'fixes': results})
+    except Exception as e:
+        logger.error(f"AI auto-fix error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/ai-fixer/fix-error/<int:error_id>', methods=['POST'])
+@login_required
+def ai_fix_single_error(error_id):
+    """AI-powered: Fix a specific error by ID"""
+    try:
+        error = ErrorLog.query.get(error_id)
+        if not error:
+            return jsonify({'success': False, 'error': 'Error not found'}), 404
+        
+        fix_result = AICodeFixer.generate_and_apply_fix(
+            error.error_type,
+            error.to_dict()
+        )
+        
+        # Mark as resolved if fix succeeded
+        if fix_result.get('status') in ['ok', 'fixed', 'all_routes_registered']:
+            error.is_resolved = True
+            error.resolution_notes = json.dumps(fix_result)
+            db.session.commit()
+        
+        return jsonify({'success': True, 'error_id': error_id, 'fix_result': fix_result})
+    except Exception as e:
+        logger.error(f"AI fix error endpoint: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/ai-fixer/codebase-structure', methods=['GET'])
+@login_required
+def get_codebase_structure():
+    """Get codebase structure for AI context"""
+    try:
+        structure = AICodeFixer.get_codebase_structure()
+        return jsonify({'success': True, 'structure': structure})
+    except Exception as e:
+        logger.error(f"Codebase structure error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @main_bp.route('/chatbot/send', methods=['POST'])
 @csrf.exempt
-def chatbot_send():
+def chatbot_send_with_auto_fix():
     """Send message to AI chatbot and get response with error diagnostics
     
     Supports actions:

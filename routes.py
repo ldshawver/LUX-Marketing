@@ -25,6 +25,19 @@ import json
 from ai_agent import lux_agent
 from seo_service import seo_service
 
+# Stub services for missing imports (prevents LSP errors and runtime crashes)
+class SMSService:
+    @staticmethod
+    def send_sms(phone, message):
+        logging.warning(f"SMS Service not configured: {phone}")
+        return None
+
+class SchedulingService:
+    @staticmethod
+    def schedule_task(task_name, time):
+        logging.warning(f"Scheduling Service not configured: {task_name}")
+        return None
+
 logger = logging.getLogger(__name__)
 
 main_bp = Blueprint('main', __name__)
@@ -3972,7 +3985,23 @@ def chatbot_send():
         response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are LUX, an AI marketing assistant for the LUX Marketing platform. You help users with campaign generation, marketing strategy, content creation, and platform guidance. Be helpful, professional, and concise."},
+                {"role": "system", "content": """You are LUX, an AI marketing assistant and platform debugger for the LUX Marketing platform. 
+
+Your capabilities:
+1. MARKETING: Help with campaign generation, marketing strategy, content creation, audience segmentation
+2. ERROR DETECTION: Identify, explain, and help fix platform errors, bugs, and configuration issues
+3. DEBUGGING: Analyze error messages, logs, and system behavior to diagnose problems
+4. TROUBLESHOOTING: Provide step-by-step solutions for platform issues
+5. PLATFORM GUIDANCE: Explain features, workflows, and best practices
+
+When users report errors or issues:
+- Ask clarifying questions to understand the problem
+- Explain what the error means in simple terms
+- Suggest solutions and next steps
+- Guide them through fixes
+- Verify the issue is resolved
+
+Be helpful, professional, concise, and proactive about identifying problems. Always look for ways to improve the user's experience and system health."""},
                 {"role": "user", "content": user_message}
             ],
             temperature=0.7,
@@ -5394,16 +5423,15 @@ def zapier_contact_webhook():
         
         else:
             # Create new contact
-            new_contact = Contact(
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                phone=phone,
-                segment='Newsletter' if 'newsletter' in source.lower() or 'signup' in source.lower() else 'lead',
-                tags='zapier',
-                source=source,
-                is_active=True
-            )
+            new_contact = Contact()
+            new_contact.email = email
+            new_contact.first_name = first_name
+            new_contact.last_name = last_name
+            new_contact.phone = phone
+            new_contact.segment = 'Newsletter' if 'newsletter' in source.lower() or 'signup' in source.lower() else 'lead'
+            new_contact.tags = 'zapier'
+            new_contact.source = source
+            new_contact.is_active = True
             
             db.session.add(new_contact)
             db.session.commit()

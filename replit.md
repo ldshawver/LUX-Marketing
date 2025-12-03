@@ -8,8 +8,37 @@ LUX Marketing is a comprehensive multi-channel marketing automation platform wit
 - Automated error logging and diagnostics system
 - AI chatbot with auto-repair capabilities and server log reading
 - Pure black background with brand colors (purple, cyan, pink)
+- Replit Auth OAuth integration (Google, GitHub, Apple, email sign-in)
 
-## Latest Updates - Session: Dec 01, 2025
+## Latest Updates - Session: Dec 03, 2025
+
+### Replit Auth OAuth Integration
+Added secure OAuth authentication via Replit's OpenID Connect provider.
+
+**Features**:
+- Sign in with Google, GitHub, X (Twitter), Apple, or email via Replit
+- JWKS-based JWT signature verification for security
+- Automatic user creation or linking by email
+- Token refresh handling with secure storage
+
+**Security Implementation**:
+- JWT signature verification using RS256 and Replit JWKS
+- Audience validation against REPL_ID
+- Issuer validation against Replit OIDC
+- Token expiration and required claims validation (sub, iss, aud, exp, iat)
+
+**Files**:
+- `replit_auth.py` - OAuth blueprint with flask-dance
+- `models.py` - ReplitOAuth model for token storage
+- `templates/login.html` - "Sign in with Replit" button
+
+**Routes**:
+- `/auth/replit_auth/login` - Initiate OAuth flow
+- `/auth/replit_auth/replit-logout` - Log out from Replit session
+
+---
+
+## Previous Updates - Session: Dec 01, 2025
 
 ### ✅ Completed Features
 

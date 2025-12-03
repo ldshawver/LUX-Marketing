@@ -8,8 +8,11 @@ import jwt
 import os
 import uuid
 import logging
+import time
+import requests
 from functools import wraps
 from urllib.parse import urlencode
+from jwt import PyJWKClient
 
 from flask import g, session, redirect, request, url_for, flash
 from flask_dance.consumer import (
@@ -27,6 +30,79 @@ from werkzeug.security import generate_password_hash
 from app import app, db
 
 logger = logging.getLogger(__name__)
+
+_jwks_client = None
+_jwks_cache_time = 0
+JWKS_CACHE_DURATION = 3600
+
+
+def get_jwks_client():
+    """Get or create JWKS client with caching for Replit OIDC keys"""
+    global _jwks_client, _jwks_cache_time
+    
+    issuer_url = os.environ.get('ISSUER_URL', "https://replit.com/oidc")
+    jwks_url = f"{issuer_url}/.well-known/jwks.json"
+    
+    current_time = time.time()
+    if _jwks_client is None or (current_time - _jwks_cache_time) > JWKS_CACHE_DURATION:
+        try:
+            _jwks_client = PyJWKClient(jwks_url, cache_keys=True, lifespan=JWKS_CACHE_DURATION)
+            _jwks_cache_time = current_time
+            logger.info("JWKS client initialized/refreshed successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize JWKS client: {e}")
+            raise
+    
+    return _jwks_client
+
+
+def verify_id_token(id_token, expected_audience):
+    """
+    Verify and decode the ID token with full security validation.
+    Returns the decoded claims if valid, raises an exception otherwise.
+    """
+    issuer_url = os.environ.get('ISSUER_URL', "https://replit.com/oidc")
+    
+    try:
+        jwks_client = get_jwks_client()
+        signing_key = jwks_client.get_signing_key_from_jwt(id_token)
+        
+        claims = jwt.decode(
+            id_token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=expected_audience,
+            issuer=issuer_url,
+            options={
+                "verify_signature": True,
+                "verify_exp": True,
+                "verify_iat": True,
+                "verify_aud": True,
+                "verify_iss": True,
+                "require": ["sub", "iss", "aud", "exp", "iat"]
+            }
+        )
+        
+        if 'sub' not in claims or not claims['sub']:
+            raise jwt.InvalidTokenError("Missing or empty 'sub' claim")
+        
+        return claims
+        
+    except jwt.ExpiredSignatureError:
+        logger.error("ID token has expired")
+        raise
+    except jwt.InvalidAudienceError:
+        logger.error(f"Invalid audience in ID token")
+        raise
+    except jwt.InvalidIssuerError:
+        logger.error(f"Invalid issuer in ID token")
+        raise
+    except jwt.InvalidSignatureError:
+        logger.error("Invalid signature on ID token")
+        raise
+    except Exception as e:
+        logger.error(f"ID token verification failed: {e}")
+        raise
 
 
 class UserSessionStorage(BaseStorage):
@@ -206,34 +282,18 @@ def save_or_update_user(user_claims):
 
 @oauth_authorized.connect
 def logged_in(blueprint, token):
-    """Handle successful OAuth authorization"""
+    """Handle successful OAuth authorization with full JWT verification"""
     if blueprint.name != "replit_auth":
         return
     
     try:
-        issuer_url = os.environ.get('ISSUER_URL', "https://replit.com/oidc")
         repl_id = os.environ.get('REPL_ID')
-        
-        user_claims = jwt.decode(
-            token['id_token'],
-            options={"verify_signature": False}
-        )
-        
-        if user_claims.get('iss') != issuer_url:
-            logger.error(f"Invalid issuer: {user_claims.get('iss')}")
-            flash('Authentication failed: invalid token issuer.', 'error')
+        if not repl_id:
+            logger.error("REPL_ID not set - cannot validate token")
+            flash('Authentication configuration error.', 'error')
             return redirect(url_for('auth.login'))
         
-        if 'sub' not in user_claims:
-            logger.error("Missing 'sub' claim in token")
-            flash('Authentication failed: invalid token.', 'error')
-            return redirect(url_for('auth.login'))
-        
-        import time
-        if user_claims.get('exp', 0) < time.time():
-            logger.error("Token has expired")
-            flash('Authentication failed: token expired.', 'error')
-            return redirect(url_for('auth.login'))
+        user_claims = verify_id_token(token['id_token'], expected_audience=repl_id)
         
         user = save_or_update_user(user_claims)
         login_user(user, remember=True)
@@ -246,7 +306,19 @@ def logged_in(blueprint, token):
             return redirect(next_url)
         return redirect(url_for('main.dashboard'))
         
-    except jwt.exceptions.DecodeError as e:
+    except jwt.ExpiredSignatureError:
+        flash('Authentication failed: session expired.', 'error')
+        return redirect(url_for('auth.login'))
+    except jwt.InvalidAudienceError:
+        flash('Authentication failed: invalid token audience.', 'error')
+        return redirect(url_for('auth.login'))
+    except jwt.InvalidIssuerError:
+        flash('Authentication failed: invalid token issuer.', 'error')
+        return redirect(url_for('auth.login'))
+    except jwt.InvalidSignatureError:
+        flash('Authentication failed: invalid token signature.', 'error')
+        return redirect(url_for('auth.login'))
+    except jwt.DecodeError as e:
         logger.error(f"JWT decode error: {e}")
         flash('Authentication failed: invalid token format.', 'error')
         return redirect(url_for('auth.login'))

@@ -6125,6 +6125,7 @@ def analytics_comprehensive():
     """Comprehensive analytics dashboard with all data sources"""
     from sqlalchemy import func
     from datetime import timedelta
+    from models import Deal
     
     period_days = request.args.get('period_days', 30, type=int)
     today = datetime.utcnow().date()
@@ -6134,7 +6135,12 @@ def analytics_comprehensive():
     total_sent = CampaignRecipient.query.filter_by(status='sent').count()
     total_opens = EmailTracking.query.filter_by(event_type='open').count()
     total_clicks = EmailTracking.query.filter_by(event_type='click').count()
-    total_revenue = db.session.query(func.sum(Deal.value)).scalar() or 0
+    
+    try:
+        total_revenue = db.session.query(func.sum(Deal.value)).scalar() or 0
+    except Exception:
+        total_revenue = 0
+    
     new_leads = Contact.query.filter(Contact.created_at >= period_start).count()
     
     open_rate = (total_opens / total_sent * 100) if total_sent > 0 else 0

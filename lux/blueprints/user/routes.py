@@ -30,23 +30,28 @@ def change_password():
             flash('All fields are required', 'error')
             return render_template('change_password.html')
         
-        if not check_password_hash(current_user.password_hash, current_password):
-            flash('Current password is incorrect', 'error')
+        try:
+            if not check_password_hash(current_user.password_hash, current_password):
+                flash('Current password is incorrect', 'error')
+                return render_template('change_password.html')
+            
+            if len(new_password) < 6:
+                flash('New password must be at least 6 characters long', 'error')
+                return render_template('change_password.html')
+            
+            if new_password != confirm_password:
+                flash('New passwords do not match', 'error')
+                return render_template('change_password.html')
+            
+            current_user.password_hash = generate_password_hash(new_password)
+            db.session.commit()
+            
+            flash('Password updated successfully', 'success')
+            return redirect(url_for('user.profile'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating password: {str(e)}', 'error')
             return render_template('change_password.html')
-        
-        if len(new_password) < 6:
-            flash('New password must be at least 6 characters long', 'error')
-            return render_template('change_password.html')
-        
-        if new_password != confirm_password:
-            flash('New passwords do not match', 'error')
-            return render_template('change_password.html')
-        
-        current_user.password_hash = generate_password_hash(new_password)
-        db.session.commit()
-        
-        flash('Password updated successfully', 'success')
-        return redirect(url_for('user.profile'))
     
     return render_template('change_password.html')
 

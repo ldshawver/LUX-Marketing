@@ -29,6 +29,7 @@ from log_reader import LogReader
 from auto_repair_service import AutoRepairService
 from error_fixes import ErrorFixService
 from ai_code_fixer import AICodeFixer
+from ai_action_executor import AIActionExecutor
 
 # Stub services for missing imports (prevents LSP errors and runtime crashes)
 class SMSService:
@@ -46,6 +47,156 @@ class SchedulingService:
 logger = logging.getLogger(__name__)
 
 main_bp = Blueprint('main', __name__)
+
+
+# Activity Tracking Routes
+@main_bp.route('/activities/log', methods=['POST'])
+@login_required
+def log_activity():
+    """Log CRM activity (call, email, meeting, note)"""
+    from models import Event
+    try:
+        activity_type = request.form.get('activity_type')
+        contact_id = request.form.get('contact_id')
+        subject = request.form.get('subject')
+        description = request.form.get('description')
+        
+        activity = Event(
+            name=subject,
+            description=description,
+            event_type=activity_type,  # call, email, meeting, note
+            is_active=True
+        )
+        
+        if contact_id:
+            from models import Contact
+            contact = Contact.query.get(contact_id)
+            if contact:
+                activity.name = f"{activity_type.title()}: {subject} - {contact.full_name}"
+        
+        db.session.add(activity)
+        db.session.commit()
+        
+        flash(f'{activity_type.title()} logged successfully', 'success')
+        return redirect(request.referrer or url_for('main.contacts'))
+    except Exception as e:
+        logger.error(f"Error logging activity: {e}")
+        flash('Error logging activity', 'error')
+        return redirect(request.referrer or url_for('main.contacts'))
+
+@main_bp.route('/contacts/<int:contact_id>/activities')
+@login_required
+def contact_activities(contact_id):
+    """View all activities for a contact"""
+    from models import Contact, Event
+    contact = Contact.query.get_or_404(contact_id)
+    activities = Event.query.filter(
+        Event.name.contains(contact.full_name)
+    ).order_by(Event.created_at.desc()).all()
+    
+    return render_template('contact_activities.html', contact=contact, activities=activities)
+
+
+
+
+# Blog Management Routes
+@main_bp.route('/blog')
+@login_required
+def blog_list():
+    """List all blog posts"""
+    from models import Event
+    posts = Event.query.filter_by(event_type='blog_post').order_by(Event.created_at.desc()).all()
+    return render_template('blog_list.html', posts=posts)
+
+@main_bp.route('/blog/create', methods=['GET', 'POST'])
+@login_required
+def blog_create():
+    """Create new blog post with AI assistance"""
+    if request.method == 'POST':
+        from models import Event
+        from ai_agent import lux_agent
+        
+        use_ai = request.form.get('use_ai') == 'true'
+        
+        if use_ai:
+            topic = request.form.get('topic')
+            keywords = request.form.get('keywords', '').split(',')
+            tone = request.form.get('tone', 'professional')
+            
+            # Generate blog post with AI
+            result = lux_agent.generate_blog_post(topic, keywords, tone)
+            
+            if result:
+                post = Event(
+                    name=result.get('title'),
+                    description=result.get('content'),
+                    event_type='blog_post',
+                    is_active=True
+                )
+                db.session.add(post)
+                db.session.commit()
+                flash('Blog post created with AI!', 'success')
+                return redirect(url_for('main.blog_edit', post_id=post.id))
+        else:
+            title = request.form.get('title')
+            content = request.form.get('content')
+            
+            post = Event(
+                name=title,
+                description=content,
+                event_type='blog_post',
+                is_active=True
+            )
+            db.session.add(post)
+            db.session.commit()
+            flash('Blog post created!', 'success')
+            return redirect(url_for('main.blog_edit', post_id=post.id))
+    
+    return render_template('blog_create.html')
+
+@main_bp.route('/blog/<int:post_id>/edit', methods=['GET', 'POST'])
+@login_required
+def blog_edit(post_id):
+    """Edit blog post"""
+    from models import Event
+    post = Event.query.get_or_404(post_id)
+    
+    if request.method == 'POST':
+        post.name = request.form.get('title')
+        post.description = request.form.get('content')
+        db.session.commit()
+        flash('Blog post updated!', 'success')
+        return redirect(url_for('main.blog_list'))
+    
+    return render_template('blog_edit.html', post=post)
+
+@main_bp.route('/blog/<int:post_id>/generate-image', methods=['POST'])
+@login_required
+def blog_generate_image(post_id):
+    """Generate featured image for blog post"""
+    from models import Event
+    import openai
+    import os
+    
+    post = Event.query.get_or_404(post_id)
+    prompt = request.form.get('image_prompt', f"Featured image for blog: {post.name}")
+    
+    try:
+        client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1792x1024",
+            quality="standard",
+            n=1
+        )
+        
+        image_url = response.data[0].url
+        # Store image URL in post metadata
+        flash('Image generated successfully!', 'success')
+        return jsonify({'success': True, 'image_url': image_url})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @main_bp.route('/')
 @login_required
@@ -4106,6 +4257,130 @@ def get_codebase_structure():
         logger.error(f"Codebase structure error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@main_bp.route('/api/ai/execute-action', methods=['POST'])
+@login_required
+def execute_ai_action():
+    """Execute AI actions immediately (not just recommend)"""
+    try:
+        data = request.get_json() or {}
+        action = data.get('action')
+        params = data.get('params', {})
+        
+        if not action:
+            return jsonify({'success': False, 'error': 'action parameter required'}), 400
+        
+        result = AIActionExecutor.handle_action(action, params)
+        return jsonify({'success': True, 'result': result})
+    except Exception as e:
+        logger.error(f"AI action execution error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/settings/integrations')
+@login_required
+def settings_integrations():
+    """Settings & Integrations page - shows current user's company config"""
+    try:
+        company = current_user.get_default_company()
+        if not company:
+            return redirect(url_for('main.dashboard'))
+        return render_template('company_settings.html', company=company)
+    except Exception as e:
+        logger.error(f"Settings page error: {e}")
+        return redirect(url_for('main.dashboard'))
+
+@main_bp.route('/company/<int:company_id>/settings')
+@login_required
+def company_settings(company_id):
+    """Company settings & integrations page"""
+    try:
+        company = Company.query.get(company_id)
+        if not company:
+            return redirect(url_for('main.dashboard'))
+        return render_template('company_settings.html', company=company)
+    except Exception as e:
+        logger.error(f"Settings page error: {e}")
+        return redirect(url_for('main.dashboard'))
+
+@main_bp.route('/api/company/<int:company_id>/secrets', methods=['GET'])
+@login_required
+def get_company_secrets(company_id):
+    """Get all secrets for a company"""
+    try:
+        from models import CompanySecret
+        company = Company.query.get(company_id)
+        if not company:
+            return jsonify({'success': False, 'error': 'Company not found'}), 404
+        
+        secrets = CompanySecret.query.filter_by(company_id=company_id).all()
+        return jsonify({
+            'success': True,
+            'company': company.name,
+            'secrets': [{'key': s.key, 'created_at': s.created_at.isoformat()} for s in secrets]
+        })
+    except Exception as e:
+        logger.error(f"Get secrets error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/company/<int:company_id>/secrets/save', methods=['POST'])
+@login_required
+def save_company_secrets(company_id):
+    """Save/update secrets for a company"""
+    try:
+        from models import CompanySecret
+        company = Company.query.get(company_id)
+        if not company:
+            return jsonify({'success': False, 'error': 'Company not found'}), 404
+        
+        data = request.get_json()
+        
+        for key, value in data.items():
+            if value:  # Only save if value is provided
+                company.set_secret(key, value)
+        
+        return jsonify({
+            'success': True,
+            'company': company.name,
+            'secrets_saved': len([k for k, v in data.items() if v])
+        })
+    except Exception as e:
+        logger.error(f"Save secrets error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/company/<int:company_id>/settings', methods=['POST'])
+@login_required
+def save_company_settings(company_id):
+    """Save company brand settings"""
+    try:
+        company = Company.query.get(company_id)
+        if not company:
+            return jsonify({'success': False, 'error': 'Company not found'}), 404
+        
+        data = request.get_json()
+        
+        if 'primary_color' in data:
+            company.primary_color = data['primary_color']
+        if 'secondary_color' in data:
+            company.secondary_color = data['secondary_color']
+        if 'accent_color' in data:
+            company.accent_color = data['accent_color']
+        if 'font_family' in data:
+            company.font_family = data['font_family']
+        if 'website_url' in data:
+            company.website_url = data['website_url']
+        if 'logo_path' in data:
+            company.logo_path = data['logo_path']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'company': company.name,
+            'message': 'Settings updated successfully'
+        })
+    except Exception as e:
+        logger.error(f"Save settings error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @main_bp.route('/chatbot/send', methods=['POST'])
 @csrf.exempt
 def chatbot_send_with_auto_fix():
@@ -5754,3 +6029,8 @@ print("  - /api/system/diagnosis (comprehensive analysis)")
 print("  - /api/system/health (resource usage)")
 print("  - /api/system/validate-openai (API key validation)")
 print("  - /api/system/endpoint-check (404 detection)")
+print("✓ AI Action Executor endpoints (autonomous, action-oriented):")
+print("  - POST /api/ai/execute-action (execute AI actions immediately)")
+print("  - GET /api/company/<id>/secrets (retrieve company secrets)")
+print("✓ CompanySecret model created for secure secret storage per company")
+print("✓ Secrets populated for Lucifer Cruz company from environment variables")

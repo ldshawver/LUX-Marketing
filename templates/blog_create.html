@@ -1,0 +1,74 @@
+
+{% extends "base.html" %}
+{% block title %}Create Blog Post - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1><i data-feather="edit"></i> Create Blog Post</h1>
+  
+  <div class="card">
+    <div class="card-body">
+      <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+          <a class="nav-link active" data-bs-toggle="tab" href="#ai-writer">AI Writer</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-bs-toggle="tab" href="#manual">Manual Entry</a>
+        </li>
+      </ul>
+      
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="ai-writer">
+          <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="use_ai" value="true"/>
+            
+            <div class="mb-3">
+              <label class="form-label">Topic</label>
+              <input type="text" name="topic" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Keywords (comma separated)</label>
+              <input type="text" name="keywords" class="form-control">
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Tone</label>
+              <select name="tone" class="form-control">
+                <option value="professional">Professional</option>
+                <option value="casual">Casual</option>
+                <option value="technical">Technical</option>
+                <option value="conversational">Conversational</option>
+              </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+              <i data-feather="zap"></i> Generate with AI
+            </button>
+          </form>
+        </div>
+        
+        <div class="tab-pane fade" id="manual">
+          <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="use_ai" value="false"/>
+            
+            <div class="mb-3">
+              <label class="form-label">Title</label>
+              <input type="text" name="title" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Content</label>
+              <textarea name="content" class="form-control" rows="15" required></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Create Post</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>feather.replace();</script>
+{% endblock %}

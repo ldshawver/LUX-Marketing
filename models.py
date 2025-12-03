@@ -98,8 +98,25 @@ class Company(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    secrets = db.relationship('CompanySecret', backref='company', cascade='all, delete-orphan', lazy='dynamic')
+    
     def __repr__(self):
         return f'<Company {self.name}>'
+    
+    def get_secret(self, key):
+        """Get a secret by key"""
+        secret = CompanySecret.query.filter_by(company_id=self.id, key=key).first()
+        return secret.value if secret else None
+    
+    def set_secret(self, key, value):
+        """Set a secret"""
+        secret = CompanySecret.query.filter_by(company_id=self.id, key=key).first()
+        if secret:
+            secret.value = value
+        else:
+            secret = CompanySecret(company_id=self.id, key=key, value=value)
+            db.session.add(secret)
+        db.session.commit()
     
     @property
     def user_count(self):
@@ -108,6 +125,21 @@ class Company(db.Model):
                 user_company.c.company_id == self.id
             )
         ).scalar()
+
+class CompanySecret(db.Model):
+    """Store secrets per company (API keys, tokens, etc)"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    key = db.Column(db.String(255), nullable=False)  # e.g., OPENAI_API_KEY
+    value = db.Column(db.Text, nullable=False)  # The actual secret value
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('company_id', 'key', name='uq_company_secret_key'),)
+    
+    def __repr__(self):
+        return f'<CompanySecret {self.key}>'
 
 class Contact(db.Model):
     id = db.Column(db.Integer, primary_key=True)

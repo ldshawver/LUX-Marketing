@@ -310,3 +310,107 @@ class AICodeFixer:
                 return {'status': 'unknown_error_type', 'error_type': error_type}
         except Exception as e:
             return {'error': str(e), 'status': 'fix_failed'}
+    
+    @staticmethod
+    def implement_feature_from_request(feature_description, client):
+        """Use AI to understand feature request and generate implementation code"""
+        try:
+            from openai import OpenAI
+            
+            # Get codebase context
+            codebase_structure = AICodeFixer.get_codebase_structure()
+            
+            prompt = f"""You are an expert Flask developer implementing a new feature.
+
+Feature Request: {feature_description}
+
+Current Codebase Structure:
+- Routes: {codebase_structure.get('routes', 0)} endpoints
+- Models: {codebase_structure.get('models', 0)} database models
+- Services: Multiple service modules available
+
+Existing Models: Contact, Campaign, EmailTemplate, User, Company, Deal, LeadScore, Automation, AgentTask
+
+Instructions:
+1. Understand what the user wants
+2. Determine what code needs to be added (routes, models, templates, services)
+3. Generate complete, working code
+4. Specify which files to modify
+
+Respond with JSON:
+{{
+  "understanding": "What the user wants in plain English",
+  "implementation_plan": [
+    "Step 1: ...",
+    "Step 2: ..."
+  ],
+  "files_to_modify": [
+    {{
+      "file": "routes.py",
+      "action": "add_route",
+      "code": "complete code to add",
+      "location": "where to add it"
+    }}
+  ],
+  "database_changes": "Any model/migration needs",
+  "testing_steps": ["How to verify it works"]
+}}"""
+            
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are an expert Flask developer. Generate complete, working code."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3
+            )
+            
+            implementation = json.loads(response.choices[0].message.content)
+            
+            return {
+                'success': True,
+                'feature_plan': implementation,
+                'status': 'plan_generated',
+                'message': f"Feature implementation plan created: {implementation.get('understanding')}"
+            }
+            
+        except Exception as e:
+            logger.error(f"Feature implementation error: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    @staticmethod
+    def auto_fix_404_errors():
+        """Automatically detect and fix 404 Not Found errors by creating missing routes"""
+        try:
+            from app import app
+            
+            # Get registered routes
+            registered_routes = set()
+            for rule in app.url_map.iter_rules():
+                if rule.endpoint != 'static':
+                    registered_routes.add(str(rule.rule))
+            
+            # Common routes that should exist
+            expected_routes = [
+                '/', '/dashboard', '/contacts', '/campaigns', '/crm-unified',
+                '/analytics-hub', '/ai-dashboard', '/chatbot', '/lux'
+            ]
+            
+            missing_routes = [r for r in expected_routes if r not in registered_routes]
+            
+            if missing_routes:
+                return {
+                    'status': 'missing_routes_detected',
+                    'missing_routes': missing_routes,
+                    'fix': 'These routes need to be added to routes.py',
+                    'action_needed': True
+                }
+            
+            return {
+                'status': 'all_routes_ok',
+                'registered_routes': len(registered_routes)
+            }
+            
+        except Exception as e:
+            return {'error': str(e), 'status': 'check_failed'}

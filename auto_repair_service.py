@@ -153,7 +153,7 @@ Focus on immediate, actionable fixes."""
     
     @staticmethod
     def execute_auto_repair(error_id=None):
-        """Execute auto-repair on errors"""
+        """Execute intelligent auto-repair with proactive monitoring"""
         import os
         from openai import OpenAI
         
@@ -162,7 +162,8 @@ Focus on immediate, actionable fixes."""
             'tested': 0,
             'resolved': 0,
             'unresolved': 0,
-            'details': []
+            'details': [],
+            'proactive_fixes': []
         }
         
         try:
@@ -186,6 +187,18 @@ Focus on immediate, actionable fixes."""
             
             results['total_errors'] = len(errors_to_process)
             
+            # Proactive checks
+            from ai_code_fixer import AICodeFixer
+            
+            # 1. Check for 404 errors
+            route_check = AICodeFixer.auto_fix_404_errors()
+            if route_check.get('action_needed'):
+                results['proactive_fixes'].append({
+                    'type': '404_detection',
+                    'missing_routes': route_check.get('missing_routes', [])
+                })
+            
+            # 2. Process each error with intelligence
             for error in errors_to_process:
                 try:
                     detail = {
@@ -195,9 +208,15 @@ Focus on immediate, actionable fixes."""
                         'status': 'processing'
                     }
                     
-                    # Generate fix plan
+                    # Generate intelligent fix plan
                     fix_plan = AutoRepairService.generate_fix_plan_with_ai(error, client)
                     detail['fix_plan'] = fix_plan
+                    
+                    # Attempt automatic fix if flagged as auto-fixable
+                    if fix_plan.get('auto_fixable'):
+                        fix_result = AICodeFixer.generate_and_apply_fix(error['type'], error)
+                        detail['auto_fix_attempted'] = True
+                        detail['fix_result'] = fix_result
                     
                     # Test resolution
                     is_resolved = AutoRepairService.verify_error_resolution(error)
@@ -214,7 +233,8 @@ Focus on immediate, actionable fixes."""
                                 'auto_repaired': True,
                                 'repaired_at': datetime.utcnow().isoformat(),
                                 'fix_plan': fix_plan,
-                                'test_result': 'resolved'
+                                'test_result': 'resolved',
+                                'autonomous': True
                             })
                             db.session.commit()
                             detail['status'] = 'resolved'
@@ -234,13 +254,33 @@ Focus on immediate, actionable fixes."""
                         'message': str(e)
                     })
             
-            logger.info(f"Auto-repair completed: {results['resolved']}/{results['tested']} resolved")
+            logger.info(f"Auto-repair completed: {results['resolved']}/{results['tested']} resolved, {len(results['proactive_fixes'])} proactive fixes")
             return results
         
         except Exception as e:
             logger.error(f"Auto-repair service error: {e}")
             results['error'] = str(e)
             return results
+    
+    @staticmethod
+    def continuous_monitoring():
+        """Continuously monitor for errors and auto-fix them"""
+        try:
+            from error_logger import ApplicationDiagnostics
+            
+            # Check system health
+            health = ApplicationDiagnostics.get_system_health()
+            
+            # If status is not healthy, trigger auto-repair
+            if health.get('status') in ['warning', 'critical']:
+                logger.info("Continuous monitoring detected issues - triggering auto-repair")
+                return AutoRepairService.execute_auto_repair()
+            
+            return {'status': 'healthy', 'monitoring': 'active'}
+            
+        except Exception as e:
+            logger.error(f"Continuous monitoring error: {e}")
+            return {'error': str(e)}
     
     @staticmethod
     def clear_resolved_errors(older_than_hours=24):

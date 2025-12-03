@@ -247,49 +247,6 @@ class LUXAgent:
             # Create campaign
             campaign = Campaign(
                 name=content['campaign_name'],
-
-
-    def generate_blog_post(self, topic, keywords=None, tone='professional'):
-        """Generate SEO-optimized blog post"""
-        try:
-            keywords_str = ', '.join(keywords) if keywords else ''
-            
-            prompt = f"""
-            Write a comprehensive, SEO-optimized blog post about: {topic}
-            
-            Keywords to include: {keywords_str}
-            Tone: {tone}
-            Length: 800-1200 words
-            
-            Include:
-            1. Compelling title
-            2. Introduction with hook
-            3. Well-structured body with H2/H3 headings
-            4. Conclusion with CTA
-            5. Natural keyword integration
-            
-            Return JSON with:
-            {{
-                "title": "blog post title",
-                "content": "full blog content with HTML formatting"
-            }}
-            """
-            
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": self.agent_personality},
-                    {"role": "user", "content": prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.7
-            )
-            
-            return json.loads(response.choices[0].message.content)
-        except Exception as e:
-            logger.error(f"Blog generation error: {e}")
-            return None
-
                 subject=content['subject'],
                 template_id=template_id,
                 status='draft'
@@ -342,6 +299,47 @@ class LUXAgent:
         except Exception as e:
             logger.error(f"LUX error creating automated campaign: {e}")
             db.session.rollback()
+            return None
+    
+    def generate_blog_post(self, topic, keywords=None, tone='professional'):
+        """Generate SEO-optimized blog post"""
+        try:
+            keywords_str = ', '.join(keywords) if keywords else ''
+            
+            prompt = f"""
+            Write a comprehensive, SEO-optimized blog post about: {topic}
+            
+            Keywords to include: {keywords_str}
+            Tone: {tone}
+            Length: 800-1200 words
+            
+            Include:
+            1. Compelling title
+            2. Introduction with hook
+            3. Well-structured body with H2/H3 headings
+            4. Conclusion with CTA
+            5. Natural keyword integration
+            
+            Return JSON with:
+            {{
+                "title": "blog post title",
+                "content": "full blog content with HTML formatting"
+            }}
+            """
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": self.agent_personality},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.7
+            )
+            
+            return json.loads(response.choices[0].message.content)
+        except Exception as e:
+            logger.error(f"Blog generation error: {e}")
             return None
     
     def generate_subject_line_variants(self, campaign_objective, original_subject=None):

@@ -12,6 +12,24 @@
                     LUX Marketing
                 </h2>
                 
+                {% if replit_auth_enabled %}
+                <!-- Replit Auth Login Option -->
+                <a href="{{ url_for('replit_auth.login') }}" class="btn btn-dark w-100 mb-3 d-flex align-items-center justify-content-center">
+                    <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="me-2">
+                        <path d="M7 5.5C7 4.67157 7.67157 4 8.5 4H15.5C16.3284 4 17 4.67157 17 5.5V12H8.5C7.67157 12 7 11.3284 7 10.5V5.5Z" fill="#F26207"/>
+                        <path d="M17 12H25.5C26.3284 12 27 12.6716 27 13.5V18.5C27 19.3284 26.3284 20 25.5 20H17V12Z" fill="#F26207"/>
+                        <path d="M7 21.5C7 20.6716 7.67157 20 8.5 20H17V28H8.5C7.67157 28 7 27.3284 7 26.5V21.5Z" fill="#F26207"/>
+                    </svg>
+                    Sign in with Replit
+                </a>
+                
+                <div class="d-flex align-items-center my-3">
+                    <hr class="flex-grow-1">
+                    <span class="px-3 text-muted small">or sign in with username</span>
+                    <hr class="flex-grow-1">
+                </div>
+                {% endif %}
+                
                 <form method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-3">

@@ -20,14 +20,22 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
     
+    # Check if Replit Auth is available
+    replit_auth_enabled = False
+    try:
+        from replit_auth import is_replit_auth_enabled
+        replit_auth_enabled = is_replit_auth_enabled()
+    except ImportError:
+        pass
+    
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
-        remember = bool(request.form.get('remember'))
+        remember = request.form.get('remember') in ['on', 'true', '1', 'yes']
         
         if not username or not password:
             flash('Username and password are required', 'error')
-            return render_template('login.html')
+            return render_template('login.html', replit_auth_enabled=replit_auth_enabled)
         
         user = User.query.filter_by(username=username).first()
         
@@ -38,7 +46,7 @@ def login():
         else:
             flash('Invalid username or password', 'error')
     
-    return render_template('login.html')
+    return render_template('login.html', replit_auth_enabled=replit_auth_enabled)
 
 @auth_bp.route('/logout')
 @login_required
@@ -127,13 +135,13 @@ def forgot_password():
             # Generate password reset token
             serializer = get_serializer()
             token = serializer.dumps(user.email, salt='password-reset')
+            reset_url = url_for('auth.reset_password', token=token, _external=True)
             
-            # Send password reset email
+            # Try to send password reset email
+            email_sent = False
             try:
                 from email_service import EmailService
                 email_service = EmailService()
-                
-                reset_url = url_for('auth.reset_password', token=token, _external=True)
                 
                 html_content = f"""
                 <html>
@@ -167,26 +175,35 @@ def forgot_password():
                 </html>
                 """
                 
-                result = email_service.send_email(
+                # Get the configured from email
+                from_email = os.environ.get("MS_FROM_EMAIL", "noreply@luxemail.com")
+                
+                email_sent = email_service.send_email(
                     to_email=user.email,
                     subject="Password Reset - LUX Email Marketing",
                     html_content=html_content,
-                    from_email="noreply@luxemail.com"
+                    from_email=from_email
                 )
-                
-                if result:
-                    flash('Password reset instructions have been sent to your email', 'success')
-                else:
-                    flash('Failed to send password reset email. Please try again or contact support.', 'error')
                     
             except Exception as e:
-                flash('Failed to send password reset email. Please try again later.', 'error')
+                import logging
+                logging.error(f"Password reset email error: {str(e)}")
+                email_sent = False
+            
+            if email_sent:
+                flash('Password reset instructions have been sent to your email', 'success')
+                return redirect(url_for('auth.login'))
+            else:
+                # Email failed - show direct reset link as fallback
+                return render_template('forgot_password.html', 
+                                     reset_link=reset_url,
+                                     email_failed=True,
+                                     user_email=user.email)
                 
         else:
             # Don't reveal if email exists or not for security
             flash('If an account with that email exists, password reset instructions have been sent', 'info')
-        
-        return redirect(url_for('auth.login'))
+            return redirect(url_for('auth.login'))
     
     return render_template('forgot_password.html')
 

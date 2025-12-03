@@ -74,6 +74,17 @@ app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(user_bp, url_prefix='/user')
 app.register_blueprint(advanced_config_bp)
 
+# Register Replit Auth blueprint if available
+try:
+    from replit_auth import make_replit_blueprint, is_replit_auth_enabled
+    if is_replit_auth_enabled():
+        replit_bp = make_replit_blueprint()
+        if replit_bp:
+            app.register_blueprint(replit_bp, url_prefix="/replit-auth")
+            logging.info("Replit Auth blueprint registered successfully")
+except Exception as e:
+    logging.warning(f"Replit Auth not available: {e}")
+
 # Root route - redirects to login
 @app.route("/")
 def index():

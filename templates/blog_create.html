@@ -1,74 +1,243 @@
-
 {% extends "base.html" %}
-{% block title %}Create Blog Post - LUX Marketing{% endblock %}
+{% block title %}{% if edit_mode %}Edit{% else %}Create{% endif %} Blog Post - LUX Marketing{% endblock %}
 {% block content %}
 <div class="container mt-4">
-  <h1><i data-feather="edit"></i> Create Blog Post</h1>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i data-feather="edit-3"></i> {% if edit_mode %}Edit{% else %}Create{% endif %} Blog Post</h1>
+    <a href="{{ url_for('main.blog_list') }}" class="btn btn-outline-secondary">
+      <i data-feather="arrow-left"></i> Back to Blog
+    </a>
+  </div>
   
-  <div class="card">
-    <div class="card-body">
-      <ul class="nav nav-tabs mb-3">
-        <li class="nav-item">
-          <a class="nav-link active" data-bs-toggle="tab" href="#ai-writer">AI Writer</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" data-bs-toggle="tab" href="#manual">Manual Entry</a>
-        </li>
-      </ul>
-      
-      <div class="tab-content">
-        <div class="tab-pane fade show active" id="ai-writer">
-          <form method="POST">
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-body">
+          <ul class="nav nav-tabs mb-4" role="tablist">
+            <li class="nav-item">
+              <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#ai-writer" type="button">
+                <i data-feather="cpu"></i> AI Writer
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" data-bs-toggle="tab" data-bs-target="#manual" type="button">
+                <i data-feather="edit-2"></i> Manual Entry
+              </button>
+            </li>
+          </ul>
+          
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="ai-writer">
+              <div class="mb-4 p-4 border rounded" style="background: linear-gradient(135deg, rgba(188, 0, 237, 0.1), rgba(0, 255, 180, 0.1));">
+                <h5><i data-feather="zap"></i> Generate with LUX AI</h5>
+                <p class="text-muted mb-3">Let AI write your blog post based on a topic and keywords.</p>
+                
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Topic *</label>
+                    <input type="text" id="aiTopic" class="form-control" placeholder="e.g., Best practices for email marketing in 2025">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Keywords (comma separated)</label>
+                    <input type="text" id="aiKeywords" class="form-control" placeholder="email marketing, automation, ROI">
+                  </div>
+                </div>
+                
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Tone</label>
+                    <select id="aiTone" class="form-select">
+                      <option value="professional">Professional</option>
+                      <option value="casual">Casual & Friendly</option>
+                      <option value="technical">Technical & Detailed</option>
+                      <option value="conversational">Conversational</option>
+                      <option value="persuasive">Persuasive & Sales</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 d-flex align-items-end">
+                    <button type="button" class="btn btn-primary w-100" onclick="generateBlogContent()">
+                      <i data-feather="zap"></i> Generate Content
+                    </button>
+                  </div>
+                </div>
+                
+                <div id="aiLoading" class="text-center py-3 d-none">
+                  <div class="spinner-border text-primary" role="status"></div>
+                  <p class="mt-2">AI is writing your blog post...</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="tab-pane fade" id="manual">
+              <p class="text-muted mb-3">Write your blog post manually or edit AI-generated content below.</p>
+            </div>
+          </div>
+          
+          <form method="POST" id="blogForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <input type="hidden" name="use_ai" value="true"/>
+            <input type="hidden" name="ai_generated" id="aiGenerated" value="false"/>
             
             <div class="mb-3">
-              <label class="form-label">Topic</label>
-              <input type="text" name="topic" class="form-control" required>
+              <label class="form-label">Title *</label>
+              <input type="text" name="title" id="blogTitle" class="form-control" required 
+                     value="{{ post.title if post else '' }}" placeholder="Enter your blog post title">
             </div>
             
             <div class="mb-3">
-              <label class="form-label">Keywords (comma separated)</label>
-              <input type="text" name="keywords" class="form-control">
+              <label class="form-label">Excerpt</label>
+              <textarea name="excerpt" id="blogExcerpt" class="form-control" rows="2" 
+                        placeholder="Brief summary for previews...">{{ post.excerpt if post else '' }}</textarea>
             </div>
             
             <div class="mb-3">
-              <label class="form-label">Tone</label>
-              <select name="tone" class="form-control">
-                <option value="professional">Professional</option>
-                <option value="casual">Casual</option>
-                <option value="technical">Technical</option>
-                <option value="conversational">Conversational</option>
-              </select>
+              <label class="form-label">Content *</label>
+              <textarea name="content" id="blogContent" class="form-control" rows="20" required
+                        placeholder="Write your blog post content here... Supports HTML formatting.">{{ post.content if post else '' }}</textarea>
             </div>
             
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Category</label>
+                <input type="text" name="category" class="form-control" 
+                       value="{{ post.category if post else '' }}" placeholder="e.g., Marketing, Tips, News">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Tags (comma separated)</label>
+                <input type="text" name="tags" class="form-control" 
+                       value="{{ post.tags if post else '' }}" placeholder="marketing, email, automation">
+              </div>
+            </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-4">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5 class="mb-0"><i data-feather="settings"></i> Publish Settings</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+              <option value="draft" {% if post and post.status == 'draft' %}selected{% endif %}>Draft</option>
+              <option value="published" {% if post and post.status == 'published' %}selected{% endif %}>Published</option>
+              <option value="scheduled" {% if post and post.status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+            </select>
+          </div>
+          
+          <div class="d-grid gap-2">
             <button type="submit" class="btn btn-primary">
-              <i data-feather="zap"></i> Generate with AI
+              <i data-feather="save"></i> {% if edit_mode %}Update{% else %}Create{% endif %} Post
             </button>
-          </form>
+            <button type="button" class="btn btn-outline-secondary" onclick="previewBlog()">
+              <i data-feather="eye"></i> Preview
+            </button>
+          </div>
         </div>
-        
-        <div class="tab-pane fade" id="manual">
-          <form method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <input type="hidden" name="use_ai" value="false"/>
-            
-            <div class="mb-3">
-              <label class="form-label">Title</label>
-              <input type="text" name="title" class="form-control" required>
-            </div>
-            
-            <div class="mb-3">
-              <label class="form-label">Content</label>
-              <textarea name="content" class="form-control" rows="15" required></textarea>
-            </div>
-            
-            <button type="submit" class="btn btn-primary">Create Post</button>
-          </form>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0"><i data-feather="search"></i> SEO Settings</h5>
         </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">SEO Title</label>
+            <input type="text" name="seo_title" class="form-control" 
+                   value="{{ post.seo_title if post else '' }}" placeholder="Custom title for search engines">
+            <small class="text-muted">Recommended: 50-60 characters</small>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">SEO Description</label>
+            <textarea name="seo_description" class="form-control" rows="3"
+                      placeholder="Meta description for search results...">{{ post.seo_description if post else '' }}</textarea>
+            <small class="text-muted">Recommended: 150-160 characters</small>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Keywords</label>
+            <input type="text" name="keywords" class="form-control" 
+                   value="{{ post.keywords if post else '' }}" placeholder="Primary keywords for SEO">
+          </div>
+        </div>
+        </form>
       </div>
     </div>
   </div>
 </div>
-<script>feather.replace();</script>
+
+<script>
+feather.replace();
+
+async function generateBlogContent() {
+  const topic = document.getElementById('aiTopic').value.trim();
+  const keywords = document.getElementById('aiKeywords').value.split(',').map(k => k.trim()).filter(k => k);
+  const tone = document.getElementById('aiTone').value;
+  
+  if (!topic) {
+    alert('Please enter a topic for your blog post');
+    return;
+  }
+  
+  const loading = document.getElementById('aiLoading');
+  loading.classList.remove('d-none');
+  
+  try {
+    const response = await fetch('/api/blog/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+      },
+      body: JSON.stringify({ topic, keywords, tone })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      document.getElementById('blogTitle').value = data.title;
+      document.getElementById('blogContent').value = data.content;
+      document.getElementById('aiGenerated').value = 'true';
+      
+      const excerpt = data.content.replace(/<[^>]*>/g, '').substring(0, 200) + '...';
+      document.getElementById('blogExcerpt').value = excerpt;
+      
+      document.querySelector('[data-bs-target="#manual"]').click();
+    } else {
+      alert('Error generating content: ' + (data.error || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Failed to generate content. Please try again.');
+  } finally {
+    loading.classList.add('d-none');
+  }
+}
+
+function previewBlog() {
+  const content = document.getElementById('blogContent').value;
+  const title = document.getElementById('blogTitle').value;
+  
+  const preview = window.open('', '_blank');
+  preview.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Preview: ${title}</title>
+      <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    </head>
+    <body class="p-4">
+      <div class="container">
+        <h1>${title}</h1>
+        <hr>
+        <div>${content}</div>
+      </div>
+    </body>
+    </html>
+  `);
+  preview.document.close();
+}
+</script>
 {% endblock %}

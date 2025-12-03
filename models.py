@@ -17,6 +17,9 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256))
     is_admin = db.Column(db.Boolean, default=False)
     
+    # Replit Auth integration
+    replit_id = db.Column(db.String(64), unique=True, nullable=True)
+    
     # User Profile Fields (like Contact)
     first_name = db.Column(db.String(64))
     last_name = db.Column(db.String(64))
@@ -33,6 +36,7 @@ class User(UserMixin, db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     companies = db.relationship('Company', secondary=user_company, backref=db.backref('users', lazy='dynamic'))
+    replit_oauth = db.relationship('ReplitOAuth', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<User {self.username}>'
@@ -71,6 +75,29 @@ class User(UserMixin, db.Model):
             return Company.query.get(result.company_id)
         companies_list = list(self.companies)
         return companies_list[0] if companies_list else None
+
+
+class ReplitOAuth(db.Model):
+    """OAuth token storage for Replit Auth"""
+    __tablename__ = 'replit_oauth'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    browser_session_key = db.Column(db.String(255), nullable=False)
+    provider = db.Column(db.String(50), nullable=False, default='replit_auth')
+    token = db.Column(JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint(
+            'user_id', 'browser_session_key', 'provider',
+            name='uq_replit_oauth_user_session_provider'
+        ),
+    )
+    
+    def __repr__(self):
+        return f'<ReplitOAuth user_id={self.user_id}>'
+
 
 class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1590,4 +1617,68 @@ class AgentConfiguration(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     company = db.relationship('Company', backref='agent_configurations')
+
+# ============= BLOG POSTS =============
+class BlogPost(db.Model):
+    """Blog posts with AI-generated content"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    slug = db.Column(db.String(255))
+    content = db.Column(db.Text)
+    excerpt = db.Column(db.Text)
+    featured_image = db.Column(db.String(500))
+    category = db.Column(db.String(100))
+    tags = db.Column(db.String(500))
+    seo_title = db.Column(db.String(255))
+    seo_description = db.Column(db.Text)
+    keywords = db.Column(db.String(500))
+    status = db.Column(db.String(20), default='draft')
+    ai_generated = db.Column(db.Boolean, default=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    published_at = db.Column(db.DateTime)
+    views = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='blog_posts')
+    author = db.relationship('User', backref='blog_posts')
+
+# ============= CUSTOMER ENGAGEMENT TRACKING =============
+class ContactActivity(db.Model):
+    """Track all customer engagement activities: calls, emails, meetings, notes"""
+    id = db.Column(db.Integer, primary_key=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    activity_type = db.Column(db.String(50), nullable=False)
+    subject = db.Column(db.String(255))
+    description = db.Column(db.Text)
+    outcome = db.Column(db.String(100))
+    duration_minutes = db.Column(db.Integer)
+    scheduled_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    is_completed = db.Column(db.Boolean, default=False)
+    attachments = db.Column(JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    contact = db.relationship('Contact', backref='activities')
+    company = db.relationship('Company', backref='contact_activities')
+    user = db.relationship('User', backref='contact_activities')
+
+# ============= ANALYTICS DATA =============
+class AnalyticsData(db.Model):
+    """Store analytics data for various sources"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    source = db.Column(db.String(50), nullable=False)
+    metric_name = db.Column(db.String(100), nullable=False)
+    metric_value = db.Column(db.Float)
+    dimension = db.Column(db.String(100))
+    dimension_value = db.Column(db.String(255))
+    date = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='analytics_data')
 

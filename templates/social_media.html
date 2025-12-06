@@ -8,8 +8,8 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i data-feather="share-2"></i> Social Media Marketing</h1>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPostModal">
-        <i data-feather="plus"></i> Create Post
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#connectAccountModal">
+        <i data-feather="link"></i> Connect Account
     </button>
 </div>
 
@@ -19,13 +19,13 @@
     <form method="POST" action="{{ url_for('main.refresh_social_followers') }}" style="display: inline;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-sm btn-outline-primary">
-            <i data-feather="refresh-cw" style="width: 14px; height: 14px;"></i> Refresh Follower Counts
+            <i data-feather="refresh-cw" style="width: 14px; height: 14px;"></i> Refresh All Follower Counts
         </button>
     </form>
 </div>
 <div class="row mb-4">
     {% for account in connected_accounts %}
-    <div class="col-md-3">
+    <div class="col-md-3 mb-3">
         <div class="card" style="border: 1px solid #00ffb4;">
             <div class="card-body text-center">
                 {% if account.platform == 'facebook' %}
@@ -34,6 +34,18 @@
                 {% elif account.platform == 'instagram' %}
                 <i data-feather="instagram" class="text-danger mb-2" style="width: 2rem; height: 2rem;"></i>
                 <h5>Instagram</h5>
+                {% elif account.platform == 'tiktok' %}
+                <svg class="mb-2" style="width: 2rem; height: 2rem;" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.68v13.7a2.4 2.4 0 0 1-2.54 2.4 2.4 2.4 0 0 1-2.54-2.4 2.4 2.4 0 0 1 5.09 0v-3.63a6.54 6.54 0 0 0-5.38 5.37 6.6 6.6 0 0 0 12.12 3.47v-3.68c1.26.72 2.64 1.1 4.04 1.05v-3.68a4.76 4.76 0 0 1-3.74-1.72z"/></svg>
+                <h5>TikTok</h5>
+                {% elif account.platform == 'youtube' %}
+                <i data-feather="youtube" class="text-danger mb-2" style="width: 2rem; height: 2rem;"></i>
+                <h5>YouTube</h5>
+                {% elif account.platform == 'reddit' %}
+                <svg class="mb-2" style="width: 2rem; height: 2rem; fill: currentColor;" viewBox="0 0 24 24"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.385 4.859-7.181 4.859-3.796 0-7.182-2.165-7.182-4.859a3.5 3.5 0 0 1 .476-1.754 1.756 1.756 0 0 1-.572-1.304c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.53l.847-3.432c1.194.159 2.566-.645 2.566-1.797 0-.94-.758-1.699-1.699-1.699-.96 0-1.744.777-1.744 1.744 0 .960.777 1.744 1.744 1.744zm2.489 5.324c.199.08.408.164.601.246.637-.473 1.282-.796 1.944-.961-.156-.511-.719-1.11-1.545-1.11z"/></svg>
+                <h5>Reddit</h5>
+                {% elif account.platform == 'snapchat' %}
+                <svg class="mb-2" style="width: 2rem; height: 2rem; fill: currentColor;" viewBox="0 0 24 24"><path d="M12.206 0c-6.927 0-7.205 5.591-7.205 7.303 0 1.404.469 2.209 1.143 3.158.255.383.443.703.443 1.143 0 1.499-2.757 3.119-5.379 3.119-.814 0-1.416.602-1.416 1.415 0 1.804 1.899 3.537 4.374 3.989.301 2.516 2.487 4.438 5.212 4.438h5.698c2.725 0 4.911-1.922 5.212-4.438 2.475-.452 4.374-2.185 4.374-3.989 0-.813-.602-1.415-1.416-1.415-2.622 0-5.379-1.62-5.379-3.119 0-.44.188-.76.443-1.143.674-.949 1.143-1.754 1.143-3.158 0-1.712-.278-7.303-7.205-7.303zm3.761 18.117a4.452 4.452 0 0 0-1.816.379 8.146 8.146 0 0 1-1.945.365 8.146 8.146 0 0 1-1.945-.365 4.452 4.452 0 0 0-1.816-.379 4.452 4.452 0 0 0-1.816.379 8.146 8.146 0 0 1-1.945.365 8.146 8.146 0 0 1-1.945-.365 4.452 4.452 0 0 0-1.816-.379v1.416c.313 0 .626.062.917.188 1.166.516 2.446.854 3.844.854 1.398 0 2.678-.338 3.844-.854.291-.126.604-.188.917-.188.313 0 .626.062.917.188 1.166.516 2.446.854 3.844.854 1.398 0 2.678-.338 3.844-.854.291-.126.604-.188.917-.188v-1.416z"/></svg>
+                <h5>Snapchat</h5>
                 {% elif account.platform == 'linkedin' %}
                 <i data-feather="linkedin" class="text-info mb-2" style="width: 2rem; height: 2rem;"></i>
                 <h5>LinkedIn</h5>
@@ -48,9 +60,18 @@
                 <div class="mt-2">
                     <strong class="text-light">{{ account.follower_count or 0 }}</strong>
                     <small class="text-muted d-block">followers</small>
-                    {% if account.last_synced_at %}
-                    <small class="text-muted" style="font-size: 0.7rem;">Last updated: {{ account.last_synced_at.strftime('%m/%d %H:%M') }}</small>
+                    {% if account.last_synced %}
+                    <small class="text-muted" style="font-size: 0.7rem;">Last updated: {{ account.last_synced.strftime('%m/%d %H:%M') }}</small>
                     {% endif %}
+                </div>
+                <div class="mt-3">
+                    <form method="POST" action="{{ url_for('main.refresh_social_followers') }}" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="account_id" value="{{ account.id }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            <i data-feather="refresh-cw" style="width: 12px; height: 12px;"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -61,11 +82,11 @@
 <div class="alert alert-info">
     <h5><i data-feather="info"></i> No Social Media Accounts Connected</h5>
     <p>Connect your social media accounts to start scheduling posts across multiple platforms.</p>
-    <button class="btn btn-primary"><i data-feather="link"></i> Connect Accounts</button>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#connectAccountModal"><i data-feather="link"></i> Connect Your First Account</button>
 </div>
 {% endif %}
 
-<div class="card">
+<div class="card mb-4">
     <div class="card-header">
         <h5 class="card-title mb-0">Scheduled & Published Posts</h5>
     </div>
@@ -84,6 +105,14 @@
                                         <i data-feather="facebook" style="width: 16px; height: 16px;" class="text-primary" title="Facebook"></i>
                                         {% elif platform == 'instagram' %}
                                         <i data-feather="instagram" style="width: 16px; height: 16px;" class="text-danger" title="Instagram"></i>
+                                        {% elif platform == 'tiktok' %}
+                                        <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.68v13.7a2.4 2.4 0 0 1-2.54 2.4 2.4 2.4 0 0 1-2.54-2.4 2.4 2.4 0 0 1 5.09 0v-3.63a6.54 6.54 0 0 0-5.38 5.37 6.6 6.6 0 0 0 12.12 3.47v-3.68c1.26.72 2.64 1.1 4.04 1.05v-3.68a4.76 4.76 0 0 1-3.74-1.72z"/></svg>
+                                        {% elif platform == 'youtube' %}
+                                        <i data-feather="youtube" style="width: 16px; height: 16px;" class="text-danger" title="YouTube"></i>
+                                        {% elif platform == 'reddit' %}
+                                        <svg style="width: 16px; height: 16px; fill: currentColor;" viewBox="0 0 24 24"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.385 4.859-7.181 4.859-3.796 0-7.182-2.165-7.182-4.859a3.5 3.5 0 0 1 .476-1.754 1.756 1.756 0 0 1-.572-1.304c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.53l.847-3.432c1.194.159 2.566-.645 2.566-1.797 0-.94-.758-1.699-1.699-1.699-.96 0-1.744.777-1.744 1.744 0 .960.777 1.744 1.744 1.744zm2.489 5.324c.199.08.408.164.601.246.637-.473 1.282-.796 1.944-.961-.156-.511-.719-1.11-1.545-1.11z"/></svg>
+                                        {% elif platform == 'snapchat' %}
+                                        <svg style="width: 16px; height: 16px; fill: currentColor;" viewBox="0 0 24 24"><path d="M12.206 0c-6.927 0-7.205 5.591-7.205 7.303 0 1.404.469 2.209 1.143 3.158.255.383.443.703.443 1.143 0 1.499-2.757 3.119-5.379 3.119-.814 0-1.416.602-1.416 1.415 0 1.804 1.899 3.537 4.374 3.989.301 2.516 2.487 4.438 5.212 4.438h5.698c2.725 0 4.911-1.922 5.212-4.438 2.475-.452 4.374-2.185 4.374-3.989 0-.813-.602-1.415-1.416-1.415-2.622 0-5.379-1.62-5.379-3.119 0-.44.188-.76.443-1.143.674-.949 1.143-1.754 1.143-3.158 0-1.712-.278-7.303-7.205-7.303zm3.761 18.117a4.452 4.452 0 0 0-1.816.379 8.146 8.146 0 0 1-1.945.365 8.146 8.146 0 0 1-1.945-.365 4.452 4.452 0 0 0-1.816-.379 4.452 4.452 0 0 0-1.816.379 8.146 8.146 0 0 1-1.945.365 8.146 8.146 0 0 1-1.945-.365 4.452 4.452 0 0 0-1.816-.379v1.416c.313 0 .626.062.917.188 1.166.516 2.446.854 3.844.854 1.398 0 2.678-.338 3.844-.854.291-.126.604-.188.917-.188.313 0 .626.062.917.188 1.166.516 2.446.854 3.844.854 1.398 0 2.678-.338 3.844-.854.291-.126.604-.188.917-.188v-1.416z"/></svg>
                                         {% elif platform == 'linkedin' %}
                                         <i data-feather="linkedin" style="width: 16px; height: 16px;" class="text-info" title="LinkedIn"></i>
                                         {% elif platform == 'twitter' %}
@@ -109,11 +138,6 @@
                                     <i data-feather="edit"></i> {{ post.created_at.strftime('%b %d, %Y') }}
                                 {% endif %}
                             </small>
-                            <div>
-                                <button class="btn btn-sm btn-outline-info" title="View Analytics">
-                                    <i data-feather="bar-chart-2"></i>
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -130,6 +154,68 @@
             </button>
         </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Connect Account Modal -->
+<div class="modal fade" id="connectAccountModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Connect Social Media Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('main.connect_social_account_route') }}" id="connectForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Platform</label>
+                        <select class="form-select" name="platform" id="platformSelect" required onchange="updatePlatformInfo()">
+                            <option value="">Choose a platform...</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="instagram">Instagram</option>
+                            <option value="tiktok">TikTok</option>
+                            <option value="youtube">YouTube</option>
+                            <option value="reddit">Reddit</option>
+                            <option value="snapchat">Snapchat</option>
+                            <option value="twitter">Twitter/X</option>
+                            <option value="linkedin">LinkedIn</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Account Name/Handle</label>
+                        <input type="text" class="form-control" name="account_name" placeholder="Your account handle or name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Access Token</label>
+                        <textarea class="form-control" name="access_token" rows="3" placeholder="Paste your API access token here" required></textarea>
+                        <small class="text-muted" id="platformGuide">Select a platform to see token instructions</small>
+                    </div>
+
+                    <div class="mb-3" id="refreshTokenField" style="display: none;">
+                        <label class="form-label">Refresh Token (Optional)</label>
+                        <input type="text" class="form-control" name="refresh_token" placeholder="Refresh token (if required)">
+                    </div>
+
+                    <div id="testResult" style="display: none;" class="alert"></div>
+
+                    <div class="alert alert-info">
+                        <strong>Test Your Connection:</strong> Click the button below to verify your credentials work before saving.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="testConnection()">
+                        <i data-feather="check-circle"></i> Test Connection
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                        <i data-feather="link"></i> Connect Account
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -159,6 +245,30 @@
                             </label>
                         </div>
                         <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="platforms[]" value="tiktok" id="tiktok">
+                            <label class="form-check-label" for="tiktok">
+                                TikTok
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="platforms[]" value="youtube" id="youtube">
+                            <label class="form-check-label" for="youtube">
+                                YouTube
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="platforms[]" value="reddit" id="reddit">
+                            <label class="form-check-label" for="reddit">
+                                Reddit
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="platforms[]" value="snapchat" id="snapchat">
+                            <label class="form-check-label" for="snapchat">
+                                Snapchat
+                            </label>
+                        </div>
+                        <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="platforms[]" value="linkedin" id="linkedin">
                             <label class="form-check-label" for="linkedin">
                                 <i data-feather="linkedin"></i> LinkedIn
@@ -184,14 +294,6 @@
                         <input type="datetime-local" class="form-control" name="scheduled_at">
                         <small class="text-muted">Leave empty to save as draft</small>
                     </div>
-                    
-                    <div class="alert alert-info">
-                        <i data-feather="info"></i>
-                        <strong>AI Caption Generator:</strong> Click the button below to get AI-powered caption suggestions!
-                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="generateAICaption()">
-                            <i data-feather="zap"></i> Generate AI Caption
-                        </button>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -201,6 +303,88 @@
         </div>
     </div>
 </div>
+
+<script>
+const platformGuides = {
+    facebook: 'Get a Facebook Page Access Token from developers.facebook.com/apps',
+    instagram: 'Use Instagram Graph API token - requires Facebook app permissions',
+    tiktok: 'Get TikTok API access token from https://developer.tiktok.com',
+    youtube: 'Use YouTube API OAuth token from Google Console',
+    reddit: 'Get Reddit API credentials from https://reddit.com/prefs/apps',
+    snapchat: 'Get Snapchat Ads API token from ads.snapchat.com',
+    twitter: 'Get Twitter API Bearer Token from developer.twitter.com',
+    linkedin: 'Get LinkedIn OAuth token from linkedin.com/developers'
+};
+
+function updatePlatformInfo() {
+    const platform = document.getElementById('platformSelect').value;
+    const guide = document.getElementById('platformGuide');
+    const refreshField = document.getElementById('refreshTokenField');
+    
+    if (platform && platformGuides[platform]) {
+        guide.textContent = platformGuides[platform];
+    }
+    
+    if (platform === 'reddit') {
+        refreshField.style.display = 'block';
+    } else {
+        refreshField.style.display = 'none';
+    }
+}
+
+function testConnection() {
+    // Get form inputs
+    const platform = document.getElementById('platformSelect').value;
+    const accessTokenField = document.querySelector('textarea[name="access_token"]');
+    const refreshTokenField = document.querySelector('input[name="refresh_token"]');
+    const submitBtn = document.getElementById('submitBtn');
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    
+    // Validation
+    if (!platform || !accessTokenField || !accessTokenField.value.trim()) {
+        alert('Please fill in platform and access token');
+        return;
+    }
+    
+    // Show loading message
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Testing...';
+    
+    // Call API
+    fetch('/api/social/test-connection', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            platform: platform,
+            access_token: accessTokenField.value.trim(),
+            refresh_token: refreshTokenField ? refreshTokenField.value.trim() : ''
+        })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network error: ' + response.status);
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(`✓ Connection successful!\nAccount: ${data.account_name}`);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Connect Account';
+        } else {
+            alert(`✗ Connection failed:\n${data.message}`);
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Connect Account';
+        }
+    })
+    .catch(err => {
+        alert(`Error: ${err.message}`);
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Connect Account';
+    });
+}
+</script>
 
 <div class="card mt-4">
     <div class="card-body">
@@ -215,18 +399,4 @@
     </div>
 </div>
 
-<script>
-function generateAICaption() {
-    const contentField = document.querySelector('textarea[name="content"]');
-    const aiSuggestions = [
-        "🚀 Excited to share our latest update! Your feedback means the world to us. #Innovation #Growth",
-        "✨ Monday motivation: Success is not final, failure is not fatal. Keep pushing forward! #MondayMotivation",
-        "📢 Big announcement coming soon! Stay tuned for something special. Tag a friend who needs to see this! #ComingSoon",
-        "💡 Pro tip: Small consistent actions lead to big results. What's your goal today? #ProductivityTips",
-        "🎉 Thank you for being part of our journey! Here's to continued success together. #Community #Gratitude"
-    ];
-    const randomCaption = aiSuggestions[Math.floor(Math.random() * aiSuggestions.length)];
-    contentField.value = randomCaption;
-}
-</script>
 {% endblock %}

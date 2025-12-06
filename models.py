@@ -99,6 +99,211 @@ class ReplitOAuth(db.Model):
         return f'<ReplitOAuth user_id={self.user_id}>'
 
 
+class TikTokOAuth(db.Model):
+    """OAuth token storage for TikTok integration"""
+    __tablename__ = 'tiktok_oauth'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
+    
+    open_id = db.Column(db.String(255), nullable=False)
+    access_token = db.Column(db.Text, nullable=False)
+    refresh_token = db.Column(db.Text, nullable=True)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    refresh_expires_at = db.Column(db.DateTime, nullable=True)
+    scope = db.Column(db.String(500), nullable=True)
+    token_type = db.Column(db.String(50), default='Bearer')
+    
+    display_name = db.Column(db.String(255), nullable=True)
+    avatar_url = db.Column(db.String(500), nullable=True)
+    
+    raw_token = db.Column(JSON)
+    status = db.Column(db.String(50), default='active')
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_refreshed_at = db.Column(db.DateTime, nullable=True)
+    
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'open_id', name='uq_tiktok_oauth_user_open_id'),
+        db.Index('ix_tiktok_oauth_user_company', 'user_id', 'company_id'),
+    )
+    
+    def __repr__(self):
+        return f'<TikTokOAuth user_id={self.user_id} open_id={self.open_id}>'
+    
+    @staticmethod
+    def _get_vault():
+        """Get SecretVault instance for encryption/decryption"""
+        from services.secret_vault import vault
+        return vault
+    
+    def set_access_token(self, token: str):
+        """Encrypt and store access token"""
+        if token:
+            vault = self._get_vault()
+            self.access_token = vault.encrypt(token)
+    
+    def get_access_token(self) -> str:
+        """Decrypt and return access token"""
+        if not self.access_token:
+            return ""
+        try:
+            vault = self._get_vault()
+            return vault.decrypt(self.access_token)
+        except:
+            return self.access_token
+    
+    def set_refresh_token(self, token: str):
+        """Encrypt and store refresh token"""
+        if token:
+            vault = self._get_vault()
+            self.refresh_token = vault.encrypt(token)
+    
+    def get_refresh_token(self) -> str:
+        """Decrypt and return refresh token"""
+        if not self.refresh_token:
+            return ""
+        try:
+            vault = self._get_vault()
+            return vault.decrypt(self.refresh_token)
+        except:
+            return self.refresh_token
+    
+    @property
+    def is_expired(self):
+        """Check if access token is expired"""
+        if not self.expires_at:
+            return True
+        return datetime.utcnow() >= self.expires_at
+    
+    @property
+    def needs_refresh(self):
+        """Check if token should be refreshed (expires in less than 1 hour)"""
+        if not self.expires_at:
+            return True
+        from datetime import timedelta
+        return datetime.utcnow() >= (self.expires_at - timedelta(hours=1))
+
+
+class InstagramOAuth(db.Model):
+    """OAuth token storage for Instagram integration"""
+    __tablename__ = 'instagram_oauth'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
+    
+    instagram_account_id = db.Column(db.String(255), nullable=False)
+    access_token = db.Column(db.Text, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    
+    username = db.Column(db.String(255), nullable=True)
+    avatar_url = db.Column(db.String(500), nullable=True)
+    
+    status = db.Column(db.String(50), default='active')
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'instagram_account_id', name='uq_instagram_oauth_user'),
+        db.Index('ix_instagram_oauth_user_company', 'user_id', 'company_id'),
+    )
+    
+    def __repr__(self):
+        return f'<InstagramOAuth user_id={self.user_id} ig_id={self.instagram_account_id}>'
+    
+    @staticmethod
+    def _get_vault():
+        """Get SecretVault instance for encryption/decryption"""
+        from services.secret_vault import vault
+        return vault
+    
+    def set_access_token(self, token: str):
+        """Encrypt and store access token"""
+        if token:
+            vault = self._get_vault()
+            self.access_token = vault.encrypt(token)
+    
+    def get_access_token(self) -> str:
+        """Decrypt and return access token"""
+        if not self.access_token:
+            return ""
+        try:
+            vault = self._get_vault()
+            return vault.decrypt(self.access_token)
+        except:
+            return self.access_token
+    
+    @property
+    def is_expired(self):
+        """Check if access token is expired"""
+        if not self.expires_at:
+            return True
+        return datetime.utcnow() >= self.expires_at
+
+
+class FacebookOAuth(db.Model):
+    """OAuth token storage for Facebook integration"""
+    __tablename__ = 'facebook_oauth'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
+    
+    facebook_user_id = db.Column(db.String(255), nullable=False)
+    access_token = db.Column(db.Text, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    
+    display_name = db.Column(db.String(255), nullable=True)
+    email = db.Column(db.String(255), nullable=True)
+    avatar_url = db.Column(db.String(500), nullable=True)
+    
+    status = db.Column(db.String(50), default='active')
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'facebook_user_id', name='uq_facebook_oauth_user'),
+        db.Index('ix_facebook_oauth_user_company', 'user_id', 'company_id'),
+    )
+    
+    def __repr__(self):
+        return f'<FacebookOAuth user_id={self.user_id} fb_id={self.facebook_user_id}>'
+    
+    @staticmethod
+    def _get_vault():
+        """Get SecretVault instance for encryption/decryption"""
+        from services.secret_vault import vault
+        return vault
+    
+    def set_access_token(self, token: str):
+        """Encrypt and store access token"""
+        if token:
+            vault = self._get_vault()
+            self.access_token = vault.encrypt(token)
+    
+    def get_access_token(self) -> str:
+        """Decrypt and return access token"""
+        if not self.access_token:
+            return ""
+        try:
+            vault = self._get_vault()
+            return vault.decrypt(self.access_token)
+        except:
+            return self.access_token
+    
+    @property
+    def is_expired(self):
+        """Check if access token is expired"""
+        if not self.expires_at:
+            return True
+        return datetime.utcnow() >= self.expires_at
+
+
 class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)

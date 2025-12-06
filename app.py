@@ -85,6 +85,31 @@ try:
 except Exception as e:
     logging.warning(f"Replit Auth not available: {e}")
 
+# Register TikTok OAuth blueprint
+try:
+    from tiktok_auth import tiktok_bp, tiktok_api_bp
+    app.register_blueprint(tiktok_bp)
+    app.register_blueprint(tiktok_api_bp)
+    logging.info("TikTok OAuth blueprint registered successfully")
+except Exception as e:
+    logging.warning(f"TikTok OAuth not available: {e}")
+
+# Register Facebook OAuth blueprint
+try:
+    from facebook_auth import facebook_auth_bp
+    app.register_blueprint(facebook_auth_bp)
+    logging.info("Facebook OAuth blueprint registered successfully")
+except Exception as e:
+    logging.warning(f"Facebook OAuth not available: {e}")
+
+# Register Instagram OAuth blueprint
+try:
+    from instagram_auth import instagram_auth_bp
+    app.register_blueprint(instagram_auth_bp)
+    logging.info("Instagram OAuth blueprint registered successfully")
+except Exception as e:
+    logging.warning(f"Instagram OAuth not available: {e}")
+
 # Root route - redirects to login
 @app.route("/")
 def index():

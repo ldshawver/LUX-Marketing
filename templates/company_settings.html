@@ -1,71 +1,64 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Company Settings & Integrations</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #000000; color: #ffffff; font-family: Inter, sans-serif; }
-        .navbar { background: #111; border-bottom: 1px solid #333; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .navbar-brand { font-size: 20px; font-weight: bold; color: #bc00ed; }
-        .navbar-menu { display: flex; gap: 30px; }
-        .navbar-menu a { color: #888; text-decoration: none; font-size: 14px; transition: color 0.3s; }
-        .navbar-menu a:hover { color: #00ffb4; }
-        .navbar-menu a.active { color: #bc00ed; border-bottom: 2px solid #bc00ed; padding-bottom: 5px; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
-        .header { margin-bottom: 40px; }
-        h1 { font-size: 32px; margin-bottom: 10px; color: #bc00ed; }
-        .tabs { display: flex; gap: 20px; margin-bottom: 30px; border-bottom: 1px solid #333; }
-        .tab { padding: 15px; cursor: pointer; border-bottom: 3px solid transparent; }
-        .tab.active { border-bottom-color: #bc00ed; color: #bc00ed; }
-        .section { display: none; }
-        .section.active { display: block; }
-        .form-group { margin-bottom: 25px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: #00ffb4; }
-        input, textarea { width: 100%; padding: 12px; background: #111; border: 1px solid #333; color: #fff; border-radius: 6px; }
-        input:focus, textarea:focus { outline: none; border-color: #bc00ed; }
-        .secrets-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .secret-field { background: #111; padding: 20px; border-radius: 8px; border: 1px solid #333; }
-        .secret-field label { margin-bottom: 10px; }
-        .secret-field input { margin-bottom: 8px; }
-        .secret-status { font-size: 12px; margin-top: 5px; color: #888; }
-        .secret-status.configured { color: #00ffb4; }
-        button { background: #bc00ed; color: #fff; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 20px; }
-        button:hover { background: #9a00c0; }
-        .success { color: #00ffb4; margin-top: 20px; padding: 15px; background: #001a1a; border-radius: 6px; }
-        .error { color: #ff0066; margin-top: 20px; padding: 15px; background: #1a0011; border-radius: 6px; }
-        .section-desc { color: #888; margin-bottom: 30px; font-size: 14px; }
-        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
-    </style>
-</head>
-<body>
-<div class="navbar">
-    <div class="navbar-brand">🎛️ LUX Marketing</div>
-    <div class="navbar-menu">
-        <a href="/">📊 Dashboard</a>
-        <a href="/email-hub">📧 Email Hub</a>
-        <a href="/campaign-hub">🚀 Campaigns</a>
-        <a href="/ai-dashboard">🤖 AI Agents</a>
-        <a href="/crm">👥 CRM</a>
-        <a href="/settings/integrations" class="active">⚙️ Settings</a>
-    </div>
-</div>
+{% extends "base_simple.html" %}
 
-<div class="container">
-    <div class="header">
-        <h1>🎛️ {{ company.name }} - Settings & Integrations</h1>
-        <p style="color: #888; margin-top: 10px;">Manage all API keys, tokens, and external service integrations</p>
-    </div>
+{% block title %}Settings & Integrations - LUX Marketing{% endblock %}
 
+{% block page_header %}
+<span style="color: #00ffb4;">Settings & Integrations</span>
+{% endblock %}
+
+{% block content %}
+<style>
+    .settings-container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    .tabs { display: flex; gap: 20px; margin-bottom: 30px; border-bottom: 1px solid #333; flex-wrap: wrap; }
+    .tab { padding: 15px 0; cursor: pointer; border-bottom: 3px solid transparent; color: #888; transition: all 0.3s; }
+    .tab:hover { color: #00ffb4; }
+    .tab.active { border-bottom-color: #bc00ed; color: #bc00ed; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .form-group { margin-bottom: 25px; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; color: #00ffb4; }
+    input, textarea { width: 100%; padding: 12px; background: #111; border: 1px solid #333; color: #fff; border-radius: 6px; font-family: Inter, sans-serif; }
+    input:focus, textarea:focus { outline: none; border-color: #bc00ed; }
+    .secrets-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+    .secret-field { background: #111; padding: 20px; border-radius: 8px; border: 1px solid #333; }
+    .secret-field label { margin-bottom: 10px; }
+    .secret-field input { margin-bottom: 8px; }
+    .secret-status { font-size: 12px; margin-top: 5px; color: #888; }
+    .secret-status.configured { color: #00ffb4; }
+    button { background: #bc00ed; color: #fff; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 20px; margin-right: 10px; transition: all 0.3s; }
+    button:hover { background: #9a00c0; }
+    .success { color: #00ffb4; margin-top: 20px; padding: 15px; background: #001a1a; border-radius: 6px; }
+    .error { color: #ff0066; margin-top: 20px; padding: 15px; background: #1a0011; border-radius: 6px; }
+    .section-desc { color: #888; margin-bottom: 30px; font-size: 14px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .section-header { margin-bottom: 30px; }
+    .section-header h2 { font-size: 24px; margin-bottom: 10px; color: #bc00ed; }
+    @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+    
+    .btn-oauth { display: inline-block; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.3s; border: none; margin: 0; background: #ff0050; color: #fff; }
+    .btn-oauth:hover { background: #cc0040; }
+    .btn-oauth.btn-danger { background: #dc3545; }
+    .btn-oauth.btn-danger:hover { background: #bb2d3b; }
+    .btn-oauth.btn-secondary { background: #444; }
+    .btn-oauth.btn-secondary:hover { background: #555; }
+    .tiktok-connected { color: #00ffb4; font-weight: 600; }
+    .tiktok-expired { color: #ff6b6b; }
+    .tiktok-avatar { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; vertical-align: middle; }
+</style>
+
+<div class="settings-container">
     <div class="tabs">
-        <div class="tab active" onclick="switchTab('brand')">Brand Settings</div>
-        <div class="tab" onclick="switchTab('secrets')">API Keys & Secrets</div>
-        <div class="tab" onclick="switchTab('oauth')">OAuth Integrations</div>
+        <div class="tab active" onclick="switchTab('brand')">🎨 Brand Settings</div>
+        <div class="tab" onclick="switchTab('secrets')">🔐 API Keys & Secrets</div>
+        <div class="tab" onclick="switchTab('oauth')">🔗 OAuth Integrations</div>
     </div>
 
     <!-- Brand Settings Section -->
     <div id="brand" class="section active">
-        <h2 style="margin-bottom: 20px;">Brand Customization</h2>
+        <div class="section-header">
+            <h2>Brand Customization</h2>
+            <p class="section-desc">Customize your brand colors and settings</p>
+        </div>
         <div class="two-col">
             <div class="form-group">
                 <label>Primary Color (Purple)</label>
@@ -98,9 +91,10 @@
 
     <!-- API Keys & Secrets Section -->
     <div id="secrets" class="section">
-        <h2 style="margin-bottom: 10px;">API Keys & Secrets</h2>
-        <p class="section-desc">All secrets are encrypted and stored securely. Never share your API keys.</p>
-        
+        <div class="section-header">
+            <h2>API Keys & Secrets</h2>
+            <p class="section-desc">All secrets are encrypted and stored securely. Never share your API keys.</p>
+        </div>
         <div class="secrets-grid">
             <!-- OpenAI -->
             <div class="secret-field">
@@ -192,6 +186,135 @@
                 <div class="secret-status" id="status-TWITTER_CLIENT_SECRET">Not configured</div>
             </div>
 
+            <!-- TikTok OAuth -->
+            <div class="secret-field" style="border: 1px solid #ff0050;">
+                <label>🎵 TikTok Client Key (Required for OAuth)</label>
+                <input type="text" data-secret="TIKTOK_CLIENT_KEY" placeholder="awxxxxxxxxx">
+                <div class="secret-status" id="status-TIKTOK_CLIENT_KEY">Not configured</div>
+            </div>
+            <div class="secret-field" style="border: 1px solid #ff0050;">
+                <label>🎵 TikTok Client Secret (Required for OAuth)</label>
+                <input type="password" data-secret="TIKTOK_CLIENT_SECRET" placeholder="client_secret...">
+                <div class="secret-status" id="status-TIKTOK_CLIENT_SECRET">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>🎵 TikTok API Key (Legacy)</label>
+                <input type="password" data-secret="TIKTOK_API_KEY" placeholder="api_key...">
+                <div class="secret-status" id="status-TIKTOK_API_KEY">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>🎵 TikTok Access Token (Legacy)</label>
+                <input type="password" data-secret="TIKTOK_ACCESS_TOKEN" placeholder="access_token...">
+                <div class="secret-status" id="status-TIKTOK_ACCESS_TOKEN">Not configured</div>
+            </div>
+
+            <!-- Instagram -->
+            <div class="secret-field">
+                <label>📸 Instagram Business Account ID</label>
+                <input type="text" data-secret="INSTAGRAM_BUSINESS_ACCOUNT_ID" placeholder="account_id...">
+                <div class="secret-status" id="status-INSTAGRAM_BUSINESS_ACCOUNT_ID">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>📸 Instagram Access Token</label>
+                <input type="password" data-secret="INSTAGRAM_ACCESS_TOKEN" placeholder="access_token...">
+                <div class="secret-status" id="status-INSTAGRAM_ACCESS_TOKEN">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>📸 Instagram User Token</label>
+                <input type="password" data-secret="INSTAGRAM_USER_TOKEN" placeholder="user_token...">
+                <div class="secret-status" id="status-INSTAGRAM_USER_TOKEN">Not configured</div>
+            </div>
+
+            <!-- Facebook OAuth -->
+            <div class="secret-field" style="border: 1px solid #1877f2;">
+                <label>👍 Facebook App ID (Required for OAuth)</label>
+                <input type="text" data-secret="facebook_app_id" placeholder="your_app_id...">
+                <div class="secret-status" id="status-facebook_app_id">Not configured</div>
+            </div>
+            <div class="secret-field" style="border: 1px solid #1877f2;">
+                <label>👍 Facebook App Secret (Required for OAuth)</label>
+                <input type="password" data-secret="facebook_app_secret" placeholder="your_app_secret...">
+                <div class="secret-status" id="status-facebook_app_secret">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>👍 Facebook Page ID (Legacy)</label>
+                <input type="text" data-secret="FACEBOOK_PAGE_ID" placeholder="page_id...">
+                <div class="secret-status" id="status-FACEBOOK_PAGE_ID">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>👍 Facebook Access Token (Legacy)</label>
+                <input type="password" data-secret="FACEBOOK_ACCESS_TOKEN" placeholder="access_token...">
+                <div class="secret-status" id="status-FACEBOOK_ACCESS_TOKEN">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>👍 Facebook App Token</label>
+                <input type="password" data-secret="FACEBOOK_APP_TOKEN" placeholder="app_token...">
+                <div class="secret-status" id="status-FACEBOOK_APP_TOKEN">Not configured</div>
+            </div>
+
+            <!-- Reddit -->
+            <div class="secret-field">
+                <label>🤖 Reddit Client ID</label>
+                <input type="password" data-secret="REDDIT_CLIENT_ID" placeholder="client_id...">
+                <div class="secret-status" id="status-REDDIT_CLIENT_ID">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>🤖 Reddit Client Secret</label>
+                <input type="password" data-secret="REDDIT_CLIENT_SECRET" placeholder="client_secret...">
+                <div class="secret-status" id="status-REDDIT_CLIENT_SECRET">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>🤖 Reddit Username</label>
+                <input type="text" data-secret="REDDIT_USERNAME" placeholder="username...">
+                <div class="secret-status" id="status-REDDIT_USERNAME">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>🤖 Reddit Password</label>
+                <input type="password" data-secret="REDDIT_PASSWORD" placeholder="password...">
+                <div class="secret-status" id="status-REDDIT_PASSWORD">Not configured</div>
+            </div>
+
+            <!-- YouTube -->
+            <div class="secret-field">
+                <label>🎬 YouTube API Key</label>
+                <input type="password" data-secret="YOUTUBE_API_KEY" placeholder="api_key...">
+                <div class="secret-status" id="status-YOUTUBE_API_KEY">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>🎬 YouTube Channel ID</label>
+                <input type="text" data-secret="YOUTUBE_CHANNEL_ID" placeholder="channel_id...">
+                <div class="secret-status" id="status-YOUTUBE_CHANNEL_ID">Not configured</div>
+            </div>
+
+            <!-- LinkedIn -->
+            <div class="secret-field">
+                <label>💼 LinkedIn Client ID</label>
+                <input type="password" data-secret="LINKEDIN_CLIENT_ID" placeholder="client_id...">
+                <div class="secret-status" id="status-LINKEDIN_CLIENT_ID">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>💼 LinkedIn Client Secret</label>
+                <input type="password" data-secret="LINKEDIN_CLIENT_SECRET" placeholder="client_secret...">
+                <div class="secret-status" id="status-LINKEDIN_CLIENT_SECRET">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>💼 LinkedIn Access Token</label>
+                <input type="password" data-secret="LINKEDIN_ACCESS_TOKEN" placeholder="access_token...">
+                <div class="secret-status" id="status-LINKEDIN_ACCESS_TOKEN">Not configured</div>
+            </div>
+
+            <!-- Snapchat -->
+            <div class="secret-field">
+                <label>👻 Snapchat Business Account ID</label>
+                <input type="text" data-secret="SNAPCHAT_BUSINESS_ACCOUNT_ID" placeholder="account_id...">
+                <div class="secret-status" id="status-SNAPCHAT_BUSINESS_ACCOUNT_ID">Not configured</div>
+            </div>
+            <div class="secret-field">
+                <label>👻 Snapchat Access Token</label>
+                <input type="password" data-secret="SNAPCHAT_ACCESS_TOKEN" placeholder="access_token...">
+                <div class="secret-status" id="status-SNAPCHAT_ACCESS_TOKEN">Not configured</div>
+            </div>
+
             <!-- WooCommerce -->
             <div class="secret-field">
                 <label>🛒 WooCommerce Store URL</label>
@@ -267,23 +390,155 @@
 
     <!-- OAuth Integrations Section -->
     <div id="oauth" class="section">
-        <h2 style="margin-bottom: 20px;">OAuth & External Integrations</h2>
-        <p class="section-desc">Connect your external services and applications</p>
-        <div style="background: #111; padding: 30px; border-radius: 8px; border: 1px solid #333; text-align: center;">
-            <p style="color: #888; margin-bottom: 20px;">All OAuth integrations are configured through the API Keys & Secrets tab above.</p>
-            <p style="color: #666; font-size: 14px;">Currently configured integrations:</p>
-            <div id="oauth-list" style="margin-top: 20px; text-align: left; display: inline-block;">
-                <p>✓ OpenAI ChatGPT</p>
-                <p>✓ Google Analytics</p>
-                <p>✓ Google Ads</p>
-                <p>✓ Microsoft 365</p>
-                <p>✓ Twitter/X</p>
-                <p>✓ WooCommerce</p>
+        <div class="section-header">
+            <h2>OAuth & External Integrations</h2>
+            <p class="section-desc">Connect your social media accounts and external services via OAuth</p>
+        </div>
+
+        <div class="secrets-grid">
+            <!-- TikTok OAuth - Full Integration -->
+            <div class="secret-field" id="tiktok-oauth-card" style="border: 2px solid #ff0050; position: relative;">
+                <div style="position: absolute; top: -10px; right: 10px; background: #ff0050; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 4px;">OAuth</div>
+                <label>🎵 TikTok</label>
+                <div id="tiktok-status" style="margin: 10px 0;">
+                    <p style="color: #888; font-size: 12px;">Loading status...</p>
+                </div>
+                <div id="tiktok-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="{{ url_for('tiktok.connect') }}" id="tiktok-connect-btn" class="btn-oauth" style="display: none;" target="_blank" rel="noopener">
+                        Connect TikTok
+                    </a>
+                    <button onclick="disconnectTikTok()" id="tiktok-disconnect-btn" class="btn-oauth btn-danger" style="display: none;">
+                        Disconnect
+                    </button>
+                    <button onclick="refreshTikTok()" id="tiktok-refresh-btn" class="btn-oauth btn-secondary" style="display: none;">
+                        Refresh Token
+                    </button>
+                    <a href="/tiktok/videos" id="tiktok-videos-btn" class="btn-oauth btn-secondary" style="display: none;">
+                        View Videos
+                    </a>
+                </div>
+            </div>
+
+            <!-- Instagram OAuth - Full Integration -->
+            <div class="secret-field" id="instagram-oauth-card" style="border: 2px solid #e4405f; position: relative;">
+                <div style="position: absolute; top: -10px; right: 10px; background: #e4405f; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 4px;">OAuth</div>
+                <label>📸 Instagram</label>
+                <div id="instagram-status" style="margin: 10px 0;">
+                    <p style="color: #888; font-size: 12px;">Loading status...</p>
+                </div>
+                <div id="instagram-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="{{ url_for('instagram_auth.connect') }}" id="instagram-connect-btn" class="btn-oauth" style="display: none;" target="_blank" rel="noopener">
+                        Connect Instagram
+                    </a>
+                    <button onclick="disconnectInstagram()" id="instagram-disconnect-btn" class="btn-oauth btn-danger" style="display: none;">
+                        Disconnect
+                    </button>
+                    <button onclick="viewInstagramMedia()" id="instagram-media-btn" class="btn-oauth btn-secondary" style="display: none;">
+                        View Media
+                    </button>
+                </div>
+            </div>
+
+            <!-- Facebook OAuth - Full Integration -->
+            <div class="secret-field" id="facebook-oauth-card" style="border: 2px solid #1877f2; position: relative;">
+                <div style="position: absolute; top: -10px; right: 10px; background: #1877f2; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 4px;">OAuth</div>
+                <label>👍 Facebook</label>
+                <div id="facebook-status" style="margin: 10px 0;">
+                    <p style="color: #888; font-size: 12px;">Loading status...</p>
+                </div>
+                <div id="facebook-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="{{ url_for('facebook_auth.connect') }}" id="facebook-connect-btn" class="btn-oauth" style="display: none;" target="_blank" rel="noopener">
+                        Connect Facebook
+                    </a>
+                    <button onclick="disconnectFacebook()" id="facebook-disconnect-btn" class="btn-oauth btn-danger" style="display: none;">
+                        Disconnect
+                    </button>
+                    <button onclick="viewFacebookPages()" id="facebook-pages-btn" class="btn-oauth btn-secondary" style="display: none;">
+                        View Pages
+                    </button>
+                </div>
+            </div>
+
+            <!-- Twitter/X -->
+            <div class="secret-field">
+                <label>𝕏 Twitter/X</label>
+                <p style="color: #888; font-size: 12px; margin-bottom: 10px;">Configure in API Keys & Secrets tab</p>
+                <span class="secret-status">Manual API key setup</span>
+            </div>
+
+            <!-- YouTube -->
+            <div class="secret-field">
+                <label>🎬 YouTube</label>
+                <p style="color: #888; font-size: 12px; margin-bottom: 10px;">Configure in API Keys & Secrets tab</p>
+                <span class="secret-status">Manual API key setup</span>
+            </div>
+
+            <!-- LinkedIn -->
+            <div class="secret-field">
+                <label>💼 LinkedIn</label>
+                <p style="color: #888; font-size: 12px; margin-bottom: 10px;">Configure in API Keys & Secrets tab</p>
+                <span class="secret-status">Manual API key setup</span>
+            </div>
+
+            <!-- Reddit -->
+            <div class="secret-field">
+                <label>🤖 Reddit</label>
+                <p style="color: #888; font-size: 12px; margin-bottom: 10px;">Configure in API Keys & Secrets tab</p>
+                <span class="secret-status">Manual API key setup</span>
+            </div>
+
+            <!-- Snapchat -->
+            <div class="secret-field">
+                <label>👻 Snapchat</label>
+                <p style="color: #888; font-size: 12px; margin-bottom: 10px;">Configure in API Keys & Secrets tab</p>
+                <span class="secret-status">Manual API key setup</span>
+            </div>
+
+            <!-- Google Analytics -->
+            <div class="secret-field">
+                <label>📊 Google Analytics</label>
+                <p style="color: #888; font-size: 12px; margin-bottom: 10px;">Configure in API Keys & Secrets tab</p>
+                <span class="secret-status">Manual API key setup</span>
+            </div>
+
+            <!-- Google Ads -->
+            <div class="secret-field">
+                <label>🔍 Google Ads</label>
+                <p style="color: #888; font-size: 12px; margin-bottom: 10px;">Configure in API Keys & Secrets tab</p>
+                <span class="secret-status">Manual API key setup</span>
+            </div>
+
+            <!-- Microsoft 365 -->
+            <div class="secret-field">
+                <label>☁️ Microsoft 365</label>
+                <p style="color: #888; font-size: 12px; margin-bottom: 10px;">Configure in API Keys & Secrets tab</p>
+                <span class="secret-status">Manual API key setup</span>
+            </div>
+
+            <!-- OpenAI -->
+            <div class="secret-field">
+                <label>🤖 OpenAI</label>
+                <p style="color: #888; font-size: 12px; margin-bottom: 10px;">Configure in API Keys & Secrets tab</p>
+                <span class="secret-status">Manual API key setup</span>
+            </div>
+
+            <!-- WooCommerce -->
+            <div class="secret-field">
+                <label>🛒 WooCommerce</label>
+                <p style="color: #888; font-size: 12px; margin-bottom: 10px;">Configure in API Keys & Secrets tab</p>
+                <span class="secret-status">Manual API key setup</span>
             </div>
         </div>
+
+        <p style="color: #666; text-align: center; margin-top: 30px; padding: 20px; background: #111; border-radius: 8px;">
+            🔗 <strong>TikTok</strong> uses full OAuth integration with Connect button above.<br>
+            Other platforms use API keys configured in the <strong>API Keys & Secrets</strong> tab.
+        </p>
+        <div id="oauth-message"></div>
     </div>
 </div>
 
+<script src="https://unpkg.com/feather-icons"></script>
 <script>
 function switchTab(tabName) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -315,6 +570,7 @@ async function loadSecrets() {
 async function saveSecrets() {
     const company_id = {{ company.id }};
     const secrets = {};
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     
     document.querySelectorAll('[data-secret]').forEach(field => {
         const key = field.getAttribute('data-secret');
@@ -326,7 +582,10 @@ async function saveSecrets() {
     try {
         const response = await fetch(`/api/company/${company_id}/secrets/save`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
             body: JSON.stringify(secrets)
         });
         
@@ -344,6 +603,7 @@ async function saveSecrets() {
 
 async function saveBrandSettings() {
     const company_id = {{ company.id }};
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const settings = {
         primary_color: document.getElementById('primary_color').value,
         secondary_color: document.getElementById('secondary_color').value,
@@ -356,7 +616,10 @@ async function saveBrandSettings() {
     try {
         const response = await fetch(`/api/company/${company_id}/settings`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
             body: JSON.stringify(settings)
         });
         
@@ -371,8 +634,296 @@ async function saveBrandSettings() {
     }
 }
 
-// Load secrets on page load
-window.onload = loadSecrets;
+async function loadTikTokStatus() {
+    try {
+        const response = await fetch('/auth/tiktok/status');
+        const data = await response.json();
+        
+        const statusDiv = document.getElementById('tiktok-status');
+        const connectBtn = document.getElementById('tiktok-connect-btn');
+        const disconnectBtn = document.getElementById('tiktok-disconnect-btn');
+        const refreshBtn = document.getElementById('tiktok-refresh-btn');
+        const videosBtn = document.getElementById('tiktok-videos-btn');
+        
+        if (data.connected) {
+            let statusHtml = '';
+            if (data.avatar_url) {
+                statusHtml += `<img src="${data.avatar_url}" class="tiktok-avatar" alt="Avatar">`;
+            }
+            statusHtml += `<span class="tiktok-connected">Connected as ${data.display_name || data.open_id}</span>`;
+            
+            if (data.is_expired) {
+                statusHtml += `<br><span class="tiktok-expired">⚠️ Token expired - please refresh or reconnect</span>`;
+            } else if (data.needs_refresh) {
+                statusHtml += `<br><span style="color: #ffc107;">⏰ Token expires soon - consider refreshing</span>`;
+            }
+            
+            if (data.expires_at) {
+                const expiresAt = new Date(data.expires_at);
+                statusHtml += `<br><small style="color: #666;">Expires: ${expiresAt.toLocaleDateString()}</small>`;
+            }
+            
+            statusDiv.innerHTML = statusHtml;
+            
+            connectBtn.style.display = 'none';
+            disconnectBtn.style.display = 'inline-block';
+            refreshBtn.style.display = 'inline-block';
+            videosBtn.style.display = 'inline-block';
+        } else {
+            statusDiv.innerHTML = '<p style="color: #888; font-size: 12px;">Not connected. Click Connect to authorize TikTok access.</p>';
+            connectBtn.style.display = 'inline-block';
+            disconnectBtn.style.display = 'none';
+            refreshBtn.style.display = 'none';
+            videosBtn.style.display = 'none';
+        }
+    } catch (e) {
+        console.error('Error loading TikTok status:', e);
+        document.getElementById('tiktok-status').innerHTML = '<p style="color: #ff6b6b; font-size: 12px;">Error loading status</p>';
+        document.getElementById('tiktok-connect-btn').style.display = 'inline-block';
+    }
+}
+
+async function disconnectTikTok() {
+    if (!confirm('Are you sure you want to disconnect your TikTok account?')) {
+        return;
+    }
+    
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    try {
+        const response = await fetch('/auth/tiktok/disconnect', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('oauth-message').innerHTML = '<div class="success">✓ TikTok disconnected successfully!</div>';
+            loadTikTokStatus();
+        } else {
+            document.getElementById('oauth-message').innerHTML = '<div class="error">✗ Error: ' + data.error + '</div>';
+        }
+    } catch (e) {
+        document.getElementById('oauth-message').innerHTML = '<div class="error">✗ Error disconnecting TikTok</div>';
+    }
+}
+
+async function refreshTikTok() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    try {
+        document.getElementById('tiktok-refresh-btn').disabled = true;
+        document.getElementById('tiktok-refresh-btn').textContent = 'Refreshing...';
+        
+        const response = await fetch('/auth/tiktok/refresh', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('oauth-message').innerHTML = '<div class="success">✓ TikTok token refreshed successfully!</div>';
+            loadTikTokStatus();
+        } else {
+            document.getElementById('oauth-message').innerHTML = '<div class="error">✗ Error: ' + data.error + '</div>';
+        }
+    } catch (e) {
+        document.getElementById('oauth-message').innerHTML = '<div class="error">✗ Error refreshing token</div>';
+    } finally {
+        document.getElementById('tiktok-refresh-btn').disabled = false;
+        document.getElementById('tiktok-refresh-btn').textContent = 'Refresh Token';
+    }
+}
+
+async function loadInstagramStatus() {
+    try {
+        const response = await fetch('/auth/instagram/status');
+        const data = await response.json();
+        
+        const statusDiv = document.getElementById('instagram-status');
+        const connectBtn = document.getElementById('instagram-connect-btn');
+        const disconnectBtn = document.getElementById('instagram-disconnect-btn');
+        const mediaBtn = document.getElementById('instagram-media-btn');
+        
+        if (data.connected) {
+            let statusHtml = `<p style="color: #00ff88; font-size: 12px;"><strong>Connected</strong></p>`;
+            
+            if (data.avatar_url) {
+                statusHtml += `<img src="${data.avatar_url}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">`;
+            }
+            if (data.username) {
+                statusHtml += `<span style="color: #fff;">@${data.username}</span>`;
+            }
+            
+            if (data.expires_at) {
+                const expiresAt = new Date(data.expires_at);
+                statusHtml += `<br><small style="color: #666;">Expires: ${expiresAt.toLocaleDateString()}</small>`;
+            }
+            
+            statusDiv.innerHTML = statusHtml;
+            
+            connectBtn.style.display = 'none';
+            disconnectBtn.style.display = 'inline-block';
+            mediaBtn.style.display = 'inline-block';
+        } else {
+            statusDiv.innerHTML = '<p style="color: #888; font-size: 12px;">Not connected. Click Connect to authorize Instagram access.</p>';
+            connectBtn.style.display = 'inline-block';
+            disconnectBtn.style.display = 'none';
+            mediaBtn.style.display = 'none';
+        }
+    } catch (e) {
+        console.error('Error loading Instagram status:', e);
+        document.getElementById('instagram-status').innerHTML = '<p style="color: #ff6b6b; font-size: 12px;">Error loading status</p>';
+        document.getElementById('instagram-connect-btn').style.display = 'inline-block';
+    }
+}
+
+async function disconnectInstagram() {
+    if (!confirm('Are you sure you want to disconnect your Instagram account?')) {
+        return;
+    }
+    
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    try {
+        const response = await fetch('/auth/instagram/disconnect', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('oauth-message').innerHTML = '<div class="success">✓ Instagram disconnected successfully!</div>';
+            loadInstagramStatus();
+        } else {
+            document.getElementById('oauth-message').innerHTML = '<div class="error">✗ Error: ' + data.error + '</div>';
+        }
+    } catch (e) {
+        document.getElementById('oauth-message').innerHTML = '<div class="error">✗ Error disconnecting Instagram</div>';
+    }
+}
+
+async function viewInstagramMedia() {
+    try {
+        const response = await fetch('/auth/instagram/media');
+        const data = await response.json();
+        
+        if (data.success && data.media) {
+            alert('Instagram Media:\n' + data.media.slice(0, 5).map(m => m.caption || 'No caption').join('\n'));
+        } else {
+            alert('Error: ' + (data.error || 'Could not load media'));
+        }
+    } catch (e) {
+        alert('Error loading Instagram media');
+    }
+}
+
+async function loadFacebookStatus() {
+    try {
+        const response = await fetch('/auth/facebook/status');
+        const data = await response.json();
+        
+        const statusDiv = document.getElementById('facebook-status');
+        const connectBtn = document.getElementById('facebook-connect-btn');
+        const disconnectBtn = document.getElementById('facebook-disconnect-btn');
+        const pagesBtn = document.getElementById('facebook-pages-btn');
+        
+        if (data.connected) {
+            let statusHtml = `<p style="color: #00ff88; font-size: 12px;"><strong>Connected</strong></p>`;
+            
+            if (data.avatar_url) {
+                statusHtml += `<img src="${data.avatar_url}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">`;
+            }
+            if (data.display_name) {
+                statusHtml += `<span style="color: #fff;">${data.display_name}</span>`;
+            }
+            
+            if (data.expires_at) {
+                const expiresAt = new Date(data.expires_at);
+                statusHtml += `<br><small style="color: #666;">Expires: ${expiresAt.toLocaleDateString()}</small>`;
+            }
+            
+            statusDiv.innerHTML = statusHtml;
+            
+            connectBtn.style.display = 'none';
+            disconnectBtn.style.display = 'inline-block';
+            pagesBtn.style.display = 'inline-block';
+        } else {
+            statusDiv.innerHTML = '<p style="color: #888; font-size: 12px;">Not connected. Click Connect to authorize Facebook access.</p>';
+            connectBtn.style.display = 'inline-block';
+            disconnectBtn.style.display = 'none';
+            pagesBtn.style.display = 'none';
+        }
+    } catch (e) {
+        console.error('Error loading Facebook status:', e);
+        document.getElementById('facebook-status').innerHTML = '<p style="color: #ff6b6b; font-size: 12px;">Error loading status</p>';
+        document.getElementById('facebook-connect-btn').style.display = 'inline-block';
+    }
+}
+
+async function disconnectFacebook() {
+    if (!confirm('Are you sure you want to disconnect your Facebook account?')) {
+        return;
+    }
+    
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    try {
+        const response = await fetch('/auth/facebook/disconnect', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('oauth-message').innerHTML = '<div class="success">✓ Facebook disconnected successfully!</div>';
+            loadFacebookStatus();
+        } else {
+            document.getElementById('oauth-message').innerHTML = '<div class="error">✗ Error: ' + data.error + '</div>';
+        }
+    } catch (e) {
+        document.getElementById('oauth-message').innerHTML = '<div class="error">✗ Error disconnecting Facebook</div>';
+    }
+}
+
+async function viewFacebookPages() {
+    try {
+        const response = await fetch('/auth/facebook/pages');
+        const data = await response.json();
+        
+        if (data.success && data.pages) {
+            let pagesHtml = '<h4>Your Facebook Pages:</h4><ul>';
+            data.pages.forEach(page => {
+                pagesHtml += `<li><strong>${page.name}</strong> (${page.category || 'Page'})</li>`;
+            });
+            pagesHtml += '</ul>';
+            alert('Facebook Pages:\n' + data.pages.map(p => p.name).join('\n'));
+        } else {
+            alert('Error: ' + (data.error || 'Could not load pages'));
+        }
+    } catch (e) {
+        alert('Error loading Facebook pages');
+    }
+}
+
+window.addEventListener('load', () => {
+    loadSecrets();
+    loadTikTokStatus();
+    loadInstagramStatus();
+    loadFacebookStatus();
+    feather.replace();
+});
 </script>
-</body>
-</html>
+{% endblock %}

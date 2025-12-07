@@ -3,7 +3,7 @@ modules = ["python-3.11", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["cargo", "freetype", "glibcLocales", "lcms2", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "pkg-config", "postgresql", "rsync", "rustc", "u-root-cmds"]
+packages = ["cargo", "freetype", "glibcLocales", "lcms2", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "pkg-config", "postgresql", "rsync", "rustc", "u-root-cmds", "openssh", "nano"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -46,9 +46,10 @@ externalPort = 3001
 localPort = 39579
 externalPort = 3000
 
-[[ports]]
-localPort = 44935
-externalPort = 3003
-
 [agent]
 expertMode = true
+
+[userenv]
+
+[userenv.shared]
+GIT_URL = "https://ldshawver:${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com/ldshawver/LUX-Marketing.git"

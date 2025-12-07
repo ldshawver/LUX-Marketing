@@ -434,3 +434,27 @@ def post_to_page():
         return jsonify({'success': False, 'error': error}), 500
     
     return jsonify({'success': True, 'post_id': result.get('id')})
+
+
+VERIFY_TOKEN = "lux_fb_verify_2025"
+
+@facebook_auth_bp.route('/webhook', methods=['GET', 'POST'])
+def facebook_webhook():
+    """Handle Facebook webhook verification and events"""
+    if request.method == 'GET':
+        mode = request.args.get('hub.mode')
+        token = request.args.get('hub.verify_token')
+        challenge = request.args.get('hub.challenge')
+        
+        if mode == "subscribe" and token == VERIFY_TOKEN:
+            logger.info("Facebook webhook verified successfully")
+            return challenge, 200
+        else:
+            logger.warning(f"Facebook webhook verification failed: mode={mode}, token={token}")
+            return "Verification failed", 403
+
+    if request.method == 'POST':
+        data = request.json
+        logger.info(f"Facebook Webhook Event: {data}")
+        
+        return jsonify({"status": "received"}), 200

@@ -10,6 +10,67 @@ user_company = db.Table('user_company',
     db.Column('created_at', db.DateTime, default=datetime.utcnow)
 )
 
+
+class UserCompanyAccess(db.Model):
+    """Manages user access permissions to companies - all companies are shared across all users"""
+    __tablename__ = 'user_company_access'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    
+    role = db.Column(db.String(20), default='viewer')
+    is_default = db.Column(db.Boolean, default=False)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'company_id', name='uq_user_company_access'),
+        db.Index('ix_user_company_access_user', 'user_id'),
+        db.Index('ix_user_company_access_company', 'company_id'),
+    )
+    
+    ROLE_OWNER = 'owner'
+    ROLE_ADMIN = 'admin'
+    ROLE_EDITOR = 'editor'
+    ROLE_VIEWER = 'viewer'
+    
+    ROLE_HIERARCHY = {
+        'owner': 4,
+        'admin': 3,
+        'editor': 2,
+        'viewer': 1
+    }
+    
+    user = db.relationship('User', backref=db.backref('company_access', lazy='dynamic'))
+    company = db.relationship('Company', backref=db.backref('user_access', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f'<UserCompanyAccess user={self.user_id} company={self.company_id} role={self.role}>'
+    
+    def can_edit(self):
+        """Check if user can edit company data"""
+        return self.role in ['owner', 'admin', 'editor']
+    
+    def can_admin(self):
+        """Check if user can administer company (manage users, settings)"""
+        return self.role in ['owner', 'admin']
+    
+    def can_own(self):
+        """Check if user is owner"""
+        return self.role == 'owner'
+    
+    @classmethod
+    def get_role_display(cls, role):
+        """Get display name for role"""
+        return {
+            'owner': 'Owner',
+            'admin': 'Admin',
+            'editor': 'Editor',
+            'viewer': 'Viewer'
+        }.get(role, 'Unknown')
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
@@ -19,6 +80,9 @@ class User(UserMixin, db.Model):
     
     # Replit Auth integration
     replit_id = db.Column(db.String(64), unique=True, nullable=True)
+    
+    # Default company for user
+    default_company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
     
     # User Profile Fields (like Contact)
     first_name = db.Column(db.String(64))
@@ -36,6 +100,7 @@ class User(UserMixin, db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     companies = db.relationship('Company', secondary=user_company, backref=db.backref('users', lazy='dynamic'))
+    default_company = db.relationship('Company', foreign_keys=[default_company_id], backref='default_users')
     replit_oauth = db.relationship('ReplitOAuth', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
@@ -65,6 +130,8 @@ class User(UserMixin, db.Model):
     
     def get_default_company(self):
         """Get the user's default company"""
+        if self.default_company_id:
+            return Company.query.get(self.default_company_id)
         result = db.session.execute(
             db.select(user_company).where(
                 user_company.c.user_id == self.id,
@@ -73,8 +140,62 @@ class User(UserMixin, db.Model):
         ).first()
         if result:
             return Company.query.get(result.company_id)
-        companies_list = list(self.companies)
-        return companies_list[0] if companies_list else None
+        all_companies = Company.query.filter_by(is_active=True).all()
+        return all_companies[0] if all_companies else None
+    
+    def set_default_company(self, company_id):
+        """Set the user's default company"""
+        self.default_company_id = company_id
+        db.session.commit()
+    
+    def get_all_companies(self):
+        """Get all companies (all companies are shared across users)"""
+        return Company.query.filter_by(is_active=True).order_by(Company.name).all()
+    
+    def get_company_access(self, company_id):
+        """Get user's access level for a specific company"""
+        access = UserCompanyAccess.query.filter_by(
+            user_id=self.id, 
+            company_id=company_id
+        ).first()
+        return access
+    
+    def get_company_role(self, company_id):
+        """Get user's role for a company (defaults to 'viewer' if no explicit access)"""
+        access = self.get_company_access(company_id)
+        if access:
+            return access.role
+        return 'viewer'
+    
+    def can_edit_company(self, company_id):
+        """Check if user can edit a company's data"""
+        if self.is_admin:
+            return True
+        access = self.get_company_access(company_id)
+        return access and access.can_edit()
+    
+    def can_admin_company(self, company_id):
+        """Check if user can administer a company"""
+        if self.is_admin:
+            return True
+        access = self.get_company_access(company_id)
+        return access and access.can_admin()
+    
+    def ensure_company_access(self, company_id, role='viewer'):
+        """Ensure user has access to a company, creating record if needed"""
+        access = UserCompanyAccess.query.filter_by(
+            user_id=self.id,
+            company_id=company_id
+        ).first()
+        if not access:
+            access = UserCompanyAccess(
+                user_id=self.id,
+                company_id=company_id,
+                role=role
+            )
+            db.session.add(access)
+            db.session.commit()
+        return access
 
 
 class ReplitOAuth(db.Model):

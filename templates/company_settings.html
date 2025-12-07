@@ -47,6 +47,47 @@
 </style>
 
 <div class="settings-container">
+    <!-- Company Selector -->
+    <div class="company-selector" style="background: #111; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="font-size: 12px; color: #888; display: block; margin-bottom: 5px;">Current Company</label>
+                <select id="company-selector" onchange="switchCompany(this.value)" style="width: 100%; padding: 10px; background: #000; border: 1px solid #bc00ed; color: #fff; border-radius: 6px; font-size: 14px;">
+                    {% for c in all_companies %}
+                    <option value="{{ c.id }}" {% if c.id == company.id %}selected{% endif %}>
+                        {{ c.name }}{% if c.id == default_company_id %} ⭐{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div>
+                    <label style="font-size: 12px; color: #888; display: block; margin-bottom: 5px;">Your Role</label>
+                    <span style="background: {% if user_role == 'owner' %}#bc00ed{% elif user_role == 'admin' %}#00ffb4{% elif user_role == 'editor' %}#ffc107{% else %}#666{% endif %}; color: {% if user_role == 'viewer' %}#fff{% else %}#000{% endif %}; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                        {{ user_role|title }}
+                    </span>
+                </div>
+                <div>
+                    <label style="font-size: 12px; color: #888; display: block; margin-bottom: 5px;">Default</label>
+                    <button onclick="setDefaultCompany({{ company.id }})" 
+                            style="padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; font-weight: 600;
+                            {% if company.id == default_company_id %}
+                            background: #00ffb4; color: #000;
+                            {% else %}
+                            background: #333; color: #888;
+                            {% endif %}">
+                        {% if company.id == default_company_id %}⭐ Default{% else %}Set as Default{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% if not can_edit %}
+        <div style="margin-top: 15px; padding: 10px; background: #1a0011; border: 1px solid #ff0066; border-radius: 4px; color: #ff0066; font-size: 12px;">
+            ⚠️ You have view-only access to this company. Contact an admin to request edit permissions.
+        </div>
+        {% endif %}
+    </div>
+
     <div class="tabs">
         <div class="tab active" onclick="switchTab('brand')">🎨 Brand Settings</div>
         <div class="tab" onclick="switchTab('secrets')">🔐 API Keys & Secrets</div>
@@ -540,6 +581,32 @@
 
 <script src="https://unpkg.com/feather-icons"></script>
 <script>
+function switchCompany(companyId) {
+    window.location.href = '/company/' + companyId + '/settings';
+}
+
+async function setDefaultCompany(companyId) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    try {
+        const response = await fetch('/api/user/set-default-company', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ company_id: companyId })
+        });
+        const data = await response.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error setting default company: ' + data.error);
+        }
+    } catch (e) {
+        alert('Error setting default company');
+    }
+}
+
 function switchTab(tabName) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));

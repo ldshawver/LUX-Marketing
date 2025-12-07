@@ -112,4 +112,84 @@
         </div>
     </div>
 </div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card" style="background: linear-gradient(135deg, #000000 0%, #1a001a 100%); border: 2px solid #bc00ed;">
+            <div class="card-header" style="background: #bc00ed; color: white;">
+                <h5 class="card-title mb-0"><i data-feather="briefcase"></i> My Companies</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover">
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th>Your Role</th>
+                                <th>Default</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for comp in all_companies %}
+                            <tr>
+                                <td>
+                                    <strong style="color: #00ffb4;">{{ comp.name }}</strong>
+                                    {% if comp.industry %}<br><small style="color: #888;">{{ comp.industry }}</small>{% endif %}
+                                </td>
+                                <td>
+                                    {% set role = current_user.get_company_role(comp.id) %}
+                                    <span class="badge" style="background: {% if role == 'owner' %}#e4055c{% elif role == 'admin' %}#bc00ed{% elif role == 'editor' %}#0044ff{% else %}#444{% endif %}; color: white;">
+                                        {{ role|upper if role else 'VIEWER' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if user.default_company_id == comp.id %}
+                                    <span class="badge bg-success"><i data-feather="check"></i> Default</span>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="setDefaultCompany({{ comp.id }})">Set Default</button>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('main.company_settings', company_id=comp.id) }}" class="btn btn-sm" style="background: #bc00ed; color: white;">
+                                        <i data-feather="settings"></i> Settings
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center" style="color: #888;">No companies available</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function setDefaultCompany(companyId) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    try {
+        const response = await fetch('/api/user/set-default-company', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ company_id: companyId })
+        });
+        const data = await response.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error setting default company: ' + data.error);
+        }
+    } catch (e) {
+        alert('Error setting default company');
+    }
+}
+</script>
 {% endblock %}

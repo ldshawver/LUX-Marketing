@@ -593,7 +593,7 @@ def ads_hub():
 @login_required
 def companies_list():
     """List all companies for the current user"""
-    user_companies = current_user.companies
+    user_companies = current_user.get_all_companies()
     return render_template('companies.html', companies=user_companies)
 
 @main_bp.route('/companies/add', methods=['GET', 'POST'])
@@ -698,23 +698,11 @@ def switch_company(company_id):
     try:
         company = Company.query.get_or_404(company_id)
         
-        if company not in current_user.companies:
-            return jsonify({'success': False, 'error': 'Access denied'}), 403
+        if not company.is_active:
+            return jsonify({'success': False, 'error': 'Company is not active'}), 400
         
-        db.session.execute(
-            user_company.update().where(
-                user_company.c.user_id == current_user.id
-            ).values(is_default=False)
-        )
-        
-        db.session.execute(
-            user_company.update().where(
-                (user_company.c.user_id == current_user.id) &
-                (user_company.c.company_id == company_id)
-            ).values(is_default=True)
-        )
-        
-        db.session.commit()
+        current_user.ensure_company_access(company_id, 'viewer')
+        current_user.set_default_company(company_id)
         
         return jsonify({'success': True, 'company_name': company.name})
     except Exception as e:
@@ -4286,9 +4274,19 @@ def settings_integrations():
     """Settings & Integrations page - shows current user's company config"""
     try:
         company = current_user.get_default_company()
+        all_companies = current_user.get_all_companies()
+        if not company and all_companies:
+            company = all_companies[0]
         if not company:
             return redirect(url_for('main.dashboard'))
-        return render_template('company_settings.html', company=company)
+        user_role = current_user.get_company_role(company.id)
+        can_edit = current_user.can_edit_company(company.id)
+        return render_template('company_settings.html', 
+                               company=company, 
+                               all_companies=all_companies,
+                               user_role=user_role,
+                               can_edit=can_edit,
+                               default_company_id=current_user.default_company_id)
     except Exception as e:
         logger.error(f"Settings page error: {e}")
         return redirect(url_for('main.dashboard'))
@@ -4299,12 +4297,44 @@ def company_settings(company_id):
     """Company settings & integrations page"""
     try:
         company = Company.query.get(company_id)
+        all_companies = current_user.get_all_companies()
         if not company:
             return redirect(url_for('main.dashboard'))
-        return render_template('company_settings.html', company=company)
+        user_role = current_user.get_company_role(company.id)
+        can_edit = current_user.can_edit_company(company.id)
+        return render_template('company_settings.html', 
+                               company=company, 
+                               all_companies=all_companies,
+                               user_role=user_role,
+                               can_edit=can_edit,
+                               default_company_id=current_user.default_company_id)
     except Exception as e:
         logger.error(f"Settings page error: {e}")
         return redirect(url_for('main.dashboard'))
+
+@main_bp.route('/api/user/set-default-company', methods=['POST'])
+@login_required
+def set_default_company():
+    """Set user's default company"""
+    try:
+        data = request.get_json() or {}
+        company_id = data.get('company_id')
+        if not company_id:
+            return jsonify({'success': False, 'error': 'company_id required'}), 400
+        
+        company = Company.query.get(company_id)
+        if not company:
+            return jsonify({'success': False, 'error': 'Company not found'}), 404
+        
+        if not company.is_active:
+            return jsonify({'success': False, 'error': 'Company is not active'}), 400
+        
+        current_user.ensure_company_access(company_id, 'viewer')
+        current_user.set_default_company(company_id)
+        return jsonify({'success': True, 'company': company.name})
+    except Exception as e:
+        logger.error(f"Set default company error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @main_bp.route('/api/company/<int:company_id>/secrets', methods=['GET'])
 @login_required
@@ -4336,6 +4366,9 @@ def save_company_secrets(company_id):
         if not company:
             return jsonify({'success': False, 'error': 'Company not found'}), 404
         
+        if not current_user.can_edit_company(company_id):
+            return jsonify({'success': False, 'error': 'You do not have permission to edit this company'}), 403
+        
         data = request.get_json()
         
         for key, value in data.items():
@@ -4359,6 +4392,9 @@ def save_company_settings(company_id):
         company = Company.query.get(company_id)
         if not company:
             return jsonify({'success': False, 'error': 'Company not found'}), 404
+        
+        if not current_user.can_edit_company(company_id):
+            return jsonify({'success': False, 'error': 'You do not have permission to edit this company'}), 403
         
         data = request.get_json()
         
@@ -5441,10 +5477,12 @@ def user_profile():
     """View current user's profile"""
     user = current_user
     company = user.get_default_company()
+    all_companies = user.get_all_companies()
     
     return render_template('user_profile.html', 
                          user=user, 
-                         company=company)
+                         company=company,
+                         all_companies=all_companies)
 
 @main_bp.route('/user/profile/edit', methods=['GET', 'POST'])
 @login_required

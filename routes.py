@@ -6341,6 +6341,137 @@ def analytics_comprehensive():
                              period_days=30,
                              generated_at=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
 
+# Keyword Research API Routes
+@main_bp.route('/api/keyword-research/research', methods=['POST'])
+@login_required
+def research_keyword():
+    """Research a keyword using available providers"""
+    try:
+        from integrations.keyword_research import KeywordResearchService
+        company = current_user.get_default_company()
+        if not company:
+            return jsonify({'success': False, 'error': 'No company selected'}), 400
+        
+        data = request.get_json()
+        keyword = data.get('keyword', '').strip()
+        provider = data.get('provider', 'auto')
+        
+        if not keyword:
+            return jsonify({'success': False, 'error': 'Keyword required'}), 400
+        
+        service = KeywordResearchService(company.id)
+        result = service.research_keyword(keyword, provider)
+        return jsonify({'success': True, 'data': result})
+    except Exception as e:
+        logger.error(f"Keyword research error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/keyword-research/suggestions', methods=['POST'])
+@login_required
+def get_keyword_suggestions():
+    """Get keyword suggestions"""
+    try:
+        from integrations.keyword_research import KeywordResearchService
+        company = current_user.get_default_company()
+        if not company:
+            return jsonify({'success': False, 'error': 'No company selected'}), 400
+        
+        data = request.get_json()
+        seed_keyword = data.get('keyword', '').strip()
+        
+        if not seed_keyword:
+            return jsonify({'success': False, 'error': 'Seed keyword required'}), 400
+        
+        service = KeywordResearchService(company.id)
+        suggestions, error = service.get_keyword_suggestions(seed_keyword)
+        
+        if error:
+            return jsonify({'success': False, 'error': error}), 500
+        
+        return jsonify({'success': True, 'suggestions': suggestions})
+    except Exception as e:
+        logger.error(f"Keyword suggestions error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/keyword-research/providers', methods=['GET'])
+@login_required
+def get_keyword_providers():
+    """Get available keyword research providers"""
+    try:
+        from integrations.keyword_research import KeywordResearchService
+        company = current_user.get_default_company()
+        service = KeywordResearchService(company.id if company else None)
+        providers = service.get_available_providers()
+        return jsonify({'success': True, 'providers': providers})
+    except Exception as e:
+        logger.error(f"Keyword providers error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Event Integration API Routes
+@main_bp.route('/api/events/search', methods=['POST'])
+@login_required
+def search_events():
+    """Search for events from all providers"""
+    try:
+        from integrations.events import EventService
+        company = current_user.get_default_company()
+        if not company:
+            return jsonify({'success': False, 'error': 'No company selected'}), 400
+        
+        data = request.get_json()
+        query = data.get('query')
+        location = data.get('location')
+        city = data.get('city')
+        state = data.get('state')
+        
+        service = EventService(company.id)
+        results = service.search_all_events(query=query, location=location, city=city, state=state)
+        
+        return jsonify({'success': True, 'data': results})
+    except Exception as e:
+        logger.error(f"Event search error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/events/local', methods=['POST'])
+@login_required
+def get_local_events():
+    """Get local events for a city"""
+    try:
+        from integrations.events import EventService
+        company = current_user.get_default_company()
+        if not company:
+            return jsonify({'success': False, 'error': 'No company selected'}), 400
+        
+        data = request.get_json()
+        city = data.get('city', '').strip()
+        state = data.get('state', '').strip()
+        category = data.get('category')
+        
+        if not city:
+            return jsonify({'success': False, 'error': 'City required'}), 400
+        
+        service = EventService(company.id)
+        events = service.get_local_events(city, state, category)
+        
+        return jsonify({'success': True, 'events': events})
+    except Exception as e:
+        logger.error(f"Local events error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/events/providers', methods=['GET'])
+@login_required
+def get_event_providers():
+    """Get available event providers"""
+    try:
+        from integrations.events import EventService
+        company = current_user.get_default_company()
+        service = EventService(company.id if company else None)
+        providers = service.get_available_providers()
+        return jsonify({'success': True, 'providers': providers})
+    except Exception as e:
+        logger.error(f"Event providers error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 print("✓ Blog post routes loaded: /blog, /blog/create, /blog/<id>/edit, /api/blog/generate")
 print("✓ Customer engagement tracking routes loaded: /contacts/<id>/activities")
 print("✓ Comprehensive analytics route loaded: /analytics/comprehensive")

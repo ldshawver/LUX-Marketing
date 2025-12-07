@@ -150,6 +150,26 @@ def campaign_status_color_filter(status):
     }
     return color_mapping.get(status, 'secondary')
 
+# Context processor for Facebook SDK
+@app.context_processor
+def inject_facebook_app_id():
+    from flask_login import current_user
+    facebook_app_id = None
+    try:
+        if current_user and current_user.is_authenticated:
+            company = current_user.get_default_company()
+            if company:
+                from models import CompanySecret
+                secret = CompanySecret.query.filter_by(
+                    company_id=company.id,
+                    key='facebook_app_id'
+                ).first()
+                if secret:
+                    facebook_app_id = secret.value
+    except Exception:
+        pass
+    return dict(facebook_app_id=facebook_app_id)
+
 # Initialize scheduler
 from scheduler import init_scheduler
 init_scheduler(app)

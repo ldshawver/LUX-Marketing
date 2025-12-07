@@ -20,6 +20,8 @@ Key technical implementations include:
 - **Zapier Webhook Integration**: An authenticated endpoint (`/api/webhook/zapier-contact`) accepts JSON payloads for contact capture, enabling auto-segmentation for newsletter signups.
 - **Error Logging & Diagnostics**: A robust system logs all application errors to a `error_log` database table, capturing details like type, message, stack trace, and severity. Diagnostic endpoints provide system health and error retrieval.
 - **AI Chatbot with Auto-Repair**: The chatbot acts as a marketing assistant, error detector, and troubleshooter. It can analyze server logs (Nginx, Gunicorn, Systemd, app logs) and trigger an automated error repair system. The auto-repair mechanism uses ChatGPT to generate fix plans, tests resolutions, and automatically marks errors as resolved. It supports both automatic and manual triggers for repair sequences.
+- **Keyword Research Integrations**: Multi-provider keyword research supporting DataForSEO (affordable $50/mo), SEMrush (premium $120/mo), and Moz (domain authority). Endpoints: `/api/keyword-research/research`, `/api/keyword-research/suggestions`, `/api/keyword-research/providers`
+- **Event Integrations**: Multi-provider event search supporting Eventbrite and Ticketmaster. Endpoints: `/api/events/search`, `/api/events/local`, `/api/events/providers`
 
 ## External Dependencies
 - **OpenAI API**: Used for AI-powered campaign generation and the AI chatbot's capabilities, including error diagnosis and auto-repair plan generation.
@@ -33,4 +35,16 @@ Key technical implementations include:
 - **LinkedIn API**: For LinkedIn integration, requiring client ID, client secret, and access token.
 - **Snapchat API**: For Snapchat integration, requiring Business Account ID and access token.
 - **X (formerly Twitter) API**: For Twitter integration, requiring API key, API secret, bearer token, client ID, and client secret.
+- **DataForSEO API**: Affordable keyword research data ($50/mo) - login/password authentication
+- **SEMrush API**: Premium keyword and competitor data ($120/mo) - API key authentication
+- **Moz API**: Domain authority and keyword difficulty - access ID/secret key authentication
+- **Eventbrite API**: Local events, ticketing, categories - bearer token authentication
+- **Ticketmaster Discovery API**: Concerts, sports, theater, venues, attractions - API key authentication
 - **PostgreSQL**: Primary database for storing application data, including `error_log` and `Contact` information.
+
+## Recent Changes (Dec 7, 2025)
+- Created `integrations/keyword_research.py` with DataForSEO, SEMrush, and Moz clients
+- Created `integrations/events.py` with Eventbrite and Ticketmaster clients
+- Added 6 new API endpoints for keyword research and event integrations
+- All integrations load credentials from CompanySecret model via Settings → Integrations
+- Credentials stored per company: `dataforseo_login`/`password`, `semrush_api_key`, `moz_access_id`/`secret_key`, `eventbrite_api_key`, `ticketmaster_api_key`

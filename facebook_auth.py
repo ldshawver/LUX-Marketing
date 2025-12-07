@@ -436,6 +436,68 @@ def post_to_page():
     return jsonify({'success': True, 'post_id': result.get('id')})
 
 
+@facebook_auth_bp.route('/sdk-login', methods=['POST'])
+@login_required
+def sdk_login():
+    """Handle Facebook SDK login from frontend button"""
+    try:
+        company = current_user.get_default_company()
+        if not company:
+            return jsonify({'success': False, 'error': 'No company selected'}), 400
+        
+        data = request.get_json()
+        access_token = data.get('accessToken')
+        user_id = data.get('userID')
+        expires_in = data.get('expiresIn', 3600)
+        
+        if not access_token or not user_id:
+            return jsonify({'success': False, 'error': 'Missing access token or user ID'}), 400
+        
+        user_info, error = FacebookService.get_user_info(access_token)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        oauth_record = FacebookOAuth.query.filter_by(
+            user_id=current_user.id,
+            company_id=company.id
+        ).first()
+        
+        if oauth_record:
+            oauth_record.access_token = access_token
+            oauth_record.facebook_user_id = user_id
+            oauth_record.facebook_name = user_info.get('name')
+            oauth_record.facebook_email = user_info.get('email')
+            oauth_record.avatar_url = user_info.get('picture', {}).get('data', {}).get('url')
+            oauth_record.expires_at = datetime.utcnow() + timedelta(seconds=int(expires_in))
+            oauth_record.updated_at = datetime.utcnow()
+        else:
+            oauth_record = FacebookOAuth(
+                user_id=current_user.id,
+                company_id=company.id,
+                access_token=access_token,
+                facebook_user_id=user_id,
+                facebook_name=user_info.get('name'),
+                facebook_email=user_info.get('email'),
+                avatar_url=user_info.get('picture', {}).get('data', {}).get('url'),
+                expires_at=datetime.utcnow() + timedelta(seconds=int(expires_in))
+            )
+            db.session.add(oauth_record)
+        
+        db.session.commit()
+        
+        logger.info(f"Facebook SDK login successful for user {current_user.id}")
+        return jsonify({
+            'success': True,
+            'user': {
+                'name': user_info.get('name'),
+                'email': user_info.get('email')
+            }
+        })
+    except Exception as e:
+        logger.error(f"Facebook SDK login error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 VERIFY_TOKEN = "lux_fb_verify_2025"
 
 @facebook_auth_bp.route('/webhook', methods=['GET', 'POST'])

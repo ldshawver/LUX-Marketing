@@ -317,21 +317,36 @@ def analytics_hub():
     except Exception as e:
         logger.error(f"Error fetching email metrics: {e}")
     
-    # Get Social Media Metrics
+    # Get Social Media Metrics (Live from OAuth accounts)
     try:
-        social_accounts = SocialMediaAccount.query.filter_by(is_verified=True).all()
-        total_followers = sum([acc.follower_count or 0 for acc in social_accounts])
+        from integrations.social_metrics import SocialMediaMetrics
+        company = current_user.get_default_company()
         
+        # Get live metrics from all connected social media accounts
+        social_metrics_live = SocialMediaMetrics.get_all_social_metrics(company.id if company else current_user.id)
+        total_followers = social_metrics_live.get('total_followers', 0)
+        
+        # Count social posts this period
         social_posts = SocialPost.query.filter(
             SocialPost.created_at >= start_date,
             SocialPost.created_at <= end_date
         ).count()
         
+        # Count connected accounts
+        from models import InstagramOAuth, TikTokOAuth, FacebookOAuth
+        connected_instagram = InstagramOAuth.query.filter_by(company_id=company.id if company else current_user.id, status='active').count()
+        connected_tiktok = TikTokOAuth.query.filter_by(company_id=company.id if company else current_user.id, status='active').count()
+        connected_facebook = FacebookOAuth.query.filter_by(company_id=company.id if company else current_user.id, status='active').count()
+        total_connected = connected_instagram + connected_tiktok + connected_facebook
+        
         analytics_data['total_reach'] = total_followers
         analytics_data['social_metrics'] = {
             'total_followers': total_followers,
             'posts_this_month': social_posts,
-            'connected_accounts': len(social_accounts)
+            'connected_accounts': total_connected,
+            'instagram_accounts': social_metrics_live.get('instagram', []),
+            'tiktok_accounts': social_metrics_live.get('tiktok', []),
+            'facebook_accounts': social_metrics_live.get('facebook', [])
         }
     except Exception as e:
         logger.error(f"Error fetching social metrics: {e}")

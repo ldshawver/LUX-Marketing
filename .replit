@@ -46,6 +46,10 @@ externalPort = 3001
 localPort = 39579
 externalPort = 3000
 
+[[ports]]
+localPort = 42159
+externalPort = 3003
+
 [agent]
 expertMode = true
 
@@ -53,3 +57,4 @@ expertMode = true
 
 [userenv.shared]
 GIT_URL = "https://ldshawver:${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com/ldshawver/LUX-Marketing.git"
+FB_VERIFY_TOKEN = "lux_fb_webhook_secret_123"

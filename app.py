@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
@@ -110,6 +110,14 @@ try:
 except Exception as e:
     logging.warning(f"Instagram OAuth not available: {e}")
 
+# Register Facebook Webhook with CSRF exemption
+try:
+    from fb_webhook import register_facebook_webhook
+    register_facebook_webhook(app, csrf)
+    logging.info("Facebook webhook registered successfully")
+except Exception as e:
+    logging.warning(f"Facebook webhook not available: {e}")
+
 # Root route - redirects to login
 @app.route("/")
 def index():
@@ -137,49 +145,11 @@ with app.app_context():
     except Exception as e:
         logging.error(f"Error initializing error logging: {e}")
 
-# Add Jinja2 filters
-@app.template_filter('campaign_status_color')
-def campaign_status_color_filter(status):
-    color_mapping = {
-        'draft': 'secondary',
-        'scheduled': 'warning',
-        'sending': 'info',
-        'sent': 'success',
-        'failed': 'danger',
-        'paused': 'dark'
-    }
-    return color_mapping.get(status, 'secondary')
-
-# Context processor for Facebook SDK
-@app.context_processor
-def inject_facebook_app_id():
-    from flask_login import current_user
-    facebook_app_id = None
+    # Initialize agents
     try:
-        if current_user and current_user.is_authenticated:
-            company = current_user.get_default_company()
-            if company:
-                from models import CompanySecret
-                secret = CompanySecret.query.filter_by(
-                    company_id=company.id,
-                    key='facebook_app_id'
-                ).first()
-                if secret:
-                    facebook_app_id = secret.value
-    except Exception:
-        pass
-    return dict(facebook_app_id=facebook_app_id)
-
-# Initialize scheduler
-from scheduler import init_scheduler
-init_scheduler(app)
-
-# Initialize AI Agent Scheduler
-try:
-    from agent_scheduler import initialize_agent_scheduler
-    with app.app_context():
-        agent_scheduler = initialize_agent_scheduler()
-        if agent_scheduler:
-            logging.info("AI Agent Scheduler initialized successfully")
-except Exception as e:
-    logging.error(f"Failed to initialize AI Agent Scheduler: {e}")
+        from agents.app_agent import AppAgent
+        from agent_scheduler import AgentScheduler, agent_scheduler
+        app.agent_scheduler = agent_scheduler
+        logging.info("AI Agent Scheduler initialized successfully")
+    except Exception as e:
+        logging.error(f"Error initializing AI Agent Scheduler: {e}")

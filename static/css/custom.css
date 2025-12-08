@@ -37,14 +37,28 @@ body {
   background: var(--lux-pure-black);
   color: var(--lux-pearl-white);
   min-height: 100vh;
+  position: relative;
 }
 
-/* Navigation Bar - Elegant LUX Branding */
+/* Technology background - image already has fade effect */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('/static/technology-bg.png') no-repeat center center;
+  background-size: cover;
+  z-index: -2;
+}
+
+/* Navigation Bar - Sleek Transparent Black */
 .navbar {
-  background: linear-gradient(135deg, var(--lux-card-bg) 0%, var(--lux-purple-dark) 50%, var(--lux-cyan-dark) 100%);
-  border-bottom: 2px solid var(--lux-purple-bright);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 16px rgba(188, 0, 237, 0.3);
+  background: rgba(0, 0, 0, 0.75);
+  border-bottom: 1px solid rgba(60, 60, 60, 0.5);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 1030;
 }
@@ -90,12 +104,15 @@ body {
   height: 1rem;
 }
 
-/* Cards - Sophisticated Design */
+/* Cards - Glossy Metallic Black */
 .card {
-  background: linear-gradient(145deg, var(--lux-card-bg) 0%, rgba(72, 7, 73, 0.4) 100%);
-  border: 1px solid rgba(188, 0, 237, 0.2);
+  background: linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 50%, #000000 100%);
+  border: 1px solid rgba(80, 80, 80, 0.4);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
   position: relative;
@@ -104,13 +121,16 @@ body {
 
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 24px rgba(188, 0, 237, 0.3);
-  border-color: rgba(0, 255, 180, 0.3);
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  border-color: rgba(120, 120, 120, 0.5);
 }
 
 .card-header {
-  background: linear-gradient(135deg, var(--lux-purple-dark) 0%, rgba(0, 68, 69, 0.3) 100%);
-  border-bottom: 1px solid rgba(0, 255, 180, 0.2);
+  background: linear-gradient(135deg, #1f1f1f 0%, #0a0a0a 100%);
+  border-bottom: 1px solid rgba(80, 80, 80, 0.3);
   border-radius: 12px 12px 0 0;
   color: var(--lux-pearl-white);
   font-weight: 600;

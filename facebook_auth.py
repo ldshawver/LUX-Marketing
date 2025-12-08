@@ -66,16 +66,21 @@ class FacebookService:
         session['facebook_oauth_state'] = state
         session['facebook_oauth_company_id'] = company_id
         
+        scope_string = ','.join(FacebookService.SCOPES)
+        logger.info(f"Facebook OAuth scopes being requested: {scope_string}")
+        
         params = {
             'client_id': app_id,
             'redirect_uri': FacebookService.get_redirect_uri(),
             'state': state,
-            'scope': ','.join(FacebookService.SCOPES),
+            'scope': scope_string,
             'response_type': 'code'
         }
         
         query_string = '&'.join(f"{k}={v}" for k, v in params.items())
         auth_url = f"{FacebookService.AUTHORIZATION_URL}?{query_string}"
+        
+        logger.info(f"Facebook OAuth URL generated: {auth_url}")
         
         return auth_url, None
     
@@ -240,93 +245,104 @@ def connect():
 
 
 @facebook_auth_bp.route('/callback')
+@login_required
 def callback():
     """Handle Facebook OAuth callback"""
-    error = request.args.get('error')
-    error_description = request.args.get('error_description')
-    
-    if error:
-        flash(f'Facebook authorization failed: {error_description or error}', 'error')
-        return redirect(url_for('main.settings_integrations'))
-    
-    code = request.args.get('code')
-    state = request.args.get('state')
-    
-    stored_state = session.pop('facebook_oauth_state', None)
-    company_id = session.pop('facebook_oauth_company_id', None)
-    
-    if not state or state != stored_state:
-        flash('Invalid OAuth state. Please try again.', 'error')
-        return redirect(url_for('main.settings_integrations'))
-    
-    if not code:
-        flash('No authorization code received', 'error')
-        return redirect(url_for('main.settings_integrations'))
-    
-    if not company_id:
-        flash('Session expired. Please try again.', 'error')
-        return redirect(url_for('main.settings_integrations'))
-    
-    token_data, error = FacebookService.exchange_code_for_token(code, company_id)
-    
-    if error:
-        flash(f'Token exchange failed: {error}', 'error')
-        return redirect(url_for('main.settings_integrations'))
-    
-    short_token = token_data.get('access_token')
-    
-    long_token_data, error = FacebookService.get_long_lived_token(short_token, company_id)
-    
-    if error:
-        access_token = short_token
-        expires_in = token_data.get('expires_in', 3600)
-    else:
-        access_token = long_token_data.get('access_token', short_token)
-        expires_in = long_token_data.get('expires_in', 5184000)
-    
-    user_info, error = FacebookService.get_user_info(access_token)
-    
-    if error:
-        flash(f'Failed to get user info: {error}', 'error')
-        return redirect(url_for('main.settings_integrations'))
-    
-    facebook_user_id = user_info.get('id')
-    display_name = user_info.get('name', 'Facebook User')
-    email = user_info.get('email')
-    picture = user_info.get('picture', {}).get('data', {}).get('url')
-    
-    expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
-    
-    oauth_record = FacebookOAuth.query.filter_by(
-        user_id=current_user.id,
-        company_id=company_id
-    ).first()
-    
-    if oauth_record:
-        oauth_record.set_access_token(access_token)
-        oauth_record.facebook_user_id = facebook_user_id
-        oauth_record.display_name = display_name
-        oauth_record.email = email
-        oauth_record.avatar_url = picture
-        oauth_record.expires_at = expires_at
-        oauth_record.updated_at = datetime.utcnow()
-    else:
-        oauth_record = FacebookOAuth(
+    try:
+        error = request.args.get('error')
+        error_description = request.args.get('error_description')
+        
+        if error:
+            flash(f'Facebook authorization failed: {error_description or error}', 'error')
+            return redirect(url_for('main.settings_integrations'))
+        
+        code = request.args.get('code')
+        state = request.args.get('state')
+        
+        stored_state = session.pop('facebook_oauth_state', None)
+        company_id = session.pop('facebook_oauth_company_id', None)
+        
+        if not state or state != stored_state:
+            logger.error(f"State mismatch: stored={stored_state}, received={state}")
+            flash('Invalid OAuth state. Please try again.', 'error')
+            return redirect(url_for('main.settings_integrations'))
+        
+        if not code:
+            flash('No authorization code received', 'error')
+            return redirect(url_for('main.settings_integrations'))
+        
+        if not company_id:
+            flash('Session expired. Please try again.', 'error')
+            return redirect(url_for('main.settings_integrations'))
+        
+        token_data, error = FacebookService.exchange_code_for_token(code, company_id)
+        
+        if error:
+            logger.error(f"Token exchange error: {error}")
+            flash(f'Token exchange failed: {error}', 'error')
+            return redirect(url_for('main.settings_integrations'))
+        
+        short_token = token_data.get('access_token')
+        
+        long_token_data, error = FacebookService.get_long_lived_token(short_token, company_id)
+        
+        if error:
+            access_token = short_token
+            expires_in = token_data.get('expires_in', 3600)
+        else:
+            access_token = long_token_data.get('access_token', short_token)
+            expires_in = long_token_data.get('expires_in', 5184000)
+        
+        user_info, error = FacebookService.get_user_info(access_token)
+        
+        if error:
+            logger.error(f"User info error: {error}")
+            flash(f'Failed to get user info: {error}', 'error')
+            return redirect(url_for('main.settings_integrations'))
+        
+        facebook_user_id = user_info.get('id')
+        display_name = user_info.get('name', 'Facebook User')
+        email = user_info.get('email')
+        picture = user_info.get('picture', {}).get('data', {}).get('url')
+        
+        expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+        
+        oauth_record = FacebookOAuth.query.filter_by(
             user_id=current_user.id,
-            company_id=company_id,
-            facebook_user_id=facebook_user_id,
-            display_name=display_name,
-            email=email,
-            avatar_url=picture,
-            expires_at=expires_at
-        )
-        oauth_record.set_access_token(access_token)
-        db.session.add(oauth_record)
+            company_id=company_id
+        ).first()
+        
+        if oauth_record:
+            oauth_record.set_access_token(access_token)
+            oauth_record.facebook_user_id = facebook_user_id
+            oauth_record.display_name = display_name
+            oauth_record.email = email
+            oauth_record.avatar_url = picture
+            oauth_record.expires_at = expires_at
+            oauth_record.updated_at = datetime.utcnow()
+        else:
+            oauth_record = FacebookOAuth(
+                user_id=current_user.id,
+                company_id=company_id,
+                facebook_user_id=facebook_user_id,
+                display_name=display_name,
+                email=email,
+                avatar_url=picture,
+                expires_at=expires_at
+            )
+            oauth_record.set_access_token(access_token)
+            db.session.add(oauth_record)
+        
+        db.session.commit()
+        
+        logger.info(f"Facebook OAuth successful for user {current_user.id}, company {company_id}")
+        flash('Facebook connected successfully!', 'success')
+        return redirect(url_for('main.company_settings', id=company_id))
     
-    db.session.commit()
-    
-    flash('Facebook connected successfully!', 'success')
-    return redirect(url_for('main.company_settings', id=company_id))
+    except Exception as e:
+        logger.error(f"Facebook callback error: {e}", exc_info=True)
+        flash(f'An error occurred: {str(e)}', 'error')
+        return redirect(url_for('main.settings_integrations'))
 
 
 @facebook_auth_bp.route('/disconnect', methods=['POST'])

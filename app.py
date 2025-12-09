@@ -110,11 +110,12 @@ try:
 except Exception as e:
     logging.warning(f"Instagram OAuth not available: {e}")
 
-# Register Facebook Webhook with CSRF exemption
+# Register Facebook Webhook Blueprint with CSRF exemption
 try:
-    from fb_webhook import register_facebook_webhook
-    register_facebook_webhook(app, csrf)
-    logging.info("Facebook webhook registered successfully")
+    from fb_webhook import fb_webhook
+    app.register_blueprint(fb_webhook)
+    csrf.exempt(fb_webhook)
+    logging.info("Facebook webhook blueprint registered successfully")
 except Exception as e:
     logging.warning(f"Facebook webhook not available: {e}")
 

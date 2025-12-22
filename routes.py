@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response, send_file
 from flask_login import login_required, current_user
-from sqlalchemy import or_
+from sqlalchemy import or_, case
 from app import db, csrf
 from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTracking, 
                     BrandKit, EmailComponent, Poll, PollResponse, ABTest, Automation, 
@@ -30,6 +30,7 @@ from auto_repair_service import AutoRepairService
 from error_fixes import ErrorFixService
 from ai_code_fixer import AICodeFixer
 from ai_action_executor import AIActionExecutor
+from services.config_status_service import ConfigStatusService
 
 # Stub services for missing imports (prevents LSP errors and runtime crashes)
 class SMSService:
@@ -69,6 +70,8 @@ def dashboard():
     
     current_company = current_user.get_default_company()
     
+    config_alerts = ConfigStatusService.get_dashboard_alerts(current_company) if current_company else []
+    
     return render_template('dashboard.html',
                          total_contacts=total_contacts,
                          total_campaigns=total_campaigns,
@@ -80,7 +83,8 @@ def dashboard():
                          utm_campaigns=utm_campaigns,
                          social_with_media=social_with_media,
                          total_social_posts=total_social_posts,
-                         current_company=current_company)
+                         current_company=current_company,
+                         config_alerts=config_alerts)
 
 @main_bp.route('/email-hub')
 @login_required
@@ -301,8 +305,8 @@ def analytics_hub():
             EmailTracking.created_at >= start_date,
             EmailTracking.created_at <= end_date
         ).with_entities(
-            func.sum(func.case((EmailTracking.event_type == 'opened', 1), else_=0)).label('opens'),
-            func.sum(func.case((EmailTracking.event_type == 'clicked', 1), else_=0)).label('clicks'),
+            func.sum(case((EmailTracking.event_type == 'opened', 1), else_=0)).label('opens'),
+            func.sum(case((EmailTracking.event_type == 'clicked', 1), else_=0)).label('clicks'),
             func.count(EmailTracking.id).label('total_events')
         ).first()
         
@@ -440,8 +444,8 @@ def export_analytics():
             EmailTracking.created_at >= start_date,
             EmailTracking.created_at <= end_date
         ).with_entities(
-            func.sum(func.case((EmailTracking.event_type == 'opened', 1), else_=0)).label('opens'),
-            func.sum(func.case((EmailTracking.event_type == 'clicked', 1), else_=0)).label('clicks')
+            func.sum(case((EmailTracking.event_type == 'opened', 1), else_=0)).label('opens'),
+            func.sum(case((EmailTracking.event_type == 'clicked', 1), else_=0)).label('clicks')
         ).first()
         
         export_data.append(['Email Marketing', ''])

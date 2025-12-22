@@ -42,6 +42,18 @@ Key technical implementations include:
 - **Ticketmaster Discovery API**: Concerts, sports, theater, venues, attractions - API key authentication
 - **PostgreSQL**: Primary database for storing application data, including `error_log` and `Contact` information.
 
+## Recent Changes (Dec 19, 2025)
+- Added TikTok Pixel integration with automatic injection into all pages via context processor
+- TikTok Pixel stored in CompanySecret as `tiktok_pixel_id` (Lucifer Cruz: D52P2FJC77UFC6VTOHHG)
+- Refactored `inject_facebook_app_id()` to `inject_tracking_pixels()` to handle both Facebook SDK and TikTok Pixel
+
+## Recent Changes (Dec 9, 2025)
+- Fixed SQLAlchemy `case` syntax error in analytics routes (email metrics export) - use `case()` instead of `func.case()`
+- Enhanced ConfigStatusService with `check_oauth_connections()` method to verify active OAuth sessions for Facebook, Instagram, TikTok
+- Dashboard alerts now differentiate between missing API credentials ("Needs Setup") vs missing OAuth connections ("Not Connected")
+- Alert types: 'error' for missing credentials, 'warning' for disconnected OAuth, 'info' for other configs
+- TikTok OAuth scopes reduced to basic permissions (`user.info.basic`, `video.list`) to resolve authorization errors
+
 ## Recent Changes (Dec 7, 2025)
 - Created `integrations/keyword_research.py` with DataForSEO, SEMrush, and Moz clients
 - Created `integrations/events.py` with Eventbrite and Ticketmaster clients

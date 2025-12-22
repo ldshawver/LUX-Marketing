@@ -63,6 +63,33 @@ def load_user(user_id):
     from models import User
     return User.query.get(int(user_id))
 
+@app.context_processor
+def inject_tracking_pixels():
+    """Inject Facebook App ID and TikTok Pixel into all templates"""
+    from flask_login import current_user
+    facebook_app_id = None
+    tiktok_pixel_id = None
+    try:
+        if current_user and current_user.is_authenticated:
+            company = current_user.get_default_company()
+            if company:
+                from models import CompanySecret
+                fb_secret = CompanySecret.query.filter_by(
+                    company_id=company.id,
+                    key='facebook_app_id'
+                ).first()
+                if fb_secret:
+                    facebook_app_id = fb_secret.value
+                tiktok_secret = CompanySecret.query.filter_by(
+                    company_id=company.id,
+                    key='tiktok_pixel_id'
+                ).first()
+                if tiktok_secret:
+                    tiktok_pixel_id = tiktok_secret.value
+    except Exception:
+        pass
+    return {'facebook_app_id': facebook_app_id, 'tiktok_pixel_id': tiktok_pixel_id}
+
 # Register blueprints
 from routes import main_bp
 from auth import auth_bp
@@ -149,8 +176,8 @@ with app.app_context():
     # Initialize agents
     try:
         from agents.app_agent import AppAgent
-        from agent_scheduler import AgentScheduler, agent_scheduler
-        app.agent_scheduler = agent_scheduler
+        from agent_scheduler import AgentScheduler, get_agent_scheduler
+        app.agent_scheduler = get_agent_scheduler()
         logging.info("AI Agent Scheduler initialized successfully")
     except Exception as e:
         logging.error(f"Error initializing AI Agent Scheduler: {e}")

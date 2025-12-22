@@ -23,10 +23,7 @@ class TikTokService:
     
     SCOPES = [
         'user.info.basic',
-        'video.list',
-        'video.upload',
-        'video.create',
-        'video.publish'
+        'video.list'
     ]
     
     def __init__(self, client_key=None, client_secret=None):

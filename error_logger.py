@@ -183,5 +183,12 @@ def setup_error_logging_handler():
         except Exception as e:
             logger.error(f"Error in error handler: {e}")
         
-        # Re-raise the error to Flask's default handler
-        raise error
+        # Return appropriate error response
+        from flask import render_template_string
+        from werkzeug.exceptions import HTTPException
+        
+        if isinstance(error, HTTPException):
+            return error
+        
+        # For non-HTTP exceptions, return 500
+        return "Internal Server Error", 500

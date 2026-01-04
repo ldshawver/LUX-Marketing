@@ -4,97 +4,433 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1><i data-feather="search"></i> Keyword Research</h1>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addKeywordModal">
-            <i data-feather="plus"></i> Research Keyword
-        </button>
+        <div>
+            <button class="btn btn-outline-info me-2" onclick="checkProviders()">
+                <i data-feather="settings"></i> Check Providers
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#researchModal">
+                <i data-feather="plus"></i> Research Keyword
+            </button>
+        </div>
     </div>
 
-    <!-- Keywords Grid -->
-    <div class="row">
-        {% for keyword in keywords %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5><i data-feather="info" style="width:18px;height:18px;"></i> 3rd Party Keyword Research Providers</h5>
+                <p class="mb-2">This tool integrates with multiple SEO data providers for comprehensive keyword research:</p>
+                <ul class="mb-0">
+                    <li><strong>DataForSEO</strong> - Affordable keyword data with search volume, CPC, and competition metrics</li>
+                    <li><strong>SEMrush</strong> - Premium keyword and competitor intelligence with difficulty scores</li>
+                    <li><strong>Moz</strong> - Domain authority and keyword difficulty analysis</li>
+                </ul>
+                <p class="mt-2 mb-0"><small>Configure API credentials in <a href="{{ url_for('main.company_settings') }}">Settings → Integrations</a></small></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="providerStatus" class="row mb-4" style="display:none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i data-feather="check-circle"></i> Provider Status</h5>
+                </div>
                 <div class="card-body">
-                    <h5>{{ keyword.keyword }}</h5>
-                    <div class="mb-3">
-                        <span class="badge bg-primary">{{ keyword.intent or 'Unknown' }}</span>
-                        <span class="badge bg-{{ 'success' if keyword.difficulty_score < 30 else 'warning' if keyword.difficulty_score < 70 else 'danger' }}">
-                            Difficulty: {{ keyword.difficulty_score|int if keyword.difficulty_score else 'N/A' }}
-                        </span>
-                    </div>
-                    <div class="small">
-                        <p class="mb-1"><strong>Search Volume:</strong> {{ keyword.search_volume or 'N/A' }}</p>
-                        <p class="mb-1"><strong>Competition:</strong> {{ keyword.competition or 'Unknown' }}</p>
-                        <p><strong>Status:</strong> {{ keyword.status }}</p>
-                    </div>
+                    <div id="providerList" class="d-flex gap-3"></div>
                 </div>
             </div>
         </div>
-        {% endfor %}
     </div>
 
-    {% if not keywords %}
-    <div class="alert alert-info text-center">No keywords tracked yet. Start researching keywords to optimize your SEO strategy.</div>
-    {% endif %}
+    <div id="researchResults" class="mb-4" style="display:none;">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i data-feather="bar-chart-2"></i> Research Results</h5>
+                <button class="btn btn-sm btn-outline-light" onclick="closeResults()">Close</button>
+            </div>
+            <div class="card-body">
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="suggestionsResults" class="mb-4" style="display:none;">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i data-feather="list"></i> Related Keywords & Suggestions</h5>
+            </div>
+            <div class="card-body">
+                <div id="suggestionsTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i data-feather="bookmark"></i> Tracked Keywords</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for keyword in keywords %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 keyword-card">
+                                <div class="card-body">
+                                    <h5 class="text-primary">{{ keyword.keyword }}</h5>
+                                    <div class="mb-3">
+                                        <span class="badge bg-info">{{ keyword.intent or 'Unknown Intent' }}</span>
+                                        {% if keyword.difficulty_score %}
+                                        <span class="badge bg-{{ 'success' if keyword.difficulty_score < 30 else 'warning' if keyword.difficulty_score < 70 else 'danger' }}">
+                                            Difficulty: {{ keyword.difficulty_score|int }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="keyword-metrics">
+                                        <div class="metric-row">
+                                            <span class="metric-label">Search Volume:</span>
+                                            <span class="metric-value">{{ '{:,}'.format(keyword.search_volume) if keyword.search_volume else 'N/A' }}</span>
+                                        </div>
+                                        <div class="metric-row">
+                                            <span class="metric-label">CPC:</span>
+                                            <span class="metric-value">${{ '%.2f'|format(keyword.cpc) if keyword.cpc else 'N/A' }}</span>
+                                        </div>
+                                        <div class="metric-row">
+                                            <span class="metric-label">Competition:</span>
+                                            <span class="metric-value">{{ keyword.competition or 'Unknown' }}</span>
+                                        </div>
+                                        <div class="metric-row">
+                                            <span class="metric-label">Status:</span>
+                                            <span class="badge bg-secondary">{{ keyword.status }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="refreshKeyword('{{ keyword.keyword }}')">
+                                            <i data-feather="refresh-cw" style="width:14px;height:14px;"></i> Refresh Data
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    {% if not keywords %}
+                    <div class="text-center py-5">
+                        <i data-feather="search" style="width:64px;height:64px;" class="text-muted mb-3"></i>
+                        <h4 class="text-muted">No keywords tracked yet</h4>
+                        <p class="text-muted">Research keywords to get search volume, CPC, and competition data from DataForSEO, SEMrush, or Moz.</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#researchModal">
+                            <i data-feather="plus"></i> Research Your First Keyword
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Add Keyword Modal -->
-<div class="modal fade" id="addKeywordModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="researchModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Research New Keyword</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i data-feather="search"></i> Research Keyword</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="addKeywordForm">
+            <form id="researchForm">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Keyword</label>
-                        <input type="text" class="form-control" id="keywordInput" required>
+                        <label class="form-label">Enter Keyword or Phrase</label>
+                        <input type="text" class="form-control form-control-lg" id="keywordInput" placeholder="e.g., digital marketing, email automation, SEO tools" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Data Provider</label>
+                        <select class="form-select" id="providerSelect">
+                            <option value="auto">Auto (Use Best Available)</option>
+                            <option value="dataforseo">DataForSEO</option>
+                            <option value="semrush">SEMrush</option>
+                        </select>
+                        <small class="text-muted">Select the SEO data provider to use for research</small>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="getSuggestions" checked>
+                        <label class="form-check-label" for="getSuggestions">
+                            Also get related keyword suggestions
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="saveKeyword" checked>
+                        <label class="form-check-label" for="saveKeyword">
+                            Save to tracked keywords
+                        </label>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Research</button>
+                    <button type="submit" class="btn btn-primary" id="researchBtn">
+                        <span class="spinner-border spinner-border-sm d-none" id="researchSpinner"></span>
+                        <i data-feather="search"></i> Research Keyword
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<style>
+.keyword-card {
+    border: 1px solid rgba(128, 0, 128, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.keyword-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(128, 0, 128, 0.2);
+}
+.keyword-metrics {
+    font-size: 0.9rem;
+}
+.metric-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.metric-label {
+    color: #aaa;
+}
+.metric-value {
+    font-weight: 600;
+    color: #fff;
+}
+.results-metric-card {
+    background: rgba(128, 0, 128, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+.results-metric-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #9b59b6;
+}
+.results-metric-label {
+    font-size: 0.85rem;
+    color: #aaa;
+}
+.provider-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 500;
+}
+.provider-connected {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+    border: 1px solid #28a745;
+}
+.provider-disconnected {
+    background: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+    border: 1px solid #dc3545;
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.getElementById('addKeywordForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const keyword = document.getElementById('keywordInput').value;
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    
-    fetch('{{ url_for("main.create_keyword_research") }}', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-        },
-        body: JSON.stringify({ keyword: keyword })
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+function checkProviders() {
+    fetch('/api/keyword-research/providers', {
+        headers: { 'X-CSRFToken': csrfToken }
     })
-    .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-    })
-    .then(d => {
-        if (d.success) {
-            alert('✓ Keyword added successfully!');
-            location.reload();
-        } else {
-            alert('Error: ' + d.error);
-        }
+    .then(r => r.json())
+    .then(data => {
+        const container = document.getElementById('providerList');
+        const allProviders = ['dataforseo', 'semrush', 'moz'];
+        const connected = data.providers || [];
+        
+        container.innerHTML = allProviders.map(p => {
+            const isConnected = connected.includes(p);
+            return `<span class="provider-badge ${isConnected ? 'provider-connected' : 'provider-disconnected'}">
+                ${isConnected ? '✓' : '✗'} ${p.charAt(0).toUpperCase() + p.slice(1)}
+            </span>`;
+        }).join('');
+        
+        document.getElementById('providerStatus').style.display = 'block';
+        feather.replace();
     })
     .catch(e => {
-        console.error('Error:', e);
-        alert('Failed to add keyword: ' + e.message);
+        alert('Error checking providers: ' + e.message);
     });
+}
+
+document.getElementById('researchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const keyword = document.getElementById('keywordInput').value.trim();
+    const provider = document.getElementById('providerSelect').value;
+    const getSuggestions = document.getElementById('getSuggestions').checked;
+    const saveKeyword = document.getElementById('saveKeyword').checked;
+    
+    const btn = document.getElementById('researchBtn');
+    const spinner = document.getElementById('researchSpinner');
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    
+    const promises = [
+        fetch('/api/keyword-research/research', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ keyword, provider })
+        }).then(r => r.json())
+    ];
+    
+    if (getSuggestions) {
+        promises.push(
+            fetch('/api/keyword-research/suggestions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ keyword })
+            }).then(r => r.json())
+        );
+    }
+    
+    if (saveKeyword) {
+        promises.push(
+            fetch('{{ url_for("main.create_keyword_research") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ keyword })
+            }).then(r => r.json())
+        );
+    }
+    
+    Promise.all(promises)
+    .then(results => {
+        const [researchResult, suggestionsResult] = results;
+        
+        displayResults(researchResult.data || researchResult);
+        
+        if (suggestionsResult && suggestionsResult.suggestions) {
+            displaySuggestions(suggestionsResult.suggestions);
+        }
+        
+        bootstrap.Modal.getInstance(document.getElementById('researchModal')).hide();
+    })
+    .catch(e => {
+        alert('Research failed: ' + e.message);
+    })
+    .finally(() => {
+        btn.disabled = false;
+        spinner.classList.add('d-none');
+    });
+});
+
+function displayResults(data) {
+    const container = document.getElementById('resultsContent');
+    
+    if (data.error) {
+        container.innerHTML = `<div class="alert alert-warning">
+            <strong>Note:</strong> ${data.error}<br>
+            <small>Configure API keys in Settings → Integrations to get real SEO data.</small>
+        </div>`;
+    } else {
+        const vol = data.search_volume ? data.search_volume.toLocaleString() : 'N/A';
+        const cpc = data.cpc ? '$' + data.cpc.toFixed(2) : 'N/A';
+        const comp = data.competition ? (data.competition * 100).toFixed(1) + '%' : 'N/A';
+        const diff = data.difficulty !== null ? data.difficulty : 'N/A';
+        
+        container.innerHTML = `
+            <h4 class="mb-4">Results for: <span class="text-primary">"${data.keyword}"</span></h4>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <div class="results-metric-card">
+                        <div class="results-metric-value">${vol}</div>
+                        <div class="results-metric-label">Monthly Search Volume</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="results-metric-card">
+                        <div class="results-metric-value">${cpc}</div>
+                        <div class="results-metric-label">Cost Per Click</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="results-metric-card">
+                        <div class="results-metric-value">${comp}</div>
+                        <div class="results-metric-label">Competition</div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="results-metric-card">
+                        <div class="results-metric-value">${diff}</div>
+                        <div class="results-metric-label">Keyword Difficulty</div>
+                    </div>
+                </div>
+            </div>
+            ${data.provider ? `<p class="text-muted mt-3"><small>Data from: ${data.provider}</small></p>` : ''}
+        `;
+    }
+    
+    document.getElementById('researchResults').style.display = 'block';
+}
+
+function displaySuggestions(suggestions) {
+    const container = document.getElementById('suggestionsTable');
+    
+    if (!suggestions || suggestions.length === 0) {
+        container.innerHTML = '<p class="text-muted">No suggestions available. Configure a keyword provider to get related keywords.</p>';
+    } else {
+        let html = `<table class="table table-dark table-striped">
+            <thead>
+                <tr>
+                    <th>Keyword</th>
+                    <th>Search Volume</th>
+                    <th>CPC</th>
+                    <th>Competition</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        
+        suggestions.slice(0, 20).forEach(s => {
+            html += `<tr>
+                <td>${s.keyword}</td>
+                <td>${s.search_volume ? s.search_volume.toLocaleString() : 'N/A'}</td>
+                <td>${s.cpc ? '$' + s.cpc.toFixed(2) : 'N/A'}</td>
+                <td>${s.competition ? (s.competition * 100).toFixed(1) + '%' : 'N/A'}</td>
+            </tr>`;
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+    
+    document.getElementById('suggestionsResults').style.display = 'block';
+}
+
+function closeResults() {
+    document.getElementById('researchResults').style.display = 'none';
+    document.getElementById('suggestionsResults').style.display = 'none';
+}
+
+function refreshKeyword(keyword) {
+    fetch('/api/keyword-research/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ keyword, provider: 'auto' })
+    })
+    .then(r => r.json())
+    .then(data => {
+        displayResults(data.data || data);
+    })
+    .catch(e => {
+        alert('Failed to refresh: ' + e.message);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    feather.replace();
 });
 </script>
 {% endblock %}

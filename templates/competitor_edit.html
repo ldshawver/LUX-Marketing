@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ competitor.competitor_name }} - LUX Marketing{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{{ url_for('main.competitor_analysis') }}" class="text-muted text-decoration-none mb-2 d-inline-block">
+                <i data-feather="arrow-left"></i> Back to Competitors
+            </a>
+            <h1><i data-feather="edit-2"></i> Edit {{ competitor.competitor_name }}</h1>
+        </div>
+    </div>
+
+    <div class="card bg-dark text-white">
+        <form method="POST" action="{{ url_for('main.save_competitor') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="competitor_id" value="{{ competitor.id }}">
+            <div class="card-body" style="max-height: 75vh; overflow-y: auto;">
+                <ul class="nav nav-tabs mb-4" role="tablist">
+                    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-basic">Basic Info</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-positioning">Positioning</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-channels">Channels</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-messaging">Messaging</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-funnel">Funnel</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-swot">SWOT</a></li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tab-basic">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Competitor Name *</label>
+                                <input type="text" class="form-control bg-secondary text-white border-0" name="competitor_name" required value="{{ competitor.competitor_name or '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Website URL</label>
+                                <input type="url" class="form-control bg-secondary text-white border-0" name="website_url" value="{{ competitor.website_url or '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Logo URL</label>
+                                <input type="text" class="form-control bg-secondary text-white border-0" name="logo_url" value="{{ competitor.logo_url or '' }}">
+                                {% if competitor.logo_url %}
+                                <div class="mt-2">
+                                    <img src="{{ competitor.logo_url }}" alt="Logo preview" style="max-height: 50px; max-width: 100px; border-radius: 4px;">
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Market Share (%)</label>
+                                <input type="number" step="0.1" min="0" max="100" class="form-control bg-secondary text-white border-0" name="market_share" value="{{ competitor.market_share or '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Notes</label>
+                                <textarea class="form-control bg-secondary text-white border-0" name="notes" rows="3">{{ competitor.notes or '' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-positioning">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Core Promise (1-sentence value proposition)</label>
+                                <input type="text" class="form-control bg-secondary text-white border-0" name="core_promise" value="{{ competitor.core_promise or '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Target Persona</label>
+                                <textarea class="form-control bg-secondary text-white border-0" name="target_persona" rows="2">{{ competitor.target_persona or '' }}</textarea>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Price Positioning</label>
+                                <select class="form-select bg-secondary text-white border-0" name="price_positioning">
+                                    <option value="">Select...</option>
+                                    <option value="premium" {% if competitor.price_positioning == 'premium' %}selected{% endif %}>Premium</option>
+                                    <option value="mid" {% if competitor.price_positioning == 'mid' %}selected{% endif %}>Mid-Market</option>
+                                    <option value="discount" {% if competitor.price_positioning == 'discount' %}selected{% endif %}>Discount/Budget</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Emotional Tone</label>
+                                <input type="text" class="form-control bg-secondary text-white border-0" name="emotional_tone" value="{{ competitor.emotional_tone or '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Transparency Level</label>
+                                <select class="form-select bg-secondary text-white border-0" name="transparency_level">
+                                    <option value="">Select...</option>
+                                    <option value="high" {% if competitor.transparency_level == 'high' %}selected{% endif %}>High</option>
+                                    <option value="medium" {% if competitor.transparency_level == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="low" {% if competitor.transparency_level == 'low' %}selected{% endif %}>Low</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Brand Notes</label>
+                                <textarea class="form-control bg-secondary text-white border-0" name="brand_notes" rows="2">{{ competitor.brand_notes or '' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-channels">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Primary Acquisition Channels</label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% set channels = competitor.primary_channels or [] %}
+                                    {% for ch in ['Google Ads', 'Meta Ads', 'TikTok Ads', 'SEO', 'YouTube', 'Influencers', 'Affiliates', 'Email', 'Content', 'PR'] %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="primary_channels" value="{{ ch }}" id="ch_{{ loop.index }}" {% if ch in channels %}checked{% endif %}>
+                                        <label class="form-check-label" for="ch_{{ loop.index }}">{{ ch }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Geographic Focus</label>
+                                <select class="form-select bg-secondary text-white border-0" name="geographic_focus">
+                                    <option value="">Select...</option>
+                                    <option value="local" {% if competitor.geographic_focus == 'local' %}selected{% endif %}>Local</option>
+                                    <option value="regional" {% if competitor.geographic_focus == 'regional' %}selected{% endif %}>Regional</option>
+                                    <option value="national" {% if competitor.geographic_focus == 'national' %}selected{% endif %}>National</option>
+                                    <option value="global" {% if competitor.geographic_focus == 'global' %}selected{% endif %}>Global</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" name="influencer_usage" id="influencer_usage" {% if competitor.influencer_usage %}checked{% endif %}>
+                                    <label class="form-check-label" for="influencer_usage">Uses Influencers</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" name="referral_program" id="referral_program" {% if competitor.referral_program %}checked{% endif %}>
+                                    <label class="form-check-label" for="referral_program">Referral Program</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-messaging">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Lead Magnet (what they offer to capture leads)</label>
+                                <input type="text" class="form-control bg-secondary text-white border-0" name="lead_magnet" value="{{ competitor.lead_magnet or '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Entry Offer</label>
+                                <input type="text" class="form-control bg-secondary text-white border-0" name="entry_offer" value="{{ competitor.entry_offer or '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">CTA Style</label>
+                                <select class="form-select bg-secondary text-white border-0" name="cta_style">
+                                    <option value="">Select...</option>
+                                    <option value="soft" {% if competitor.cta_style == 'soft' %}selected{% endif %}>Soft</option>
+                                    <option value="aggressive" {% if competitor.cta_style == 'aggressive' %}selected{% endif %}>Aggressive</option>
+                                    <option value="educational" {% if competitor.cta_style == 'educational' %}selected{% endif %}>Educational</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Risk Reversal</label>
+                                <input type="text" class="form-control bg-secondary text-white border-0" name="risk_reversal" value="{{ competitor.risk_reversal or '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Key Headlines (one per line)</label>
+                                <textarea class="form-control bg-secondary text-white border-0" name="key_headlines" rows="3">{% if competitor.key_headlines %}{% for h in competitor.key_headlines %}{{ h }}{% if not loop.last %}
+{% endif %}{% endfor %}{% endif %}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-funnel">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Funnel Type</label>
+                                <select class="form-select bg-secondary text-white border-0" name="funnel_type">
+                                    <option value="">Select...</option>
+                                    <option value="direct" {% if competitor.funnel_type == 'direct' %}selected{% endif %}>Direct Sale</option>
+                                    <option value="tripwire" {% if competitor.funnel_type == 'tripwire' %}selected{% endif %}>Tripwire</option>
+                                    <option value="webinar" {% if competitor.funnel_type == 'webinar' %}selected{% endif %}>Webinar</option>
+                                    <option value="free_trial" {% if competitor.funnel_type == 'free_trial' %}selected{% endif %}>Free Trial</option>
+                                    <option value="freemium" {% if competitor.funnel_type == 'freemium' %}selected{% endif %}>Freemium</option>
+                                    <option value="consultation" {% if competitor.funnel_type == 'consultation' %}selected{% endif %}>Consultation</option>
+                                    <option value="membership" {% if competitor.funnel_type == 'membership' %}selected{% endif %}>Membership</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Signup Friction</label>
+                                <select class="form-select bg-secondary text-white border-0" name="signup_friction">
+                                    <option value="">Select...</option>
+                                    <option value="low" {% if competitor.signup_friction == 'low' %}selected{% endif %}>Low (1-2 fields)</option>
+                                    <option value="medium" {% if competitor.signup_friction == 'medium' %}selected{% endif %}>Medium (3-5 fields)</option>
+                                    <option value="high" {% if competitor.signup_friction == 'high' %}selected{% endif %}>High (6+ fields)</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Pricing Model</label>
+                                <textarea class="form-control bg-secondary text-white border-0" name="pricing_model" rows="2">{{ competitor.pricing_model or '' }}</textarea>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="subscription_model" id="subscription_model" {% if competitor.subscription_model %}checked{% endif %}>
+                                    <label class="form-check-label" for="subscription_model">Subscription Model</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="cart_recovery" id="cart_recovery" {% if competitor.cart_recovery %}checked{% endif %}>
+                                    <label class="form-check-label" for="cart_recovery">Cart Recovery</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="sms_usage" id="sms_usage" {% if competitor.sms_usage %}checked{% endif %}>
+                                    <label class="form-check-label" for="sms_usage">SMS Usage</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="loyalty_program" id="loyalty_program" {% if competitor.loyalty_program %}checked{% endif %}>
+                                    <label class="form-check-label" for="loyalty_program">Loyalty Program</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="long_form_content" id="long_form_content" {% if competitor.long_form_content %}checked{% endif %}>
+                                    <label class="form-check-label" for="long_form_content">Long-Form Content</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-swot">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-success">Strengths (one per line)</label>
+                                <textarea class="form-control bg-secondary text-white border-0" name="strengths" rows="4">{% if competitor.strengths %}{% for s in competitor.strengths %}{{ s }}{% if not loop.last %}
+{% endif %}{% endfor %}{% endif %}</textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-danger">Weaknesses (one per line)</label>
+                                <textarea class="form-control bg-secondary text-white border-0" name="weaknesses" rows="4">{% if competitor.weaknesses %}{% for w in competitor.weaknesses %}{{ w }}{% if not loop.last %}
+{% endif %}{% endfor %}{% endif %}</textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label text-warning">Opportunities for Us (one per line)</label>
+                                <textarea class="form-control bg-secondary text-white border-0" name="opportunities" rows="3">{% if competitor.opportunities %}{% for o in competitor.opportunities %}{{ o }}{% if not loop.last %}
+{% endif %}{% endfor %}{% endif %}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer border-secondary">
+                <a href="{{ url_for('main.competitor_analysis') }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary"><i data-feather="save"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

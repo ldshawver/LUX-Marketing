@@ -5,9 +5,17 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i data-feather="globe"></i> Create Landing Page</h1>
-    <a href="{{ url_for('main.landing_pages') }}" class="btn btn-outline-secondary">
-        <i data-feather="arrow-left"></i> Back to Landing Pages
-    </a>
+    <div>
+        <button type="button" class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#aiSuggestionsModal">
+            <i data-feather="cpu"></i> AI Suggestions
+        </button>
+        <button type="button" class="btn btn-outline-info me-2" data-bs-toggle="modal" data-bs-target="#templatePickerModal">
+            <i data-feather="layout"></i> Choose Template
+        </button>
+        <a href="{{ url_for('main.landing_pages') }}" class="btn btn-outline-secondary">
+            <i data-feather="arrow-left"></i> Back to Landing Pages
+        </a>
+    </div>
 </div>
 
 <div class="card">
@@ -105,4 +113,429 @@
 &lt;/div&gt;</code></pre>
     </div>
 </div>
+
+<!-- AI Suggestions Modal -->
+<div class="modal fade" id="aiSuggestionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i data-feather="cpu"></i> AI Landing Page Suggestions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Describe your landing page goal:</label>
+                    <textarea class="form-control" id="ai-prompt" rows="3" placeholder="e.g., A landing page for a summer sale with 30% discount on all products"></textarea>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Page Type</label>
+                        <select class="form-select" id="ai-page-type">
+                            <option value="sales">Sales / Promotion</option>
+                            <option value="lead-capture">Lead Capture</option>
+                            <option value="event">Event Registration</option>
+                            <option value="product">Product Launch</option>
+                            <option value="webinar">Webinar Signup</option>
+                            <option value="ebook">eBook / Download</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Style</label>
+                        <select class="form-select" id="ai-style">
+                            <option value="modern">Modern & Clean</option>
+                            <option value="bold">Bold & Impactful</option>
+                            <option value="minimal">Minimal</option>
+                            <option value="luxury">Luxury</option>
+                            <option value="playful">Playful & Fun</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="generateAILandingPage()">
+                    <i data-feather="zap"></i> Generate Content
+                </button>
+                
+                <div id="ai-results" class="mt-4" style="display: none;">
+                    <h6>Generated Content:</h6>
+                    <div id="ai-generated-content" class="border rounded p-3 bg-light"></div>
+                    <button type="button" class="btn btn-success mt-2" onclick="applyAIContent()">
+                        <i data-feather="check"></i> Apply to Page
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template Picker Modal -->
+<div class="modal fade" id="templatePickerModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i data-feather="layout"></i> Choose a Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="template-grid">
+                    <div class="col-md-4 mb-4">
+                        <div class="card template-card h-100" onclick="selectTemplate('hero-cta')">
+                            <div class="card-body text-center">
+                                <div class="template-preview mb-3" style="height: 150px; background: linear-gradient(135deg, #301934 0%, #013220 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <div class="text-white">
+                                        <h5>Hero + CTA</h5>
+                                        <small>Big headline with button</small>
+                                    </div>
+                                </div>
+                                <h6>Hero with CTA</h6>
+                                <small class="text-muted">Perfect for promotions and sales</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card template-card h-100" onclick="selectTemplate('lead-capture')">
+                            <div class="card-body text-center">
+                                <div class="template-preview mb-3" style="height: 150px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <div class="text-white">
+                                        <h5>Lead Form</h5>
+                                        <small>Collect emails</small>
+                                    </div>
+                                </div>
+                                <h6>Lead Capture</h6>
+                                <small class="text-muted">Email signup with form</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card template-card h-100" onclick="selectTemplate('product-showcase')">
+                            <div class="card-body text-center">
+                                <div class="template-preview mb-3" style="height: 150px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <div class="text-white">
+                                        <h5>Product Grid</h5>
+                                        <small>Show products</small>
+                                    </div>
+                                </div>
+                                <h6>Product Showcase</h6>
+                                <small class="text-muted">Feature multiple products</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card template-card h-100" onclick="selectTemplate('event-registration')">
+                            <div class="card-body text-center">
+                                <div class="template-preview mb-3" style="height: 150px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <div class="text-white">
+                                        <h5>Event</h5>
+                                        <small>Date & RSVP</small>
+                                    </div>
+                                </div>
+                                <h6>Event Registration</h6>
+                                <small class="text-muted">Webinars, workshops, etc.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card template-card h-100" onclick="selectTemplate('countdown-sale')">
+                            <div class="card-body text-center">
+                                <div class="template-preview mb-3" style="height: 150px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <div class="text-white">
+                                        <h5>Countdown</h5>
+                                        <small>Urgency timer</small>
+                                    </div>
+                                </div>
+                                <h6>Countdown Sale</h6>
+                                <small class="text-muted">Limited time offers</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card template-card h-100" onclick="selectTemplate('testimonials')">
+                            <div class="card-body text-center">
+                                <div class="template-preview mb-3" style="height: 150px; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <div class="text-dark">
+                                        <h5>Reviews</h5>
+                                        <small>Social proof</small>
+                                    </div>
+                                </div>
+                                <h6>Testimonials</h6>
+                                <small class="text-muted">Customer reviews & trust</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.template-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+.template-card:hover {
+    border-color: var(--lux-emerald-abyss, #013220);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+</style>
+
+<script>
+const templates = {
+    'hero-cta': `<div class="container py-5">
+    <div class="row justify-content-center text-center">
+        <div class="col-lg-8">
+            <h1 class="display-3 fw-bold mb-4" style="color: #301934;">Your Amazing Headline Here</h1>
+            <p class="lead mb-4" style="font-size: 1.5rem; color: #666;">A compelling subheadline that explains the value proposition and gets visitors excited.</p>
+            <a href="#" class="btn btn-lg px-5 py-3" style="background: linear-gradient(135deg, #301934, #013220); color: white; font-size: 1.25rem; border-radius: 50px;">Get Started Now</a>
+        </div>
+    </div>
+</div>`,
+    'lead-capture': `<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <h1 class="display-4 fw-bold mb-4" style="color: #301934;">Join Our Newsletter</h1>
+            <p class="lead mb-4">Get exclusive updates, tips, and special offers delivered to your inbox.</p>
+            <form class="row g-3 justify-content-center">
+                <div class="col-md-8">
+                    <input type="email" class="form-control form-control-lg" placeholder="Enter your email">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-lg w-100" style="background: #301934; color: white;">Subscribe</button>
+                </div>
+            </form>
+            <small class="text-muted mt-3 d-block">We respect your privacy. Unsubscribe anytime.</small>
+        </div>
+    </div>
+</div>`,
+    'product-showcase': `<div class="container py-5">
+    <h2 class="text-center mb-5" style="color: #301934;">Featured Products</h2>
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-img-top bg-light" style="height: 200px; display: flex; align-items: center; justify-content: center;">
+                    <span class="text-muted">Product Image</span>
+                </div>
+                <div class="card-body text-center">
+                    <h5 class="card-title">Product Name</h5>
+                    <p class="text-muted">Short description here</p>
+                    <h4 style="color: #013220;">$49.99</h4>
+                    <a href="#" class="btn btn-outline-primary">View Details</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-img-top bg-light" style="height: 200px; display: flex; align-items: center; justify-content: center;">
+                    <span class="text-muted">Product Image</span>
+                </div>
+                <div class="card-body text-center">
+                    <h5 class="card-title">Product Name</h5>
+                    <p class="text-muted">Short description here</p>
+                    <h4 style="color: #013220;">$59.99</h4>
+                    <a href="#" class="btn btn-outline-primary">View Details</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-img-top bg-light" style="height: 200px; display: flex; align-items: center; justify-content: center;">
+                    <span class="text-muted">Product Image</span>
+                </div>
+                <div class="card-body text-center">
+                    <h5 class="card-title">Product Name</h5>
+                    <p class="text-muted">Short description here</p>
+                    <h4 style="color: #013220;">$69.99</h4>
+                    <a href="#" class="btn btn-outline-primary">View Details</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>`,
+    'event-registration': `<div class="container py-5">
+    <div class="row align-items-center">
+        <div class="col-lg-6">
+            <span class="badge bg-primary mb-3">Upcoming Event</span>
+            <h1 class="display-5 fw-bold mb-4" style="color: #301934;">Join Our Live Webinar</h1>
+            <p class="lead mb-4">Learn the secrets to success from industry experts. Limited spots available!</p>
+            <ul class="list-unstyled mb-4">
+                <li class="mb-2"><i data-feather="calendar" class="me-2"></i> January 15, 2025</li>
+                <li class="mb-2"><i data-feather="clock" class="me-2"></i> 2:00 PM EST</li>
+                <li class="mb-2"><i data-feather="users" class="me-2"></i> 500 seats remaining</li>
+            </ul>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h4 class="mb-4">Register Now - Free!</h4>
+                    <form>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" placeholder="Full Name">
+                        </div>
+                        <div class="mb-3">
+                            <input type="email" class="form-control" placeholder="Email Address">
+                        </div>
+                        <button type="submit" class="btn btn-lg w-100" style="background: #301934; color: white;">Reserve My Spot</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>`,
+    'countdown-sale': `<div class="container py-5 text-center">
+    <span class="badge bg-danger mb-3 fs-6">Limited Time Offer</span>
+    <h1 class="display-3 fw-bold mb-4" style="color: #301934;">Flash Sale - 50% OFF!</h1>
+    <p class="lead mb-4">Don't miss out on our biggest sale of the year. Ends soon!</p>
+    <div class="row justify-content-center mb-5">
+        <div class="col-auto">
+            <div class="d-flex gap-3">
+                <div class="text-center p-3 rounded" style="background: #301934; color: white; min-width: 80px;">
+                    <h2 class="mb-0" id="days">00</h2>
+                    <small>Days</small>
+                </div>
+                <div class="text-center p-3 rounded" style="background: #301934; color: white; min-width: 80px;">
+                    <h2 class="mb-0" id="hours">00</h2>
+                    <small>Hours</small>
+                </div>
+                <div class="text-center p-3 rounded" style="background: #301934; color: white; min-width: 80px;">
+                    <h2 class="mb-0" id="minutes">00</h2>
+                    <small>Minutes</small>
+                </div>
+                <div class="text-center p-3 rounded" style="background: #013220; color: white; min-width: 80px;">
+                    <h2 class="mb-0" id="seconds">00</h2>
+                    <small>Seconds</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <a href="#" class="btn btn-lg px-5 py-3" style="background: linear-gradient(135deg, #fa709a, #fee140); color: #333; font-weight: bold; border-radius: 50px;">Shop Now</a>
+</div>`,
+    'testimonials': `<div class="container py-5">
+    <h2 class="text-center mb-5" style="color: #301934;">What Our Customers Say</h2>
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="mb-3 text-warning">★★★★★</div>
+                    <p class="card-text">"Amazing product! Exceeded all my expectations. The quality is outstanding and customer service was top-notch."</p>
+                    <div class="d-flex align-items-center mt-3">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">JD</div>
+                        <div class="ms-3">
+                            <strong>John Doe</strong>
+                            <small class="d-block text-muted">Verified Buyer</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="mb-3 text-warning">★★★★★</div>
+                    <p class="card-text">"Best purchase I've made this year. Fast shipping and the product works exactly as described. Highly recommend!"</p>
+                    <div class="d-flex align-items-center mt-3">
+                        <div class="rounded-circle bg-success text-white d-flex align-items: center; justify-content: center;" style="width: 50px; height: 50px;">JS</div>
+                        <div class="ms-3">
+                            <strong>Jane Smith</strong>
+                            <small class="d-block text-muted">Verified Buyer</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="mb-3 text-warning">★★★★★</div>
+                    <p class="card-text">"I've tried many similar products but this one is by far the best. Will definitely be ordering again!"</p>
+                    <div class="d-flex align-items-center mt-3">
+                        <div class="rounded-circle bg-info text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">MJ</div>
+                        <div class="ms-3">
+                            <strong>Mike Johnson</strong>
+                            <small class="d-block text-muted">Verified Buyer</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>`
+};
+
+function selectTemplate(templateId) {
+    const template = templates[templateId];
+    if (template) {
+        document.getElementById('html_content').value = template;
+        const modal = bootstrap.Modal.getInstance(document.getElementById('templatePickerModal'));
+        modal.hide();
+    }
+}
+
+let generatedAIContent = '';
+
+function generateAILandingPage() {
+    const prompt = document.getElementById('ai-prompt').value;
+    const pageType = document.getElementById('ai-page-type').value;
+    const style = document.getElementById('ai-style').value;
+    
+    if (!prompt.trim()) {
+        alert('Please describe your landing page goal');
+        return;
+    }
+    
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<i data-feather="loader" class="spin"></i> Generating...';
+    feather.replace();
+    
+    fetch('/api/ai/generate-landing-page', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
+        },
+        body: JSON.stringify({
+            prompt: prompt,
+            page_type: pageType,
+            style: style
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-feather="zap"></i> Generate Content';
+        feather.replace();
+        
+        if (data.success) {
+            generatedAIContent = data.html_content;
+            document.getElementById('ai-generated-content').innerHTML = `<pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">${data.html_content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+            document.getElementById('ai-results').style.display = 'block';
+        } else {
+            alert('Error generating content: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-feather="zap"></i> Generate Content';
+        feather.replace();
+        console.error('Error:', error);
+        alert('Error generating content. Please try again.');
+    });
+}
+
+function applyAIContent() {
+    if (generatedAIContent) {
+        document.getElementById('html_content').value = generatedAIContent;
+        const modal = bootstrap.Modal.getInstance(document.getElementById('aiSuggestionsModal'));
+        modal.hide();
+    }
+}
+
+document.getElementById('name').addEventListener('input', function() {
+    const slug = this.value.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+    document.getElementById('slug').value = slug;
+});
+</script>
 {% endblock %}

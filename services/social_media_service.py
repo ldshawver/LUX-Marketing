@@ -111,26 +111,32 @@ class SocialMediaService:
     
     @staticmethod
     def _test_tiktok(credentials):
-        """Test TikTok connection"""
+        """Test TikTok connection using v2 API"""
         try:
             access_token = credentials.get('access_token')
             if not access_token:
                 return {'success': False, 'message': 'Access token required'}
             
-            headers = {'Authorization': f'Bearer {access_token}'}
-            response = requests.get(
-                'https://open.tiktokapis.com/v1/user/info/',
-                headers=headers
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/json'
+            }
+            response = requests.post(
+                'https://open.tiktokapis.com/v2/user/info/',
+                params={'fields': 'display_name,avatar_url,follower_count'},
+                headers=headers,
+                timeout=10
             )
             
+            logger.info(f"TikTok test connection: {response.status_code}")
             if response.status_code == 200:
                 data = response.json()
-                if data.get('data'):
-                    user = data['data'].get('user', {})
+                if data.get('data', {}).get('user'):
+                    user = data['data']['user']
                     return {
                         'success': True,
                         'account_name': user.get('display_name'),
-                        'account_id': user.get('open_id'),
+                        'follower_count': user.get('follower_count', 0),
                         'message': 'TikTok connection successful'
                     }
             return {'success': False, 'message': 'TikTok API error'}
@@ -249,45 +255,115 @@ class SocialMediaService:
         """Get Facebook page stats"""
         try:
             response = requests.get(
-                'https://graph.facebook.com/v18.0/me',
-                params={'fields': 'followers_count', 'access_token': credentials['access_token']}
+                'https://graph.facebook.com/v18.0/me/accounts',
+                params={'fields': 'id,name,followers_count,fan_count,access_token', 'access_token': credentials['access_token']},
+                timeout=10
             )
+            logger.info(f"Facebook accounts response: {response.status_code}")
             if response.status_code == 200:
-                return {'success': True, 'follower_count': response.json().get('followers_count', 0)}
-            return {'success': False, 'message': 'Failed to get stats'}
+                data = response.json()
+                pages = data.get('data', [])
+                if pages:
+                    page = pages[0]
+                    follower_count = page.get('followers_count') or page.get('fan_count', 0)
+                    return {'success': True, 'follower_count': follower_count}
+                else:
+                    response2 = requests.get(
+                        'https://graph.facebook.com/v18.0/me',
+                        params={'fields': 'id,name,friends', 'access_token': credentials['access_token']},
+                        timeout=10
+                    )
+                    if response2.status_code == 200:
+                        data2 = response2.json()
+                        friends_data = data2.get('friends', {})
+                        friend_count = friends_data.get('summary', {}).get('total_count', 0)
+                        return {'success': True, 'follower_count': friend_count}
+                    return {'success': True, 'follower_count': 0, 'message': 'No pages found'}
+            else:
+                error_data = response.json() if response.text else {}
+                error_msg = error_data.get('error', {}).get('message', f'HTTP {response.status_code}')
+                return {'success': False, 'message': error_msg}
         except Exception as e:
+            logger.error(f"Facebook stats error: {e}")
             return {'success': False, 'message': str(e)}
     
     @staticmethod
     def _get_instagram_stats(credentials):
-        """Get Instagram account stats"""
+        """Get Instagram account stats - tries Business API first, then Basic Display API"""
         try:
             response = requests.get(
-                'https://graph.instagram.com/v18.0/me',
-                params={'fields': 'followers_count', 'access_token': credentials['access_token']}
+                'https://graph.facebook.com/v18.0/me/accounts',
+                params={'fields': 'instagram_business_account{followers_count,username,media_count}', 'access_token': credentials['access_token']},
+                timeout=10
             )
+            logger.info(f"Instagram Business API response: {response.status_code}")
+            
             if response.status_code == 200:
-                return {'success': True, 'follower_count': response.json().get('followers_count', 0)}
-            return {'success': False, 'message': 'Failed to get stats'}
+                data = response.json()
+                pages = data.get('data', [])
+                for page in pages:
+                    ig_account = page.get('instagram_business_account')
+                    if ig_account:
+                        follower_count = ig_account.get('followers_count', 0)
+                        logger.info(f"Instagram Business follower count: {follower_count}")
+                        return {'success': True, 'follower_count': follower_count}
+            
+            response2 = requests.get(
+                'https://graph.instagram.com/me',
+                params={'fields': 'id,username,account_type,media_count', 'access_token': credentials['access_token']},
+                timeout=10
+            )
+            logger.info(f"Instagram Basic Display API response: {response2.status_code}")
+            
+            if response2.status_code == 200:
+                data = response2.json()
+                media_count = data.get('media_count', 0)
+                return {'success': True, 'follower_count': 0, 'message': 'Basic Display API (no follower access)', 'media_count': media_count}
+            
+            error_data = response2.json() if response2.text else {}
+            error_msg = error_data.get('error', {}).get('message', 'API error')
+            return {'success': False, 'message': error_msg}
         except Exception as e:
+            logger.error(f"Instagram stats error: {e}")
             return {'success': False, 'message': str(e)}
     
     @staticmethod
     def _get_tiktok_stats(credentials):
-        """Get TikTok account stats"""
+        """Get TikTok account stats using v2 API"""
         try:
-            headers = {'Authorization': f'Bearer {credentials["access_token"]}'}
-            response = requests.get(
-                'https://open.tiktokapis.com/v1/user/info/',
-                headers=headers
+            headers = {
+                'Authorization': f'Bearer {credentials["access_token"]}',
+                'Content-Type': 'application/json'
+            }
+            response = requests.post(
+                'https://open.tiktokapis.com/v2/user/info/',
+                params={'fields': 'follower_count,display_name,avatar_url,likes_count'},
+                headers=headers,
+                timeout=10
             )
+            logger.info(f"TikTok v2 API response: {response.status_code} - {response.text[:300] if response.text else 'empty'}")
+            
             if response.status_code == 200:
                 data = response.json()
                 if data.get('data', {}).get('user'):
-                    follower_count = data['data']['user'].get('follower_count', 0)
+                    user_data = data['data']['user']
+                    follower_count = user_data.get('follower_count', 0)
+                    logger.info(f"TikTok follower count: {follower_count}")
                     return {'success': True, 'follower_count': follower_count}
-            return {'success': False, 'message': 'Failed to get stats'}
+                elif data.get('error'):
+                    error_info = data.get('error', {})
+                    error_msg = error_info.get('message', error_info.get('code', 'TikTok API error'))
+                    logger.warning(f"TikTok API error: {error_msg}")
+                    return {'success': False, 'message': error_msg}
+            
+            try:
+                error_data = response.json() if response.text else {}
+                error_msg = error_data.get('error', {}).get('message', f'HTTP {response.status_code}')
+            except:
+                error_msg = f'HTTP {response.status_code}'
+            return {'success': False, 'message': error_msg}
         except Exception as e:
+            logger.error(f"TikTok stats error: {e}")
             return {'success': False, 'message': str(e)}
     
     @staticmethod

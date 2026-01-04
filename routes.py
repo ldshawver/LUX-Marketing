@@ -31,19 +31,8 @@ from error_fixes import ErrorFixService
 from ai_code_fixer import AICodeFixer
 from ai_action_executor import AIActionExecutor
 from services.config_status_service import ConfigStatusService
-
-# Stub services for missing imports (prevents LSP errors and runtime crashes)
-class SMSService:
-    @staticmethod
-    def send_sms(phone, message):
-        logging.warning(f"SMS Service not configured: {phone}")
-        return None
-
-class SchedulingService:
-    @staticmethod
-    def schedule_task(task_name, time):
-        logging.warning(f"Scheduling Service not configured: {task_name}")
-        return None
+from services.sms_service import SMSService
+from services.scheduling_service import SchedulingService
 
 logger = logging.getLogger(__name__)
 
@@ -375,7 +364,43 @@ def analytics_hub():
     except Exception as e:
         logger.error(f"Error fetching WooCommerce revenue: {e}")
     
+    # Get comprehensive metrics from new service
+    try:
+        from services.comprehensive_analytics_service import ComprehensiveAnalyticsService
+        company = current_user.get_default_company()
+        comprehensive_metrics = ComprehensiveAnalyticsService.get_all_metrics(db, days=period_length, company_id=company.id if company else None)
+        chart_data = ComprehensiveAnalyticsService.get_chart_data(db, days=min(period_length, 30), company_id=company.id if company else None)
+        analytics_data['comprehensive'] = comprehensive_metrics
+        analytics_data['chart_data'] = chart_data
+    except Exception as e:
+        logger.error(f"Error fetching comprehensive metrics: {e}")
+        analytics_data['comprehensive'] = {}
+        analytics_data['chart_data'] = {}
+    
     return render_template('analytics_hub.html', analytics=analytics_data)
+
+
+@main_bp.route('/api/analytics/comprehensive')
+@login_required
+def api_comprehensive_analytics():
+    """API endpoint for comprehensive analytics data"""
+    from services.comprehensive_analytics_service import ComprehensiveAnalyticsService
+    
+    days = int(request.args.get('days', 30))
+    company = current_user.get_default_company()
+    
+    try:
+        metrics = ComprehensiveAnalyticsService.get_all_metrics(db, days=days, company_id=company.id if company else None)
+        chart_data = ComprehensiveAnalyticsService.get_chart_data(db, days=min(days, 30), company_id=company.id if company else None)
+        
+        return jsonify({
+            'success': True,
+            'metrics': metrics,
+            'chart_data': chart_data
+        })
+    except Exception as e:
+        logger.error(f"Analytics API error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @main_bp.route('/analytics-hub/export')
@@ -599,8 +624,113 @@ def export_analytics():
 @main_bp.route('/agents-hub')
 @login_required
 def agents_hub():
-    """Redirect to unified Automations & Agents dashboard"""
-    return redirect(url_for('main.automation_dashboard'))
+    """Interactive AI Marketing Team Hub"""
+    import json
+    
+    # Define all 11 marketing agents with their details
+    agents = {
+        'brand_strategy': {
+            'name': 'Brand & Strategy Agent',
+            'role': 'Brand Strategist',
+            'icon': '🎯',
+            'color': '#8b5cf6',
+            'description': 'I develop and maintain your brand identity, positioning, and long-term marketing strategy.',
+            'expertise': ['Brand Identity', 'Market Research', 'Competitive Analysis'],
+            'welcome_message': "Hello! I'm your Brand Strategist. I can help you with brand positioning, market research, and developing your marketing strategy. What would you like to work on?"
+        },
+        'content_seo': {
+            'name': 'Content & SEO Agent',
+            'role': 'Content Strategist',
+            'icon': '📝',
+            'color': '#06b6d4',
+            'description': 'I create compelling content and optimize it for search engines to drive organic traffic.',
+            'expertise': ['Blog Writing', 'SEO Optimization', 'Content Calendars'],
+            'welcome_message': "Hi there! I specialize in content creation and SEO. Need help with blog posts, keywords, or content strategy? Just ask!"
+        },
+        'analytics': {
+            'name': 'Analytics Agent',
+            'role': 'Data Analyst',
+            'icon': '📊',
+            'color': '#10b981',
+            'description': 'I analyze your marketing data to provide insights and recommendations for improvement.',
+            'expertise': ['Performance Tracking', 'ROI Analysis', 'Trend Identification'],
+            'welcome_message': "Welcome! I'm your Analytics expert. I can help you understand your marketing performance and identify opportunities for growth."
+        },
+        'creative_design': {
+            'name': 'Creative & Design Agent',
+            'role': 'Creative Director',
+            'icon': '🎨',
+            'color': '#f43f5e',
+            'description': 'I help with visual branding, campaign creatives, and design direction for all marketing materials.',
+            'expertise': ['Visual Design', 'Ad Creatives', 'Brand Guidelines'],
+            'welcome_message': "Hello! I'm your Creative Director. Let me help you with design concepts, ad creatives, and visual branding decisions."
+        },
+        'advertising': {
+            'name': 'Advertising Agent',
+            'role': 'Ads Specialist',
+            'icon': '📢',
+            'color': '#f59e0b',
+            'description': 'I manage and optimize your paid advertising campaigns across all platforms.',
+            'expertise': ['PPC Campaigns', 'Ad Optimization', 'Budget Management'],
+            'welcome_message': "Hi! I'm your Advertising specialist. I can help you plan, execute, and optimize your paid ad campaigns."
+        },
+        'social_media': {
+            'name': 'Social Media Agent',
+            'role': 'Social Media Manager',
+            'icon': '📱',
+            'color': '#ec4899',
+            'description': 'I create engaging social content and manage your presence across all social platforms.',
+            'expertise': ['Social Posts', 'Engagement', 'Community Building'],
+            'welcome_message': "Hey! I'm your Social Media Manager. Need help with posts, engagement strategies, or managing your social presence? I'm here!"
+        },
+        'email_crm': {
+            'name': 'Email & CRM Agent',
+            'role': 'Email Marketing Specialist',
+            'icon': '📧',
+            'color': '#3b82f6',
+            'description': 'I design and execute email campaigns while managing customer relationships.',
+            'expertise': ['Email Campaigns', 'Automation', 'Lead Nurturing'],
+            'welcome_message': "Hello! I specialize in email marketing and CRM. Let me help you create effective email campaigns and nurture your leads."
+        },
+        'sales_enablement': {
+            'name': 'Sales Enablement Agent',
+            'role': 'Sales Support Specialist',
+            'icon': '💼',
+            'color': '#14b8a6',
+            'description': 'I provide sales teams with the content, tools, and insights they need to close deals.',
+            'expertise': ['Lead Scoring', 'Sales Content', 'Pipeline Support'],
+            'welcome_message': "Hi! I'm your Sales Enablement specialist. I can help with lead scoring, sales materials, and pipeline optimization."
+        },
+        'retention': {
+            'name': 'Customer Retention Agent',
+            'role': 'Retention Specialist',
+            'icon': '🔄',
+            'color': '#84cc16',
+            'description': 'I focus on keeping customers engaged, reducing churn, and increasing lifetime value.',
+            'expertise': ['Churn Prevention', 'Loyalty Programs', 'Customer Feedback'],
+            'welcome_message': "Hello! I'm focused on customer retention. Let me help you keep customers happy and reduce churn."
+        },
+        'operations': {
+            'name': 'Operations Agent',
+            'role': 'Marketing Operations',
+            'icon': '⚙️',
+            'color': '#64748b',
+            'description': 'I manage marketing technology, integrations, and operational efficiency.',
+            'expertise': ['Tech Stack', 'Integrations', 'Process Optimization'],
+            'welcome_message': "Hi! I handle marketing operations and technology. Need help with integrations, workflows, or process improvements?"
+        },
+        'app_intelligence': {
+            'name': 'APP Intelligence Agent',
+            'role': 'Platform Monitor',
+            'icon': '🤖',
+            'color': '#a855f7',
+            'description': 'I monitor the LUX platform health, analyze usage, and suggest improvements.',
+            'expertise': ['System Health', 'Usage Analytics', 'Feature Suggestions'],
+            'welcome_message': "Hello! I monitor the LUX platform and can provide insights on system health and feature recommendations."
+        }
+    }
+    
+    return render_template('agents_hub.html', agents=agents, agents_json=json.dumps(agents))
 
 @main_bp.route('/ads')
 @login_required
@@ -1070,15 +1200,73 @@ def create_campaign():
     templates = EmailTemplate.query.filter_by(is_active=True).all()
     return render_template('campaign_create.html', templates=templates)
 
+@main_bp.route('/campaigns/auto-generate', methods=['POST'])
+@login_required
+def auto_generate_campaign():
+    """AI-powered campaign content generation"""
+    try:
+        data = request.get_json()
+        campaign_name = data.get('campaign_name', '')
+        
+        if not campaign_name:
+            return jsonify({'success': False, 'error': 'Campaign name is required'}), 400
+        
+        from ai_agent import LUXAgent
+        lux_agent = LUXAgent()
+        
+        subjects = lux_agent.generate_subject_lines(campaign_name, "general audience")
+        
+        if subjects and len(subjects) > 0:
+            subject = subjects[0]
+        else:
+            subject = f"{campaign_name} - Don't Miss Out!"
+        
+        utm = campaign_name.lower().replace(' ', '-').replace('_', '-')
+        import re
+        utm = re.sub(r'[^a-z0-9-]', '', utm)
+        
+        return jsonify({
+            'success': True,
+            'subject': subject,
+            'utm_keyword': utm
+        })
+            
+    except Exception as e:
+        logger.error(f"Auto-generate error: {str(e)}")
+        subject = f"{campaign_name} - Special Offer"
+        utm = campaign_name.lower().replace(' ', '-').replace('_', '-')
+        return jsonify({
+            'success': True,
+            'subject': subject,
+            'utm_keyword': utm
+        })
+
 @main_bp.route('/campaigns/<int:campaign_id>/send', methods=['POST'])
 @login_required
 def send_campaign(campaign_id):
-    """Send a campaign immediately"""
+    """Send a campaign - requires approval for AI-generated content"""
+    from services.approval_service import ApprovalService, FeatureToggleService
+    from models import ApprovalQueue
+    
     campaign = Campaign.query.get_or_404(campaign_id)
     
     if campaign.status not in ['draft', 'scheduled']:
         flash('Campaign cannot be sent in current status', 'error')
         return redirect(url_for('main.campaigns'))
+    
+    company = Company.query.first()
+    company_id = company.id if company else 1
+    
+    if FeatureToggleService.requires_approval(company_id, 'channel_email'):
+        approval_item = ApprovalQueue.query.filter_by(
+            content_type='email_campaign',
+            content_id=campaign_id,
+            status='approved'
+        ).first()
+        
+        if not approval_item:
+            flash('This campaign requires admin approval before sending. Please submit it for review in the Approval Queue.', 'warning')
+            return redirect(url_for('main.campaigns'))
     
     try:
         email_service = EmailService()
@@ -1087,6 +1275,9 @@ def send_campaign(campaign_id):
         campaign.status = 'sending'
         campaign.sent_at = datetime.utcnow()
         db.session.commit()
+        
+        if 'approval_item' in dir() and approval_item:
+            ApprovalService.mark_published(approval_item.id)
         
         flash('Campaign is being sent', 'success')
     except Exception as e:
@@ -1109,6 +1300,109 @@ def preview_campaign(campaign_id):
                          campaign=campaign, 
                          template=template,
                          sample_contact=sample_contact)
+
+@main_bp.route('/campaigns/<int:campaign_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_campaign(campaign_id):
+    """Edit a scheduled campaign"""
+    campaign = Campaign.query.get_or_404(campaign_id)
+    
+    if campaign.status not in ['draft', 'scheduled']:
+        flash('Only draft or scheduled campaigns can be edited', 'error')
+        return redirect(url_for('main.campaigns'))
+    
+    if request.method == 'POST':
+        try:
+            campaign.name = request.form.get('name', campaign.name)
+            campaign.subject = request.form.get('subject', campaign.subject)
+            
+            template_id = request.form.get('template_id', type=int)
+            if template_id:
+                campaign.template_id = template_id
+            
+            scheduled_at = request.form.get('scheduled_at')
+            if scheduled_at:
+                campaign.scheduled_at = datetime.fromisoformat(scheduled_at.replace('T', ' '))
+                campaign.status = 'scheduled'
+            
+            db.session.commit()
+            flash('Campaign updated successfully!', 'success')
+            return redirect(url_for('main.campaigns'))
+        except Exception as e:
+            logger.error(f"Error updating campaign: {e}")
+            flash('Error updating campaign', 'error')
+    
+    templates = EmailTemplate.query.filter_by(is_active=True).all()
+    return render_template('edit_campaign.html', campaign=campaign, templates=templates)
+
+@main_bp.route('/api/campaigns/schedule', methods=['POST'])
+@login_required
+def api_schedule_campaign():
+    """API endpoint to create and schedule a campaign from the drag-drop editor"""
+    try:
+        data = request.get_json()
+        
+        name = data.get('name')
+        subject = data.get('subject')
+        html_content = data.get('html_content')
+        scheduled_at = data.get('scheduled_at')
+        segment_id = data.get('segment_id')
+        
+        if not name or not subject:
+            return jsonify({'success': False, 'message': 'Name and subject are required'}), 400
+        
+        # Create email template from HTML content
+        template = EmailTemplate()
+        template.name = f"Template for {name}"
+        template.subject = subject
+        template.html_content = html_content or '<p>No content</p>'
+        template.is_active = True
+        db.session.add(template)
+        db.session.flush()
+        
+        # Create campaign
+        campaign = Campaign()
+        campaign.name = name
+        campaign.subject = subject
+        campaign.template_id = template.id
+        
+        if scheduled_at:
+            campaign.scheduled_at = datetime.fromisoformat(scheduled_at.replace('Z', '+00:00'))
+            campaign.status = 'scheduled'
+        else:
+            campaign.status = 'draft'
+        
+        db.session.add(campaign)
+        db.session.flush()
+        
+        # Add recipients
+        if segment_id:
+            segment_members = SegmentMember.query.filter_by(segment_id=segment_id).all()
+            for member in segment_members:
+                recipient = CampaignRecipient()
+                recipient.campaign_id = campaign.id
+                recipient.contact_id = member.contact_id
+                db.session.add(recipient)
+        else:
+            contacts = Contact.query.filter_by(is_active=True).all()
+            for contact in contacts:
+                recipient = CampaignRecipient()
+                recipient.campaign_id = campaign.id
+                recipient.contact_id = contact.id
+                db.session.add(recipient)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'campaign_id': campaign.id,
+            'message': f'Campaign scheduled successfully with {campaign.recipients.count()} recipients'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error scheduling campaign: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @main_bp.route('/templates')
 @login_required
@@ -1276,6 +1570,40 @@ def preview_template(template_id):
     except Exception as e:
         flash(f'Error rendering template preview: {str(e)}', 'error')
         return redirect(url_for('main.templates'))
+
+@main_bp.route('/templates/<int:template_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_template(template_id):
+    """Edit an existing email template"""
+    template = EmailTemplate.query.get_or_404(template_id)
+    
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name', '').strip()
+            subject = request.form.get('subject', '').strip()
+            html_content = request.form.get('html_content', '').strip()
+            
+            if not name or not subject or not html_content:
+                flash('All fields are required', 'error')
+                return redirect(url_for('main.edit_template', template_id=template_id))
+            
+            template.name = name
+            template.subject = subject
+            template.html_content = html_content
+            
+            db.session.commit()
+            
+            logging.info(f"Template '{name}' updated successfully")
+            flash('Template updated successfully', 'success')
+            return redirect(url_for('main.templates'))
+            
+        except Exception as e:
+            logging.error(f"Error updating template: {str(e)}")
+            db.session.rollback()
+            flash('Error updating template. Please try again.', 'error')
+            return redirect(url_for('main.edit_template', template_id=template_id))
+    
+    return render_template('template_create.html', template=template, editing=True)
 
 @main_bp.route('/templates/preview-live', methods=['POST'])
 @login_required
@@ -2405,7 +2733,9 @@ def delete_poll(poll_id):
 def ab_tests():
     """A/B testing management"""
     tests = ABTest.query.all()
-    draft_campaigns = Campaign.query.filter_by(status='draft').all()
+    draft_campaigns = Campaign.query.filter(
+        Campaign.status.in_(['draft', 'scheduled'])
+    ).order_by(Campaign.created_at.desc()).all()
     return render_template('ab_tests.html', tests=tests, draft_campaigns=draft_campaigns)
 
 @main_bp.route('/ab-tests/create', methods=['POST'])
@@ -2448,6 +2778,166 @@ def create_ab_test():
         db.session.rollback()
         flash('Error creating A/B test', 'error')
         return redirect(url_for('main.ab_tests'))
+
+@main_bp.route('/ab-tests/<int:test_id>/run', methods=['POST'])
+@login_required
+def run_ab_test(test_id):
+    """Run an A/B test"""
+    test = ABTest.query.get_or_404(test_id)
+    
+    if test.status != 'draft':
+        flash('Only draft tests can be started', 'error')
+        return redirect(url_for('main.ab_tests'))
+    
+    try:
+        test.status = 'running'
+        test.started_at = datetime.utcnow()
+        db.session.commit()
+        flash('A/B test started successfully!', 'success')
+    except Exception as e:
+        logger.error(f"Error running A/B test: {e}")
+        flash('Error starting A/B test', 'error')
+    
+    return redirect(url_for('main.ab_tests'))
+
+@main_bp.route('/ab-tests/<int:test_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_ab_test(test_id):
+    """Edit an A/B test"""
+    test = ABTest.query.get_or_404(test_id)
+    draft_campaigns = Campaign.query.filter(Campaign.status.in_(['draft', 'scheduled'])).all()
+    
+    if request.method == 'POST':
+        try:
+            test.campaign_id = request.form.get('campaign_id')
+            test.test_type = request.form.get('test_type', 'subject_line')
+            test.variant_a = request.form.get('variant_a')
+            test.variant_b = request.form.get('variant_b')
+            test.split_ratio = float(request.form.get('split_ratio', 0.5))
+            db.session.commit()
+            flash('A/B test updated successfully!', 'success')
+            return redirect(url_for('main.ab_tests'))
+        except Exception as e:
+            logger.error(f"Error updating A/B test: {e}")
+            flash('Error updating A/B test', 'error')
+    
+    return render_template('edit_ab_test.html', test=test, draft_campaigns=draft_campaigns)
+
+@main_bp.route('/ab-tests/<int:test_id>/duplicate', methods=['POST'])
+@login_required
+def duplicate_ab_test(test_id):
+    """Duplicate an A/B test"""
+    test = ABTest.query.get_or_404(test_id)
+    
+    try:
+        new_test = ABTest()
+        new_test.campaign_id = test.campaign_id
+        new_test.test_type = test.test_type
+        new_test.variant_a = test.variant_a + ' (Copy)'
+        new_test.variant_b = test.variant_b + ' (Copy)'
+        new_test.split_ratio = test.split_ratio
+        new_test.status = 'draft'
+        
+        db.session.add(new_test)
+        db.session.commit()
+        flash('A/B test duplicated successfully!', 'success')
+    except Exception as e:
+        logger.error(f"Error duplicating A/B test: {e}")
+        flash('Error duplicating A/B test', 'error')
+    
+    return redirect(url_for('main.ab_tests'))
+
+@main_bp.route('/ab-tests/<int:test_id>/delete', methods=['POST'])
+@login_required
+def delete_ab_test(test_id):
+    """Delete an A/B test"""
+    test = ABTest.query.get_or_404(test_id)
+    
+    try:
+        db.session.delete(test)
+        db.session.commit()
+        flash('A/B test deleted successfully!', 'success')
+    except Exception as e:
+        logger.error(f"Error deleting A/B test: {e}")
+        flash('Error deleting A/B test', 'error')
+    
+    return redirect(url_for('main.ab_tests'))
+
+@main_bp.route('/ab-tests/<int:test_id>/results')
+@login_required
+def ab_test_results(test_id):
+    """View A/B test results"""
+    test = ABTest.query.get_or_404(test_id)
+    
+    results = {
+        'variant_a': {
+            'sent': 0, 'opens': 0, 'clicks': 0, 'conversions': 0,
+            'open_rate': 0, 'click_rate': 0, 'conversion_rate': 0
+        },
+        'variant_b': {
+            'sent': 0, 'opens': 0, 'clicks': 0, 'conversions': 0,
+            'open_rate': 0, 'click_rate': 0, 'conversion_rate': 0
+        }
+    }
+    
+    if test.campaign_id:
+        recipients = CampaignRecipient.query.filter_by(campaign_id=test.campaign_id).all()
+        total = len(recipients)
+        split_point = int(total * test.split_ratio)
+        
+        variant_a_recipients = recipients[:split_point]
+        variant_b_recipients = recipients[split_point:]
+        
+        for r in variant_a_recipients:
+            results['variant_a']['sent'] += 1
+            if r.opened_at:
+                results['variant_a']['opens'] += 1
+        
+        for r in variant_b_recipients:
+            results['variant_b']['sent'] += 1
+            if r.opened_at:
+                results['variant_b']['opens'] += 1
+        
+        if results['variant_a']['sent'] > 0:
+            results['variant_a']['open_rate'] = round(results['variant_a']['opens'] / results['variant_a']['sent'] * 100, 1)
+        if results['variant_b']['sent'] > 0:
+            results['variant_b']['open_rate'] = round(results['variant_b']['opens'] / results['variant_b']['sent'] * 100, 1)
+    
+    return render_template('ab_test_results.html', test=test, results=results)
+
+@main_bp.route('/segments/<int:segment_id>/refresh', methods=['POST'])
+@login_required
+def refresh_segment(segment_id):
+    """Refresh/recompile a segment to update its members"""
+    segment = Segment.query.get_or_404(segment_id)
+    
+    try:
+        SegmentMember.query.filter_by(segment_id=segment_id).delete()
+        
+        contacts = Contact.query.all()
+        matched = 0
+        
+        for contact in contacts:
+            if segment.segment_type == 'newsletter' and getattr(contact, 'is_subscribed', False):
+                member = SegmentMember(segment_id=segment_id, contact_id=contact.id)
+                db.session.add(member)
+                matched += 1
+            elif segment.segment_type == 'all':
+                member = SegmentMember(segment_id=segment_id, contact_id=contact.id)
+                db.session.add(member)
+                matched += 1
+        
+        segment.member_count = matched
+        segment.last_updated = datetime.utcnow()
+        db.session.commit()
+        
+        flash(f'Segment refreshed! {matched} contacts matched.', 'success')
+    except Exception as e:
+        logger.error(f"Error refreshing segment: {e}")
+        db.session.rollback()
+        flash('Error refreshing segment', 'error')
+    
+    return redirect(url_for('main.segments'))
 
 # Contact Segmentation Routes
 @main_bp.route('/segments')
@@ -2567,27 +3057,83 @@ def test_social_connection():
 @main_bp.route('/social/create', methods=['POST'])
 @login_required
 def create_social_post():
-    """Create new social media post"""
+    """Create or update social media post"""
     try:
+        post_id = request.form.get('post_id')
         content = request.form.get('content')
         platforms = request.form.getlist('platforms[]')
         scheduled_at = request.form.get('scheduled_at')
+        image_url = request.form.get('image_url', '')
+        link_url = request.form.get('link_url', '')
+        use_shortened_url = request.form.get('use_shortened_url') == 'on'
+        hashtags = request.form.get('hashtags', '')
         
-        post = SocialPost()
+        final_link = link_url
+        if link_url and use_shortened_url:
+            from services.url_service import URLService
+            shortened, error = URLService.shorten_url(link_url)
+            if shortened:
+                final_link = shortened
+        
+        if hashtags and hashtags not in content:
+            content = content + '\n\n' + hashtags
+        
+        media_data = {
+            'images': [image_url] if image_url else [],
+            'primary_image': image_url if image_url else None,
+            'link': {
+                'original': link_url if link_url else None,
+                'short': final_link if final_link != link_url else None,
+                'display': final_link if link_url else None
+            } if link_url else None
+        }
+        
+        if post_id:
+            post = SocialPost.query.get(post_id)
+            if not post:
+                flash('Post not found', 'error')
+                return redirect(url_for('main.social_media'))
+            message = 'Social media post updated successfully!'
+        else:
+            post = SocialPost()
+            message = 'Social media post created successfully!'
+        
         post.content = content
         post.platforms = platforms
         post.scheduled_at = datetime.fromisoformat(scheduled_at) if scheduled_at else None
+        post.media_urls = media_data
+        post.status = 'scheduled' if scheduled_at else 'draft'
         
-        db.session.add(post)
+        if not post_id:
+            db.session.add(post)
         db.session.commit()
         
-        flash('Social media post created successfully!', 'success')
+        flash(message, 'success')
         return redirect(url_for('main.social_media'))
         
     except Exception as e:
-        logger.error(f"Error creating social post: {e}")
-        flash('Error creating social post', 'error')
+        logger.error(f"Error creating/updating social post: {e}")
+        flash('Error saving social post', 'error')
         return redirect(url_for('main.social_media'))
+
+@main_bp.route('/api/social/delete-post/<int:post_id>', methods=['DELETE'])
+@login_required
+def delete_social_post(post_id):
+    """Delete a social media post"""
+    try:
+        post = SocialPost.query.get(post_id)
+        if not post:
+            return jsonify({'success': False, 'message': 'Post not found'}), 404
+        
+        if post.status == 'published':
+            return jsonify({'success': False, 'message': 'Cannot delete published posts'}), 400
+        
+        db.session.delete(post)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Post deleted successfully'})
+    except Exception as e:
+        logger.error(f"Error deleting social post: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @main_bp.route('/social/refresh-followers', methods=['POST'])
 @login_required
@@ -2630,12 +3176,295 @@ def refresh_social_followers():
         flash('Error refreshing follower counts', 'error')
         return redirect(url_for('main.social_media'))
 
+# Image, URL, and Keyword API Routes for Social Media Posts
+@main_bp.route('/api/social/search-images', methods=['POST'])
+@login_required
+def search_stock_images():
+    """Search royalty-free images from Unsplash/Pexels"""
+    try:
+        from services.image_service import ImageService
+        
+        data = request.get_json()
+        if not data or not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'Invalid JSON payload'}), 400
+        
+        query = data.get('query', '')
+        source = data.get('source', 'all')
+        page = data.get('page', 1)
+        
+        if not query:
+            return jsonify({'success': False, 'message': 'Search query required'}), 400
+        
+        images, error = ImageService.search_images(query, source, page)
+        
+        if error and not images:
+            return jsonify({'success': False, 'message': error}), 400
+        
+        return jsonify({
+            'success': True,
+            'images': images,
+            'warning': error if error else None
+        })
+    except Exception as e:
+        logger.error(f"Image search error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@main_bp.route('/api/social/wordpress-media', methods=['POST'])
+@login_required
+def get_wordpress_media():
+    """Fetch images from WordPress media library"""
+    try:
+        from services.wordpress_service import WordPressService
+        
+        data = request.get_json()
+        search = data.get('search', '') if data else ''
+        
+        wp_integration = WordPressIntegration.query.first()
+        if not wp_integration:
+            return jsonify({'success': False, 'message': 'WordPress not connected. Go to Settings to connect your WordPress site.'}), 400
+        
+        result = WordPressService.get_media(wp_integration.site_url, wp_integration.api_key, search)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"WordPress media fetch error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@main_bp.route('/api/social/trigger-download', methods=['POST'])
+@login_required
+def trigger_unsplash_download():
+    """Trigger Unsplash download event when user selects a photo (API compliance)"""
+    try:
+        from services.image_service import ImageService
+        
+        data = request.get_json()
+        if not data or not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'Invalid JSON payload'}), 400
+        
+        download_location = data.get('download_location', '')
+        
+        if not download_location:
+            return jsonify({'success': False, 'message': 'Download location required'}), 400
+        
+        success = ImageService.trigger_unsplash_download(download_location)
+        
+        return jsonify({'success': success})
+    except Exception as e:
+        logger.error(f"Download trigger error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@main_bp.route('/api/social/import-image', methods=['POST'])
+@login_required
+def import_image_from_url():
+    """Import an image from URL"""
+    try:
+        from services.image_service import ImageService
+        
+        data = request.get_json()
+        if not data or not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'Invalid JSON payload'}), 400
+        
+        image_url = data.get('url', '')
+        
+        if not image_url:
+            return jsonify({'success': False, 'message': 'Image URL required'}), 400
+        
+        local_path, error = ImageService.import_from_url(image_url)
+        
+        if error:
+            return jsonify({'success': False, 'message': error}), 400
+        
+        return jsonify({
+            'success': True,
+            'local_path': local_path
+        })
+    except Exception as e:
+        logger.error(f"Image import error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@main_bp.route('/api/social/upload-image', methods=['POST'])
+@login_required
+def upload_social_image():
+    """Upload an image from device"""
+    try:
+        from services.image_service import ImageService
+        
+        if 'image' not in request.files:
+            return jsonify({'success': False, 'message': 'No image file provided'}), 400
+        
+        file = request.files['image']
+        local_path, error = ImageService.save_uploaded_file(file)
+        
+        if error:
+            return jsonify({'success': False, 'message': error}), 400
+        
+        return jsonify({
+            'success': True,
+            'local_path': local_path
+        })
+    except Exception as e:
+        logger.error(f"Image upload error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@main_bp.route('/api/social/generate-image', methods=['POST'])
+@login_required
+def generate_ai_image():
+    """Generate an image using AI (DALL-E)"""
+    try:
+        from services.image_service import ImageService
+        
+        data = request.get_json()
+        if not data or not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'Invalid JSON payload'}), 400
+        
+        prompt = data.get('prompt', '')
+        size = data.get('size', '1024x1024')
+        
+        if not prompt:
+            return jsonify({'success': False, 'message': 'Image prompt required'}), 400
+        
+        local_path, error = ImageService.generate_ai_image(prompt, size)
+        
+        if error:
+            return jsonify({'success': False, 'message': error}), 400
+        
+        return jsonify({
+            'success': True,
+            'local_path': local_path
+        })
+    except Exception as e:
+        logger.error(f"AI image generation error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@main_bp.route('/api/social/shorten-url', methods=['POST'])
+@login_required
+def shorten_url():
+    """Shorten a URL"""
+    try:
+        from services.url_service import URLService
+        
+        data = request.get_json()
+        if not data or not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'Invalid JSON payload'}), 400
+        
+        url = data.get('url', '')
+        service = data.get('service', 'auto')
+        
+        if not url:
+            return jsonify({'success': False, 'message': 'URL required'}), 400
+        
+        shortened, error = URLService.shorten_url(url, service)
+        
+        if error:
+            return jsonify({'success': False, 'message': error}), 400
+        
+        return jsonify({
+            'success': True,
+            'original_url': url,
+            'shortened_url': shortened,
+            'pretty_url': URLService.create_pretty_url(url)
+        })
+    except Exception as e:
+        logger.error(f"URL shortening error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@main_bp.route('/api/social/generate-hashtags', methods=['POST'])
+@login_required
+def generate_hashtags():
+    """Generate AI hashtags for content"""
+    try:
+        from services.keyword_service import KeywordService
+        
+        data = request.get_json()
+        if not data or not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'Invalid JSON payload'}), 400
+        
+        content = data.get('content', '')
+        platform = data.get('platform', 'general')
+        max_tags = data.get('max_tags', 10)
+        
+        if not content:
+            return jsonify({'success': False, 'message': 'Content required'}), 400
+        
+        hashtags, error = KeywordService.generate_hashtags(content, platform, max_tags)
+        
+        if error:
+            return jsonify({'success': False, 'message': error}), 400
+        
+        return jsonify({
+            'success': True,
+            'hashtags': hashtags
+        })
+    except Exception as e:
+        logger.error(f"Hashtag generation error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@main_bp.route('/api/social/generate-keywords', methods=['POST'])
+@login_required
+def generate_keywords():
+    """Generate AI keywords for content"""
+    try:
+        from services.keyword_service import KeywordService
+        
+        data = request.get_json()
+        if not data or not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'Invalid JSON payload'}), 400
+        
+        content = data.get('content', '')
+        for_seo = data.get('for_seo', False)
+        
+        if not content:
+            return jsonify({'success': False, 'message': 'Content required'}), 400
+        
+        keywords, error = KeywordService.generate_keywords(content, for_seo)
+        
+        if error:
+            return jsonify({'success': False, 'message': error}), 400
+        
+        return jsonify({
+            'success': True,
+            'keywords': keywords
+        })
+    except Exception as e:
+        logger.error(f"Keyword generation error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@main_bp.route('/api/social/analyze-content', methods=['POST'])
+@login_required
+def analyze_social_content():
+    """Analyze content and suggest improvements"""
+    try:
+        from services.keyword_service import KeywordService
+        
+        data = request.get_json()
+        if not data or not isinstance(data, dict):
+            return jsonify({'success': False, 'message': 'Invalid JSON payload'}), 400
+        
+        content = data.get('content', '')
+        platform = data.get('platform', 'general')
+        
+        if not content:
+            return jsonify({'success': False, 'message': 'Content required'}), 400
+        
+        suggestions, error = KeywordService.suggest_content_improvements(content, platform)
+        
+        if error:
+            return jsonify({'success': False, 'message': error}), 400
+        
+        return jsonify({
+            'success': True,
+            'suggestions': suggestions
+        })
+    except Exception as e:
+        logger.error(f"Content analysis error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 # Advanced Automation Management Routes
 @main_bp.route('/automations')
 @login_required
 def automation_dashboard():
     """Unified Automations & AI Agents dashboard"""
     from agent_scheduler import get_agent_scheduler
+    from models import AgentDeliverable, AgentReport
     
     automations = Automation.query.all()
     templates = AutomationTemplate.query.filter_by(is_predefined=True).all()
@@ -2645,11 +3474,297 @@ def automation_dashboard():
     scheduler = get_agent_scheduler()
     agents = scheduler.agents if scheduler else {}
     
+    # Build detailed agent info for enhanced tiles
+    agent_details = [
+        {
+            'type': 'brand_strategy',
+            'name': 'Brand & Strategy',
+            'icon': '🎯',
+            'purpose': 'Market research, competitive analysis, brand positioning, and quarterly strategy planning.',
+            'scheduled_tasks': ['Quarterly Strategy', 'Monthly Research'],
+            'deliverables_count': AgentDeliverable.query.filter_by(agent_type='brand_strategy').count(),
+            'reports_count': AgentReport.query.filter_by(agent_type='brand_strategy').count()
+        },
+        {
+            'type': 'content_seo',
+            'name': 'Content & SEO',
+            'icon': '✍️',
+            'purpose': 'Blog posts, SEO optimization, content calendars, and keyword research.',
+            'scheduled_tasks': ['Weekly Blog Post', 'Monthly Calendar'],
+            'deliverables_count': AgentDeliverable.query.filter_by(agent_type='content_seo').count(),
+            'reports_count': AgentReport.query.filter_by(agent_type='content_seo').count()
+        },
+        {
+            'type': 'analytics',
+            'name': 'Analytics & Optimization',
+            'icon': '📊',
+            'purpose': 'Performance tracking, KPIs, optimization recommendations, and data insights.',
+            'scheduled_tasks': ['Daily Recommendations', 'Weekly Summary', 'Monthly Report'],
+            'deliverables_count': AgentDeliverable.query.filter_by(agent_type='analytics').count(),
+            'reports_count': AgentReport.query.filter_by(agent_type='analytics').count()
+        },
+        {
+            'type': 'creative_design',
+            'name': 'Creative & Design',
+            'icon': '🎨',
+            'purpose': 'Graphics, images, visual assets, and brand creative using DALL-E 3.',
+            'scheduled_tasks': ['Weekly Assets'],
+            'deliverables_count': AgentDeliverable.query.filter_by(agent_type='creative_design').count(),
+            'reports_count': AgentReport.query.filter_by(agent_type='creative_design').count()
+        },
+        {
+            'type': 'advertising',
+            'name': 'Advertising & Demand Gen',
+            'icon': '📢',
+            'purpose': 'Campaign strategy, ad copy, audience targeting, and performance optimization.',
+            'scheduled_tasks': ['Weekly Strategy Review'],
+            'deliverables_count': AgentDeliverable.query.filter_by(agent_type='advertising').count(),
+            'reports_count': AgentReport.query.filter_by(agent_type='advertising').count()
+        },
+        {
+            'type': 'social_media',
+            'name': 'Social Media & Community',
+            'icon': '📱',
+            'purpose': 'Social content, posting schedules, engagement, and community management.',
+            'scheduled_tasks': ['Daily Posts'],
+            'deliverables_count': AgentDeliverable.query.filter_by(agent_type='social_media').count(),
+            'reports_count': AgentReport.query.filter_by(agent_type='social_media').count()
+        },
+        {
+            'type': 'email_crm',
+            'name': 'Email & CRM',
+            'icon': '📧',
+            'purpose': 'Email campaigns, subscriber sync, CRM automation, and customer outreach.',
+            'scheduled_tasks': ['Weekly Campaign', 'Daily Subscriber Sync'],
+            'deliverables_count': AgentDeliverable.query.filter_by(agent_type='email_crm').count(),
+            'reports_count': AgentReport.query.filter_by(agent_type='email_crm').count()
+        },
+        {
+            'type': 'sales_enablement',
+            'name': 'Sales Enablement',
+            'icon': '💼',
+            'purpose': 'Lead scoring, sales materials, prospect insights, and pipeline optimization.',
+            'scheduled_tasks': ['Weekly Lead Scoring'],
+            'deliverables_count': AgentDeliverable.query.filter_by(agent_type='sales_enablement').count(),
+            'reports_count': AgentReport.query.filter_by(agent_type='sales_enablement').count()
+        },
+        {
+            'type': 'retention',
+            'name': 'Customer Retention & Loyalty',
+            'icon': '❤️',
+            'purpose': 'Churn prevention, loyalty programs, win-back campaigns, and customer success.',
+            'scheduled_tasks': ['Monthly Churn Analysis'],
+            'deliverables_count': AgentDeliverable.query.filter_by(agent_type='retention').count(),
+            'reports_count': AgentReport.query.filter_by(agent_type='retention').count()
+        },
+        {
+            'type': 'operations',
+            'name': 'Operations & Integration',
+            'icon': '⚙️',
+            'purpose': 'System health, integration checks, workflow automation, and infrastructure.',
+            'scheduled_tasks': ['Daily Health Check'],
+            'deliverables_count': AgentDeliverable.query.filter_by(agent_type='operations').count(),
+            'reports_count': AgentReport.query.filter_by(agent_type='operations').count()
+        },
+        {
+            'type': 'app_intelligence',
+            'name': 'APP Agent',
+            'icon': '🧠',
+            'purpose': 'Platform monitoring, usage analysis, self-diagnosis, and improvement suggestions.',
+            'scheduled_tasks': ['Hourly Health', 'Daily Analysis', 'Weekly Improvements'],
+            'deliverables_count': AgentDeliverable.query.filter_by(agent_type='app_intelligence').count(),
+            'reports_count': AgentReport.query.filter_by(agent_type='app_intelligence').count()
+        }
+    ]
+    
     return render_template('automation_dashboard.html', 
                          automations=automations, 
                          templates=templates,
                          active_executions=active_executions,
-                         agents=agents)
+                         agents=agents,
+                         agent_details=agent_details)
+
+
+@main_bp.route('/agents/reports')
+@login_required
+def agent_reports():
+    """View all agent reports, deliverables, and activity logs"""
+    from models import AgentDeliverable, AgentReport, AgentLog, AgentPerformance
+    
+    agent_type = request.args.get('agent', 'all')
+    report_type = request.args.get('type', 'all')
+    
+    deliverables_query = AgentDeliverable.query
+    reports_query = AgentReport.query
+    logs_query = AgentLog.query
+    
+    if agent_type != 'all':
+        deliverables_query = deliverables_query.filter_by(agent_type=agent_type)
+        reports_query = reports_query.filter_by(agent_type=agent_type)
+        logs_query = logs_query.filter_by(agent_type=agent_type)
+    
+    deliverables = deliverables_query.order_by(AgentDeliverable.created_at.desc()).limit(50).all()
+    reports = reports_query.order_by(AgentReport.created_at.desc()).limit(50).all()
+    logs = logs_query.order_by(AgentLog.created_at.desc()).limit(100).all()
+    
+    agent_names = {
+        'brand_strategy': 'Brand & Strategy',
+        'content_seo': 'Content & SEO',
+        'analytics': 'Analytics & Optimization',
+        'creative_design': 'Creative & Design',
+        'advertising': 'Advertising & Demand Gen',
+        'social_media': 'Social Media & Community',
+        'email_crm': 'Email & CRM',
+        'sales_enablement': 'Sales Enablement',
+        'retention': 'Customer Retention & Loyalty',
+        'operations': 'Operations & Integration',
+        'app_intelligence': 'APP Agent'
+    }
+    
+    return render_template('agent_reports.html',
+                         deliverables=deliverables,
+                         reports=reports,
+                         logs=logs,
+                         agent_names=agent_names,
+                         current_agent=agent_type,
+                         current_type=report_type)
+
+
+@main_bp.route('/agents/<agent_type>')
+@login_required
+def agent_detail(agent_type):
+    """View detailed agent page with deliverables, chat, and performance"""
+    from models import AgentDeliverable, AgentReport, AgentLog, AgentMemory, AgentPerformance
+    from agent_scheduler import get_agent_scheduler
+    
+    agent_info = {
+        'brand_strategy': {'name': 'Brand & Strategy', 'icon': '🎯', 'purpose': 'Market research, competitive analysis, brand positioning, and quarterly strategy planning.'},
+        'content_seo': {'name': 'Content & SEO', 'icon': '✍️', 'purpose': 'Blog posts, SEO optimization, content calendars, and keyword research.'},
+        'analytics': {'name': 'Analytics & Optimization', 'icon': '📊', 'purpose': 'Performance tracking, KPIs, optimization recommendations, and data insights.'},
+        'creative_design': {'name': 'Creative & Design', 'icon': '🎨', 'purpose': 'Graphics, images, visual assets, and brand creative using DALL-E 3.'},
+        'advertising': {'name': 'Advertising & Demand Gen', 'icon': '📢', 'purpose': 'Campaign strategy, ad copy, audience targeting, and performance optimization.'},
+        'social_media': {'name': 'Social Media & Community', 'icon': '📱', 'purpose': 'Social content, posting schedules, engagement, and community management.'},
+        'email_crm': {'name': 'Email & CRM', 'icon': '📧', 'purpose': 'Email campaigns, subscriber sync, CRM automation, and customer outreach.'},
+        'sales_enablement': {'name': 'Sales Enablement', 'icon': '💼', 'purpose': 'Lead scoring, sales materials, prospect insights, and pipeline optimization.'},
+        'retention': {'name': 'Customer Retention & Loyalty', 'icon': '❤️', 'purpose': 'Churn prevention, loyalty programs, win-back campaigns, and customer success.'},
+        'operations': {'name': 'Operations & Integration', 'icon': '⚙️', 'purpose': 'System health, integration checks, workflow automation, and infrastructure.'},
+        'app_intelligence': {'name': 'APP Agent', 'icon': '🧠', 'purpose': 'Platform monitoring, usage analysis, self-diagnosis, and improvement suggestions.'}
+    }
+    
+    if agent_type not in agent_info:
+        flash('Agent not found', 'error')
+        return redirect(url_for('main.automation_dashboard'))
+    
+    agent = agent_info[agent_type]
+    agent['type'] = agent_type
+    
+    deliverables = AgentDeliverable.query.filter_by(agent_type=agent_type).order_by(AgentDeliverable.created_at.desc()).limit(20).all()
+    reports = AgentReport.query.filter_by(agent_type=agent_type).order_by(AgentReport.created_at.desc()).limit(10).all()
+    logs = AgentLog.query.filter_by(agent_type=agent_type).order_by(AgentLog.created_at.desc()).limit(50).all()
+    memories = AgentMemory.query.filter_by(agent_type=agent_type).order_by(AgentMemory.updated_at.desc()).limit(20).all()
+    performance = AgentPerformance.query.filter_by(agent_type=agent_type).order_by(AgentPerformance.created_at.desc()).first()
+    
+    return render_template('agent_detail.html',
+                         agent=agent,
+                         deliverables=deliverables,
+                         reports=reports,
+                         logs=logs,
+                         memories=memories,
+                         performance=performance)
+
+
+@main_bp.route('/agents/<agent_type>/chat')
+@login_required
+def agent_chat(agent_type):
+    """Interactive chat with an AI agent to request deliverables"""
+    agent_info = {
+        'brand_strategy': {'name': 'Brand & Strategy', 'icon': '🎯', 'capabilities': ['Market research', 'Competitive analysis', 'Brand positioning', 'Strategy planning']},
+        'content_seo': {'name': 'Content & SEO', 'icon': '✍️', 'capabilities': ['Blog posts', 'SEO optimization', 'Content calendars', 'Keyword research']},
+        'analytics': {'name': 'Analytics & Optimization', 'icon': '📊', 'capabilities': ['Performance reports', 'KPI dashboards', 'Optimization recommendations', 'Data insights']},
+        'creative_design': {'name': 'Creative & Design', 'icon': '🎨', 'capabilities': ['Social graphics', 'Ad creatives', 'Brand assets', 'Image generation']},
+        'advertising': {'name': 'Advertising & Demand Gen', 'icon': '📢', 'capabilities': ['Ad copy', 'Campaign strategy', 'Audience targeting', 'A/B test ideas']},
+        'social_media': {'name': 'Social Media & Community', 'icon': '📱', 'capabilities': ['Social posts', 'Posting schedules', 'Hashtag suggestions', 'Engagement ideas']},
+        'email_crm': {'name': 'Email & CRM', 'icon': '📧', 'capabilities': ['Email campaigns', 'Subject lines', 'Drip sequences', 'Customer segments']},
+        'sales_enablement': {'name': 'Sales Enablement', 'icon': '💼', 'capabilities': ['Lead scoring', 'Sales materials', 'Prospect insights', 'Pitch decks']},
+        'retention': {'name': 'Customer Retention & Loyalty', 'icon': '❤️', 'capabilities': ['Win-back campaigns', 'Loyalty programs', 'Churn prevention', 'Customer success']},
+        'operations': {'name': 'Operations & Integration', 'icon': '⚙️', 'capabilities': ['System health', 'Integration checks', 'Workflow optimization', 'Error diagnosis']},
+        'app_intelligence': {'name': 'APP Agent', 'icon': '🧠', 'capabilities': ['Platform monitoring', 'Usage analysis', 'Self-diagnosis', 'Improvement suggestions']}
+    }
+    
+    if agent_type not in agent_info:
+        flash('Agent not found', 'error')
+        return redirect(url_for('main.automation_dashboard'))
+    
+    agent = agent_info[agent_type]
+    agent['type'] = agent_type
+    
+    return render_template('agent_chat.html', agent=agent)
+
+
+@main_bp.route('/api/agents/<agent_type>/generate', methods=['POST'])
+@login_required
+def agent_generate_deliverable(agent_type):
+    """Generate a deliverable from an agent based on user request"""
+    from agent_scheduler import get_agent_scheduler
+    from models import AgentDeliverable
+    import time
+    
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', '')
+        deliverable_type = data.get('type', 'content')
+        
+        if not prompt:
+            return jsonify({'success': False, 'error': 'Prompt required'}), 400
+        
+        scheduler = get_agent_scheduler()
+        agent = scheduler.agents.get(agent_type) if scheduler else None
+        
+        if not agent:
+            return jsonify({'success': False, 'error': 'Agent not available'}), 404
+        
+        start_time = time.time()
+        result = agent.generate_response(f"""
+        User Request: {prompt}
+        
+        Please provide a comprehensive response. Return as JSON with:
+        - "title": A short title for this deliverable
+        - "content": The main content (detailed and actionable)
+        - "summary": A brief summary
+        - "recommendations": List of key recommendations or next steps
+        """)
+        response_time = time.time() - start_time
+        
+        if result:
+            company = current_user.get_default_company()
+            deliverable = AgentDeliverable(
+                agent_type=agent_type,
+                agent_name=agent.agent_name,
+                company_id=company.id if company else None,
+                deliverable_type=deliverable_type,
+                title=result.get('title', f'{agent.agent_name} Response'),
+                description=result.get('summary', ''),
+                content=json.dumps(result),
+                content_format='json',
+                prompt_used=prompt,
+                status='completed'
+            )
+            db.session.add(deliverable)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'deliverable': deliverable.to_dict(),
+                'content': result,
+                'response_time': round(response_time, 2)
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to generate response'}), 500
+            
+    except Exception as e:
+        logger.error(f"Agent generate error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @main_bp.route('/automations/create', methods=['GET', 'POST'])
 @login_required
@@ -2993,6 +4108,54 @@ def create_sms_campaign():
                          templates=templates,
                          segments=segments)
 
+@main_bp.route('/sms/campaign/<int:campaign_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_sms_campaign(campaign_id):
+    """Edit an existing SMS campaign"""
+    from services.sms_service import SMSService
+    
+    campaign = SMSCampaign.query.get_or_404(campaign_id)
+    
+    if request.method == 'POST':
+        try:
+            campaign.name = request.form.get('name', campaign.name)
+            campaign.message = request.form.get('message', campaign.message)
+            
+            scheduled_date = request.form.get('scheduled_date')
+            scheduled_time = request.form.get('scheduled_time')
+            if scheduled_date and scheduled_time:
+                campaign.scheduled_at = datetime.fromisoformat(f"{scheduled_date}T{scheduled_time}")
+            
+            db.session.commit()
+            flash('SMS campaign updated successfully!', 'success')
+            return redirect(url_for('main.sms_dashboard'))
+        except Exception as e:
+            logger.error(f"Error updating SMS campaign: {e}")
+            flash('Error updating campaign', 'error')
+    
+    contacts = Contact.query.filter(Contact.phone.isnot(None)).all()
+    templates = SMSTemplate.query.all()
+    
+    return render_template('edit_sms_campaign.html',
+                         campaign=campaign,
+                         contacts=contacts,
+                         templates=templates)
+
+@main_bp.route('/sms/campaign/<int:campaign_id>/archive', methods=['POST'])
+@login_required
+def archive_sms_campaign(campaign_id):
+    """Archive an SMS campaign"""
+    try:
+        campaign = SMSCampaign.query.get_or_404(campaign_id)
+        campaign.status = 'archived'
+        db.session.commit()
+        flash('Campaign archived successfully', 'success')
+    except Exception as e:
+        logger.error(f"Error archiving SMS campaign: {e}")
+        flash('Error archiving campaign', 'error')
+    
+    return redirect(url_for('main.sms_dashboard'))
+
 @main_bp.route('/sms/templates/create', methods=['GET', 'POST'])
 @login_required
 def create_sms_template():
@@ -3235,6 +4398,221 @@ def create_landing_page():
         forms = []
     
     return render_template('create_landing_page.html', forms=forms)
+
+@main_bp.route('/landing-pages/builder')
+@main_bp.route('/landing-pages/builder/<int:page_id>')
+@login_required
+def landing_page_builder(page_id=None):
+    """Visual drag-and-drop landing page builder"""
+    page = None
+    if page_id:
+        page = LandingPage.query.get(page_id)
+    return render_template('landing_page_builder.html', page=page)
+
+@main_bp.route('/api/landing-page/save', methods=['POST'])
+@login_required
+def save_landing_page_api():
+    """Save landing page from builder"""
+    try:
+        data = request.get_json() or {}
+        page_id = data.get('id')
+        name = data.get('name', '').strip()
+        slug = data.get('slug', '').strip()
+        html_content = data.get('html_content', '')
+        builder_schema = data.get('builder_schema', [])
+        
+        if not name:
+            return jsonify({'success': False, 'error': 'Page name is required'}), 400
+        if not slug:
+            return jsonify({'success': False, 'error': 'URL slug is required'}), 400
+        
+        import re
+        if not re.match(r'^[a-z0-9-]+$', slug):
+            return jsonify({'success': False, 'error': 'Slug must be lowercase letters, numbers, and hyphens only'}), 400
+        
+        if page_id:
+            page = LandingPage.query.get(page_id)
+            if not page:
+                return jsonify({'success': False, 'error': 'Page not found'}), 404
+        else:
+            existing = LandingPage.query.filter_by(slug=slug).first()
+            if existing:
+                return jsonify({'success': False, 'error': f'Slug "{slug}" already exists'}), 400
+            page = LandingPage()
+            db.session.add(page)
+        
+        page.name = name
+        page.slug = slug
+        page.html_content = html_content
+        
+        import json
+        page.builder_schema = json.dumps(builder_schema) if builder_schema else None
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'page_id': page.id, 'message': 'Page saved successfully'})
+        
+    except Exception as e:
+        logger.error(f"Error saving landing page: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/newsletters')
+@login_required
+def newsletters():
+    """Newsletter management page"""
+    newsletters = NewsletterArchive.query.order_by(NewsletterArchive.published_at.desc()).all()
+    subscriber_count = Contact.query.filter_by(is_subscribed=True, is_active=True).count()
+    return render_template('newsletters.html', newsletters=newsletters, subscriber_count=subscriber_count)
+
+@main_bp.route('/newsletters/create', methods=['GET', 'POST'])
+@login_required
+def create_newsletter():
+    """Create new newsletter"""
+    if request.method == 'POST':
+        try:
+            title = request.form.get('title', '').strip()
+            slug = request.form.get('slug', '').strip()
+            html_content = request.form.get('html_content', '')
+            is_public = request.form.get('is_public') == 'on'
+            campaign_id = request.form.get('campaign_id')
+            
+            if not title or not slug or not html_content:
+                flash('Title, slug, and content are required', 'error')
+                return redirect(url_for('main.create_newsletter'))
+            
+            import re
+            if not re.match(r'^[a-z0-9-]+$', slug):
+                flash('Slug must be lowercase letters, numbers, and hyphens only', 'error')
+                return redirect(url_for('main.create_newsletter'))
+            
+            existing = NewsletterArchive.query.filter_by(slug=slug).first()
+            if existing:
+                flash(f'Newsletter with slug "{slug}" already exists', 'error')
+                return redirect(url_for('main.create_newsletter'))
+            
+            if not campaign_id:
+                campaign = Campaign()
+                campaign.name = f"Newsletter: {title}"
+                campaign.subject = title
+                campaign.status = 'sent' if is_public else 'draft'
+                db.session.add(campaign)
+                db.session.flush()
+                campaign_id = campaign.id
+            
+            newsletter = NewsletterArchive()
+            newsletter.title = title
+            newsletter.slug = slug
+            newsletter.html_content = html_content
+            newsletter.campaign_id = int(campaign_id)
+            newsletter.is_public = is_public
+            newsletter.published_at = datetime.utcnow() if is_public else None
+            
+            db.session.add(newsletter)
+            db.session.commit()
+            
+            flash('Newsletter created successfully!', 'success')
+            return redirect(url_for('main.newsletters'))
+            
+        except Exception as e:
+            logger.error(f"Error creating newsletter: {e}")
+            db.session.rollback()
+            flash(f'Error creating newsletter: {str(e)}', 'error')
+    
+    campaigns = Campaign.query.order_by(Campaign.created_at.desc()).limit(50).all()
+    templates = EmailTemplate.query.filter_by(is_active=True).all()
+    return render_template('create_newsletter.html', campaigns=campaigns, templates=templates)
+
+@main_bp.route('/newsletters/<int:newsletter_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_newsletter(newsletter_id):
+    """Edit newsletter"""
+    newsletter = NewsletterArchive.query.get_or_404(newsletter_id)
+    
+    if request.method == 'POST':
+        try:
+            newsletter.title = request.form.get('title', '').strip()
+            newsletter.slug = request.form.get('slug', '').strip()
+            newsletter.html_content = request.form.get('html_content', '')
+            newsletter.is_public = request.form.get('is_public') == 'on'
+            
+            if newsletter.is_public and not newsletter.published_at:
+                newsletter.published_at = datetime.utcnow()
+            
+            db.session.commit()
+            flash('Newsletter updated successfully!', 'success')
+            return redirect(url_for('main.newsletters'))
+            
+        except Exception as e:
+            logger.error(f"Error updating newsletter: {e}")
+            db.session.rollback()
+            flash(f'Error updating newsletter: {str(e)}', 'error')
+    
+    campaigns = Campaign.query.order_by(Campaign.created_at.desc()).limit(50).all()
+    templates = EmailTemplate.query.filter_by(is_active=True).all()
+    return render_template('edit_newsletter.html', newsletter=newsletter, campaigns=campaigns, templates=templates)
+
+@main_bp.route('/newsletters/<int:newsletter_id>/toggle-public', methods=['POST'])
+@login_required
+def toggle_newsletter_public(newsletter_id):
+    """Toggle newsletter public status"""
+    newsletter = NewsletterArchive.query.get_or_404(newsletter_id)
+    newsletter.is_public = not newsletter.is_public
+    if newsletter.is_public and not newsletter.published_at:
+        newsletter.published_at = datetime.utcnow()
+    db.session.commit()
+    flash(f'Newsletter {"published" if newsletter.is_public else "unpublished"}!', 'success')
+    return redirect(url_for('main.newsletters'))
+
+@main_bp.route('/newsletters/<int:newsletter_id>/delete', methods=['POST'])
+@login_required
+def delete_newsletter(newsletter_id):
+    """Delete newsletter"""
+    newsletter = NewsletterArchive.query.get_or_404(newsletter_id)
+    db.session.delete(newsletter)
+    db.session.commit()
+    flash('Newsletter deleted!', 'success')
+    return redirect(url_for('main.newsletters'))
+
+@main_bp.route('/api/ai/generate-newsletter', methods=['POST'])
+@login_required
+def ai_generate_newsletter():
+    """AI-powered newsletter content generation"""
+    try:
+        data = request.get_json() or {}
+        title = data.get('title', '')
+        
+        if not title:
+            return jsonify({'success': False, 'message': 'Title required'}), 400
+        
+        from ai_agent import LUXAgent
+        lux_agent = LUXAgent()
+        
+        system_prompt = """Generate a professional newsletter HTML content. Include:
+- A header section with the title
+- 2-3 content sections with headings and paragraphs
+- A call-to-action button
+- Use Bootstrap 5 classes
+- Use brand colors: purple (#301934) and emerald (#013220)
+- Keep it clean and professional
+Only output the HTML code, no explanations."""
+        
+        response = lux_agent.chat(f"Create newsletter content for: {title}", context=system_prompt)
+        
+        if response:
+            html_content = response
+            if '```html' in html_content:
+                html_content = html_content.split('```html')[1].split('```')[0]
+            elif '```' in html_content:
+                html_content = html_content.split('```')[1].split('```')[0]
+            
+            return jsonify({'success': True, 'html_content': html_content.strip()})
+        
+        return jsonify({'success': False, 'message': 'AI generation failed'}), 500
+        
+    except Exception as e:
+        logger.error(f"AI newsletter generation error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @main_bp.route('/newsletter-archive')
 def newsletter_archive():
@@ -3707,26 +5085,6 @@ def agent_logs():
     
     return render_template('agent_logs.html', logs=logs, selected_agent=agent_type)
 
-@main_bp.route('/agents/reports')
-@login_required
-def agent_reports():
-    """View agent-generated reports"""
-    from models import AgentReport
-    
-    page = request.args.get('page', 1, type=int)
-    report_type = request.args.get('report_type', '')
-    
-    query = AgentReport.query
-    
-    if report_type:
-        query = query.filter_by(report_type=report_type)
-    
-    reports = query.order_by(AgentReport.created_at.desc()).paginate(
-        page=page, per_page=20, error_out=False
-    )
-    
-    return render_template('agent_reports.html', reports=reports, selected_type=report_type)
-
 @main_bp.route('/agents/reports/<int:report_id>')
 @login_required
 def view_agent_report(report_id):
@@ -3986,8 +5344,146 @@ def automation_triggers():
     category = request.args.get('category')
     triggers = AutomationService.get_trigger_library(category)
     
-    categories = ['ecommerce', 'engagement', 'nurture', 'retention']
+    categories = ['ecommerce', 'engagement', 'nurture', 'retention', 'sms', 'social']
     return render_template('automation_triggers.html', triggers=triggers, categories=categories)
+
+# ===== AUTOMATION TRIGGER LIBRARY API =====
+@main_bp.route('/api/automation-triggers', methods=['GET'])
+@login_required
+def api_get_triggers():
+    """Get all automation triggers"""
+    from services.automation_service import AutomationService
+    category = request.args.get('category')
+    triggers = AutomationService.get_trigger_library(category)
+    return jsonify({
+        'success': True,
+        'triggers': [{
+            'id': t.id,
+            'name': t.name,
+            'trigger_type': t.trigger_type,
+            'description': t.description,
+            'category': t.category,
+            'trigger_config': t.trigger_config,
+            'steps_template': t.steps_template,
+            'is_predefined': t.is_predefined,
+            'usage_count': t.usage_count
+        } for t in triggers]
+    })
+
+@main_bp.route('/api/automation-triggers/<int:trigger_id>', methods=['GET'])
+@login_required
+def api_get_trigger(trigger_id):
+    """Get a specific trigger by ID"""
+    trigger = AutomationTriggerLibrary.query.get(trigger_id)
+    if not trigger:
+        return jsonify({'success': False, 'error': 'Trigger not found'}), 404
+    
+    return jsonify({
+        'success': True,
+        'trigger': {
+            'id': trigger.id,
+            'name': trigger.name,
+            'trigger_type': trigger.trigger_type,
+            'description': trigger.description,
+            'category': trigger.category,
+            'trigger_config': trigger.trigger_config,
+            'steps_template': trigger.steps_template,
+            'is_predefined': trigger.is_predefined,
+            'usage_count': trigger.usage_count
+        }
+    })
+
+@main_bp.route('/api/automation-triggers', methods=['POST'])
+@login_required
+def api_create_trigger():
+    """Create a new custom trigger"""
+    from services.automation_service import AutomationService
+    
+    try:
+        data = request.get_json()
+        trigger = AutomationService.create_trigger_template(
+            name=data.get('name', 'Custom Trigger'),
+            trigger_type=data.get('trigger_type', 'custom'),
+            description=data.get('description', ''),
+            category=data.get('category', 'engagement'),
+            trigger_config=data.get('trigger_config', {}),
+            steps_template=data.get('steps_template', [])
+        )
+        
+        if trigger:
+            trigger.is_predefined = False
+            db.session.commit()
+            return jsonify({'success': True, 'trigger_id': trigger.id})
+        return jsonify({'success': False, 'error': 'Failed to create trigger'}), 500
+    except Exception as e:
+        logger.error(f"Error creating trigger: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/automation-triggers/<int:trigger_id>', methods=['PATCH'])
+@login_required
+def api_update_trigger(trigger_id):
+    """Update an existing trigger"""
+    from services.automation_service import AutomationService
+    
+    try:
+        data = request.get_json()
+        trigger = AutomationService.update_trigger_template(
+            trigger_id=trigger_id,
+            name=data.get('name'),
+            description=data.get('description'),
+            trigger_type=data.get('trigger_type'),
+            category=data.get('category'),
+            trigger_config=data.get('trigger_config'),
+            steps_template=data.get('steps_template')
+        )
+        
+        if trigger:
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'Trigger not found'}), 404
+    except Exception as e:
+        logger.error(f"Error updating trigger: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/automation-triggers/<int:trigger_id>/duplicate', methods=['POST'])
+@login_required
+def api_duplicate_trigger(trigger_id):
+    """Duplicate a trigger"""
+    from services.automation_service import AutomationService
+    
+    try:
+        data = request.get_json() or {}
+        new_name = data.get('new_name')
+        
+        duplicate = AutomationService.duplicate_trigger_template(trigger_id, new_name)
+        
+        if duplicate:
+            return jsonify({'success': True, 'trigger_id': duplicate.id})
+        return jsonify({'success': False, 'error': 'Trigger not found'}), 404
+    except Exception as e:
+        logger.error(f"Error duplicating trigger: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/automation-triggers/<int:trigger_id>', methods=['DELETE'])
+@login_required
+def api_delete_trigger(trigger_id):
+    """Delete a trigger"""
+    from services.automation_service import AutomationService
+    
+    try:
+        trigger = AutomationTriggerLibrary.query.get(trigger_id)
+        if not trigger:
+            return jsonify({'success': False, 'error': 'Trigger not found'}), 404
+        
+        if trigger.is_predefined:
+            return jsonify({'success': False, 'error': 'Cannot delete predefined triggers'}), 403
+        
+        success = AutomationService.delete_trigger_template(trigger_id)
+        if success:
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'Failed to delete trigger'}), 500
+    except Exception as e:
+        logger.error(f"Error deleting trigger: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @main_bp.route('/automations/<int:automation_id>/abtest', methods=['POST'])
 @login_required
@@ -4011,18 +5507,133 @@ def create_automation_abtest(automation_id):
 @login_required
 def marketing_calendar():
     """Unified marketing calendar view"""
-    # from services.scheduling_service import SchedulingService
-    from datetime import datetime
+    from datetime import datetime, timedelta
+    import calendar as cal
     
     year = request.args.get('year', datetime.now().year, type=int)
     month = request.args.get('month', datetime.now().month, type=int)
     
-    # calendar_data = SchedulingService.get_calendar_view(year, month)
-    # upcoming = SchedulingService.get_upcoming_schedules(days=30)
+    start_date = datetime(year, month, 1)
+    if month == 12:
+        end_date = datetime(year + 1, 1, 1)
+    else:
+        end_date = datetime(year, month + 1, 1)
+    
+    calendar_data = {}
+    upcoming = []
+    
+    sms_campaigns = SMSCampaign.query.filter(
+        SMSCampaign.scheduled_at.isnot(None),
+        SMSCampaign.scheduled_at >= start_date,
+        SMSCampaign.scheduled_at < end_date,
+        SMSCampaign.status.in_(['draft', 'scheduled'])
+    ).all()
+    
+    for campaign in sms_campaigns:
+        day = campaign.scheduled_at.day
+        if day not in calendar_data:
+            calendar_data[day] = []
+        calendar_data[day].append({
+            'type': 'sms',
+            'title': campaign.name,
+            'time': campaign.scheduled_at.strftime('%H:%M'),
+            'id': campaign.id,
+            'status': campaign.status,
+            'color': 'success'
+        })
+    
+    social_posts = SocialPost.query.filter(
+        SocialPost.scheduled_at.isnot(None),
+        SocialPost.scheduled_at >= start_date,
+        SocialPost.scheduled_at < end_date,
+        SocialPost.status.in_(['draft', 'scheduled'])
+    ).all()
+    
+    for post in social_posts:
+        day = post.scheduled_at.day
+        if day not in calendar_data:
+            calendar_data[day] = []
+        platforms_str = ', '.join(post.platforms[:2]) if post.platforms else 'Social'
+        calendar_data[day].append({
+            'type': 'social',
+            'title': f"{platforms_str}: {post.content[:30]}...",
+            'time': post.scheduled_at.strftime('%H:%M'),
+            'id': post.id,
+            'status': post.status,
+            'color': 'primary'
+        })
+    
+    email_campaigns = Campaign.query.filter(
+        Campaign.scheduled_at.isnot(None),
+        Campaign.scheduled_at >= start_date,
+        Campaign.scheduled_at < end_date
+    ).all()
+    
+    for campaign in email_campaigns:
+        day = campaign.scheduled_at.day
+        if day not in calendar_data:
+            calendar_data[day] = []
+        calendar_data[day].append({
+            'type': 'email',
+            'title': campaign.name,
+            'time': campaign.scheduled_at.strftime('%H:%M'),
+            'id': campaign.id,
+            'status': campaign.status,
+            'color': 'info'
+        })
+    
+    now = datetime.now()
+    upcoming_sms = SMSCampaign.query.filter(
+        SMSCampaign.scheduled_at.isnot(None),
+        SMSCampaign.scheduled_at >= now,
+        SMSCampaign.scheduled_at <= now + timedelta(days=30),
+        SMSCampaign.status.in_(['draft', 'scheduled'])
+    ).order_by(SMSCampaign.scheduled_at).limit(10).all()
+    
+    upcoming_social = SocialPost.query.filter(
+        SocialPost.scheduled_at.isnot(None),
+        SocialPost.scheduled_at >= now,
+        SocialPost.scheduled_at <= now + timedelta(days=30),
+        SocialPost.status.in_(['draft', 'scheduled'])
+    ).order_by(SocialPost.scheduled_at).limit(10).all()
+    
+    for item in upcoming_sms:
+        upcoming.append({
+            'type': 'sms',
+            'title': item.name,
+            'scheduled_at': item.scheduled_at,
+            'id': item.id
+        })
+    
+    for item in upcoming_social:
+        platforms_str = ', '.join(item.platforms[:2]) if item.platforms else 'Social'
+        upcoming.append({
+            'type': 'social',
+            'title': f"{platforms_str}: {item.content[:30]}...",
+            'scheduled_at': item.scheduled_at,
+            'id': item.id
+        })
+    
+    upcoming_email = Campaign.query.filter(
+        Campaign.scheduled_at.isnot(None),
+        Campaign.scheduled_at >= now,
+        Campaign.scheduled_at <= now + timedelta(days=30),
+        Campaign.status.in_(['draft', 'scheduled'])
+    ).order_by(Campaign.scheduled_at).limit(10).all()
+    
+    for item in upcoming_email:
+        upcoming.append({
+            'type': 'email',
+            'title': item.name,
+            'scheduled_at': item.scheduled_at,
+            'id': item.id
+        })
+    
+    upcoming.sort(key=lambda x: x['scheduled_at'])
     
     return render_template('marketing_calendar.html', 
-                         calendar_data={},
-                         upcoming=[],
+                         calendar_data=calendar_data,
+                         upcoming=upcoming[:15],
                          year=year,
                          month=month)
 
@@ -4050,6 +5661,336 @@ def calendar_schedule():
         flash('Item added to calendar!', 'success')
     
     return redirect(url_for('main.marketing_calendar'))
+
+
+@main_bp.route('/api/calendar/events', methods=['GET'])
+@login_required
+def api_calendar_events():
+    """Get all calendar events with filtering support"""
+    from datetime import datetime, timedelta
+    from models import CalendarEvent, SocialPost, SMSCampaign, Campaign
+    
+    start = request.args.get('start')
+    end = request.args.get('end')
+    event_types = request.args.getlist('types')
+    range_days = request.args.get('range')
+    
+    now = datetime.now()
+    
+    if range_days:
+        start_date = now
+        end_date = now + timedelta(days=int(range_days))
+    elif start and end:
+        start_date = datetime.fromisoformat(start.replace('Z', '+00:00').replace('+00:00', ''))
+        end_date = datetime.fromisoformat(end.replace('Z', '+00:00').replace('+00:00', ''))
+    else:
+        start_date = now - timedelta(days=30)
+        end_date = now + timedelta(days=60)
+    
+    events = []
+    
+    if not event_types or 'sms' in event_types:
+        sms_campaigns = SMSCampaign.query.filter(
+            SMSCampaign.scheduled_at.isnot(None),
+            SMSCampaign.scheduled_at >= start_date,
+            SMSCampaign.scheduled_at <= end_date
+        ).all()
+        for c in sms_campaigns:
+            events.append({
+                'id': f'sms_{c.id}',
+                'title': c.name,
+                'start': c.scheduled_at.isoformat(),
+                'allDay': False,
+                'event_type': 'sms',
+                'content_type': 'sms_campaign',
+                'content_id': c.id,
+                'color': '#28a745',
+                'className': 'event-sms',
+                'extendedProps': {'type': 'sms', 'status': c.status, 'edit_url': f'/sms/campaigns/{c.id}'}
+            })
+    
+    if not event_types or 'social' in event_types:
+        social_posts = SocialPost.query.filter(
+            SocialPost.scheduled_at.isnot(None),
+            SocialPost.scheduled_at >= start_date,
+            SocialPost.scheduled_at <= end_date
+        ).all()
+        for p in social_posts:
+            platforms = ', '.join(p.platforms[:2]) if p.platforms else 'Social'
+            events.append({
+                'id': f'social_{p.id}',
+                'title': f"{platforms}: {p.content[:30]}..." if p.content else platforms,
+                'start': p.scheduled_at.isoformat(),
+                'allDay': False,
+                'event_type': 'social',
+                'content_type': 'social_post',
+                'content_id': p.id,
+                'color': '#007bff',
+                'className': 'event-social',
+                'extendedProps': {'type': 'social', 'status': p.status, 'edit_url': f'/social/posts/{p.id}/edit', 'platforms': p.platforms}
+            })
+    
+    if not event_types or 'email' in event_types:
+        email_campaigns = Campaign.query.filter(
+            Campaign.scheduled_at.isnot(None),
+            Campaign.scheduled_at >= start_date,
+            Campaign.scheduled_at <= end_date
+        ).all()
+        for c in email_campaigns:
+            events.append({
+                'id': f'email_{c.id}',
+                'title': c.name,
+                'start': c.scheduled_at.isoformat(),
+                'allDay': False,
+                'event_type': 'email',
+                'content_type': 'email_campaign',
+                'content_id': c.id,
+                'color': '#17a2b8',
+                'className': 'event-email',
+                'extendedProps': {'type': 'email', 'status': c.status, 'edit_url': f'/campaigns/{c.id}'}
+            })
+    
+    if not event_types or 'deadline' in event_types or 'note' in event_types:
+        custom_query = CalendarEvent.query.filter(
+            CalendarEvent.start_date >= start_date,
+            CalendarEvent.start_date <= end_date
+        )
+        if event_types:
+            custom_query = custom_query.filter(CalendarEvent.event_type.in_(event_types))
+        custom_events = custom_query.all()
+        for e in custom_events:
+            events.append({
+                'id': f'custom_{e.id}',
+                'title': e.title,
+                'start': e.start_date.isoformat(),
+                'end': e.end_date.isoformat() if e.end_date else None,
+                'allDay': e.all_day,
+                'event_type': e.event_type,
+                'content_type': 'custom',
+                'content_id': e.id,
+                'color': '#dc3545' if e.event_type == 'deadline' else '#6c757d',
+                'className': f'event-{e.event_type}',
+                'extendedProps': {'type': e.event_type, 'notes': e.notes, 'is_completed': e.is_completed}
+            })
+    
+    return jsonify(events)
+
+
+@main_bp.route('/api/calendar/events', methods=['POST'])
+@login_required
+def api_calendar_create_event():
+    """Create a new calendar event (deadline or note)"""
+    from models import CalendarEvent
+    
+    try:
+        data = request.get_json()
+        
+        title = data.get('title', '').strip()
+        if not title:
+            return jsonify({'success': False, 'error': 'Title is required'}), 400
+        
+        event_type = data.get('event_type', 'note')
+        start_date = datetime.fromisoformat(data.get('start_date').replace('Z', ''))
+        end_date = datetime.fromisoformat(data.get('end_date').replace('Z', '')) if data.get('end_date') else None
+        
+        company = current_user.get_default_company()
+        
+        event = CalendarEvent(
+            title=title,
+            description=data.get('description', ''),
+            event_type=event_type,
+            start_date=start_date,
+            end_date=end_date,
+            all_day=data.get('all_day', False),
+            notes=data.get('notes', ''),
+            color=data.get('color', 'secondary'),
+            deadline_at=datetime.fromisoformat(data.get('deadline_at').replace('Z', '')) if data.get('deadline_at') else None,
+            company_id=company.id if company else None,
+            created_by_id=current_user.id
+        )
+        
+        db.session.add(event)
+        db.session.commit()
+        
+        event_data = event.to_dict()
+        event_data['id'] = f'custom_{event.id}'
+        
+        return jsonify({'success': True, 'event': event_data})
+    except Exception as e:
+        logger.error(f"Error creating calendar event: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@main_bp.route('/api/calendar/events/<event_id>', methods=['PATCH'])
+@login_required
+def api_calendar_update_event(event_id):
+    """Update calendar event (for drag-drop reschedule)"""
+    from models import CalendarEvent, SocialPost, SMSCampaign, Campaign
+    
+    try:
+        data = request.get_json()
+        
+        parts = event_id.split('_')
+        if len(parts) < 2:
+            return jsonify({'success': False, 'error': 'Invalid event ID'}), 400
+        
+        event_type = parts[0]
+        content_id = int(parts[1])
+        
+        new_start = data.get('start')
+        new_end = data.get('end')
+        
+        if new_start:
+            new_start_dt = datetime.fromisoformat(new_start.replace('Z', '').replace('+00:00', ''))
+        else:
+            return jsonify({'success': False, 'error': 'Start date required'}), 400
+        
+        if event_type == 'sms':
+            campaign = SMSCampaign.query.get(content_id)
+            if campaign:
+                campaign.scheduled_at = new_start_dt
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'SMS campaign rescheduled'})
+        
+        elif event_type == 'social':
+            post = SocialPost.query.get(content_id)
+            if post:
+                post.scheduled_at = new_start_dt
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'Social post rescheduled'})
+        
+        elif event_type == 'email':
+            campaign = Campaign.query.get(content_id)
+            if campaign:
+                campaign.scheduled_at = new_start_dt
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'Email campaign rescheduled'})
+        
+        elif event_type == 'custom':
+            event = CalendarEvent.query.get(content_id)
+            if event:
+                event.start_date = new_start_dt
+                if new_end:
+                    event.end_date = datetime.fromisoformat(new_end.replace('Z', '').replace('+00:00', ''))
+                if 'title' in data:
+                    event.title = data['title']
+                if 'notes' in data:
+                    event.notes = data['notes']
+                if 'is_completed' in data:
+                    event.is_completed = data['is_completed']
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'Event updated', 'event': event.to_dict()})
+        
+        return jsonify({'success': False, 'error': 'Event not found'}), 404
+        
+    except Exception as e:
+        logger.error(f"Error updating calendar event: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@main_bp.route('/api/calendar/events/<event_id>', methods=['DELETE'])
+@login_required
+def api_calendar_delete_event(event_id):
+    """Delete a custom calendar event"""
+    from models import CalendarEvent
+    
+    try:
+        parts = event_id.split('_')
+        if len(parts) < 2 or parts[0] != 'custom':
+            return jsonify({'success': False, 'error': 'Can only delete custom events'}), 400
+        
+        content_id = int(parts[1])
+        event = CalendarEvent.query.get(content_id)
+        
+        if not event:
+            return jsonify({'success': False, 'error': 'Event not found'}), 404
+        
+        db.session.delete(event)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Event deleted'})
+    except Exception as e:
+        logger.error(f"Error deleting calendar event: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@main_bp.route('/api/calendar/events/<event_id>', methods=['GET'])
+@login_required
+def api_calendar_get_event(event_id):
+    """Get details of a specific calendar event"""
+    from models import CalendarEvent, SocialPost, SMSCampaign, Campaign
+    
+    try:
+        parts = event_id.split('_')
+        if len(parts) < 2:
+            return jsonify({'success': False, 'error': 'Invalid event ID'}), 400
+        
+        event_type = parts[0]
+        content_id = int(parts[1])
+        
+        if event_type == 'sms':
+            campaign = SMSCampaign.query.get(content_id)
+            if campaign:
+                return jsonify({
+                    'success': True,
+                    'event': {
+                        'id': f'sms_{campaign.id}',
+                        'title': campaign.name,
+                        'type': 'sms',
+                        'scheduled_at': campaign.scheduled_at.isoformat() if campaign.scheduled_at else None,
+                        'status': campaign.status,
+                        'message': campaign.message,
+                        'edit_url': f'/sms/campaigns/{campaign.id}'
+                    }
+                })
+        
+        elif event_type == 'social':
+            post = SocialPost.query.get(content_id)
+            if post:
+                return jsonify({
+                    'success': True,
+                    'event': {
+                        'id': f'social_{post.id}',
+                        'title': post.content[:50] if post.content else 'Social Post',
+                        'type': 'social',
+                        'scheduled_at': post.scheduled_at.isoformat() if post.scheduled_at else None,
+                        'status': post.status,
+                        'content': post.content,
+                        'platforms': post.platforms,
+                        'edit_url': f'/social/posts/{post.id}/edit'
+                    }
+                })
+        
+        elif event_type == 'email':
+            campaign = Campaign.query.get(content_id)
+            if campaign:
+                return jsonify({
+                    'success': True,
+                    'event': {
+                        'id': f'email_{campaign.id}',
+                        'title': campaign.name,
+                        'type': 'email',
+                        'scheduled_at': campaign.scheduled_at.isoformat() if campaign.scheduled_at else None,
+                        'status': campaign.status,
+                        'subject': campaign.subject,
+                        'edit_url': f'/campaigns/{campaign.id}'
+                    }
+                })
+        
+        elif event_type == 'custom':
+            event = CalendarEvent.query.get(content_id)
+            if event:
+                return jsonify({'success': True, 'event': event.to_dict()})
+        
+        return jsonify({'success': False, 'error': 'Event not found'}), 404
+        
+    except Exception as e:
+        logger.error(f"Error getting calendar event: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 # ===== SYSTEM INITIALIZATION =====
 @main_bp.route('/system/init')
@@ -4286,6 +6227,71 @@ def execute_ai_action():
     except Exception as e:
         logger.error(f"AI action execution error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/ai/generate-landing-page', methods=['POST'])
+@login_required
+def ai_generate_landing_page():
+    """AI-powered landing page content generation"""
+    try:
+        data = request.get_json() or {}
+        prompt = data.get('prompt', '')
+        page_type = data.get('page_type', 'sales')
+        style = data.get('style', 'modern')
+        
+        if not prompt:
+            return jsonify({'success': False, 'message': 'Please provide a description'}), 400
+        
+        from ai_agent import LUXAgent
+        lux_agent = LUXAgent()
+        
+        system_prompt = f"""You are a landing page HTML generator. Create a responsive, Bootstrap 5 landing page based on the user's description.
+        
+Page Type: {page_type}
+Style: {style}
+
+Requirements:
+- Use Bootstrap 5 classes
+- Include proper container/row/col structure
+- Use the brand colors: purple (#301934) and green (#013220)
+- Include a clear call-to-action
+- Make it mobile-responsive
+- Keep it clean and professional
+
+Only output the HTML code, no explanations."""
+
+        user_prompt = f"Create a landing page for: {prompt}"
+        
+        response = lux_agent.chat(user_prompt, context=system_prompt)
+        
+        if response:
+            html_content = response
+            if '```html' in html_content:
+                html_content = html_content.split('```html')[1].split('```')[0]
+            elif '```' in html_content:
+                html_content = html_content.split('```')[1].split('```')[0]
+            
+            return jsonify({
+                'success': True,
+                'html_content': html_content.strip()
+            })
+        else:
+            template = f"""<div class="container py-5">
+    <div class="row justify-content-center text-center">
+        <div class="col-lg-8">
+            <h1 class="display-4 fw-bold mb-4" style="color: #301934;">Welcome</h1>
+            <p class="lead mb-4">{prompt}</p>
+            <a href="#" class="btn btn-lg px-5 py-3" style="background: #301934; color: white;">Get Started</a>
+        </div>
+    </div>
+</div>"""
+            return jsonify({
+                'success': True,
+                'html_content': template
+            })
+            
+    except Exception as e:
+        logger.error(f"AI landing page generation error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @main_bp.route('/settings/integrations')
 @login_required
@@ -4993,8 +6999,159 @@ def competitor_analysis():
     """Competitor analysis and tracking"""
     from models import CompetitorProfile
     company = current_user.get_default_company()
-    competitors = CompetitorProfile.query.filter_by(company_id=company.id).all()
+    competitors = CompetitorProfile.query.filter_by(company_id=company.id, is_active=True).order_by(CompetitorProfile.created_at.desc()).all()
     return render_template('competitor_analysis.html', competitors=competitors)
+
+@main_bp.route('/competitors/save', methods=['POST'])
+@login_required
+def save_competitor():
+    """Save a new or updated competitor"""
+    from models import CompetitorProfile
+    from datetime import datetime
+    
+    company = current_user.get_default_company()
+    competitor_id = request.form.get('competitor_id')
+    
+    if competitor_id:
+        competitor = CompetitorProfile.query.get(competitor_id)
+        if not competitor or competitor.company_id != company.id:
+            flash('Competitor not found', 'error')
+            return redirect(url_for('main.competitor_analysis'))
+    else:
+        competitor = CompetitorProfile(company_id=company.id)
+    
+    competitor.competitor_name = request.form.get('competitor_name', '').strip()
+    competitor.website_url = request.form.get('website_url', '').strip() or None
+    competitor.logo_url = request.form.get('logo_url', '').strip() or None
+    competitor.core_promise = request.form.get('core_promise', '').strip() or None
+    competitor.target_persona = request.form.get('target_persona', '').strip() or None
+    competitor.price_positioning = request.form.get('price_positioning') or None
+    competitor.emotional_tone = request.form.get('emotional_tone', '').strip() or None
+    competitor.brand_notes = request.form.get('brand_notes', '').strip() or None
+    competitor.geographic_focus = request.form.get('geographic_focus') or None
+    competitor.influencer_usage = 'influencer_usage' in request.form
+    competitor.referral_program = 'referral_program' in request.form
+    competitor.lead_magnet = request.form.get('lead_magnet', '').strip() or None
+    competitor.entry_offer = request.form.get('entry_offer', '').strip() or None
+    competitor.cta_style = request.form.get('cta_style') or None
+    competitor.risk_reversal = request.form.get('risk_reversal', '').strip() or None
+    competitor.funnel_type = request.form.get('funnel_type') or None
+    competitor.signup_friction = request.form.get('signup_friction') or None
+    competitor.pricing_model = request.form.get('pricing_model', '').strip() or None
+    competitor.subscription_model = 'subscription_model' in request.form
+    competitor.cart_recovery = 'cart_recovery' in request.form
+    competitor.sms_usage = 'sms_usage' in request.form
+    competitor.loyalty_program = 'loyalty_program' in request.form
+    competitor.long_form_content = 'long_form_content' in request.form
+    competitor.transparency_level = request.form.get('transparency_level') or None
+    competitor.notes = request.form.get('notes', '').strip() or None
+    
+    market_share = request.form.get('market_share')
+    competitor.market_share = float(market_share) if market_share else None
+    
+    primary_channels = request.form.getlist('primary_channels')
+    competitor.primary_channels = primary_channels if primary_channels else None
+    
+    key_headlines = request.form.get('key_headlines', '').strip()
+    competitor.key_headlines = [h.strip() for h in key_headlines.split('\n') if h.strip()] if key_headlines else None
+    
+    strengths = request.form.get('strengths', '').strip()
+    competitor.strengths = [s.strip() for s in strengths.split('\n') if s.strip()] if strengths else None
+    
+    weaknesses = request.form.get('weaknesses', '').strip()
+    competitor.weaknesses = [w.strip() for w in weaknesses.split('\n') if w.strip()] if weaknesses else None
+    
+    opportunities = request.form.get('opportunities', '').strip()
+    competitor.opportunities = [o.strip() for o in opportunities.split('\n') if o.strip()] if opportunities else None
+    
+    competitor.last_analyzed = datetime.utcnow()
+    
+    if not competitor_id:
+        db.session.add(competitor)
+    db.session.commit()
+    
+    flash(f'Competitor "{competitor.competitor_name}" saved successfully', 'success')
+    return redirect(url_for('main.competitor_analysis'))
+
+@main_bp.route('/api/competitors/<int:competitor_id>')
+@login_required
+def get_competitor(competitor_id):
+    """Get competitor details as JSON"""
+    from models import CompetitorProfile
+    company = current_user.get_default_company()
+    
+    competitor = CompetitorProfile.query.get(competitor_id)
+    if not competitor or competitor.company_id != company.id:
+        return jsonify({'success': False, 'error': 'Competitor not found'}), 404
+    
+    return jsonify({
+        'success': True,
+        'competitor': {
+            'id': competitor.id,
+            'competitor_name': competitor.competitor_name,
+            'website_url': competitor.website_url,
+            'logo_url': competitor.logo_url,
+            'core_promise': competitor.core_promise,
+            'target_persona': competitor.target_persona,
+            'price_positioning': competitor.price_positioning,
+            'emotional_tone': competitor.emotional_tone,
+            'brand_notes': competitor.brand_notes,
+            'primary_channels': competitor.primary_channels or [],
+            'geographic_focus': competitor.geographic_focus,
+            'influencer_usage': competitor.influencer_usage,
+            'referral_program': competitor.referral_program,
+            'lead_magnet': competitor.lead_magnet,
+            'entry_offer': competitor.entry_offer,
+            'key_headlines': competitor.key_headlines or [],
+            'cta_style': competitor.cta_style,
+            'risk_reversal': competitor.risk_reversal,
+            'funnel_type': competitor.funnel_type,
+            'signup_friction': competitor.signup_friction,
+            'pricing_model': competitor.pricing_model,
+            'subscription_model': competitor.subscription_model,
+            'cart_recovery': competitor.cart_recovery,
+            'sms_usage': competitor.sms_usage,
+            'loyalty_program': competitor.loyalty_program,
+            'long_form_content': competitor.long_form_content,
+            'transparency_level': competitor.transparency_level,
+            'strengths': competitor.strengths or [],
+            'weaknesses': competitor.weaknesses or [],
+            'opportunities': competitor.opportunities or [],
+            'market_share': competitor.market_share,
+            'notes': competitor.notes,
+            'last_analyzed': competitor.last_analyzed.strftime('%Y-%m-%d') if competitor.last_analyzed else None
+        }
+    })
+
+@main_bp.route('/api/competitors/<int:competitor_id>', methods=['DELETE'])
+@login_required
+def delete_competitor(competitor_id):
+    """Delete a competitor"""
+    from models import CompetitorProfile
+    company = current_user.get_default_company()
+    
+    competitor = CompetitorProfile.query.get(competitor_id)
+    if not competitor or competitor.company_id != company.id:
+        return jsonify({'success': False, 'error': 'Competitor not found'}), 404
+    
+    db.session.delete(competitor)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Competitor deleted'})
+
+@main_bp.route('/competitors/<int:competitor_id>/edit')
+@login_required
+def edit_competitor(competitor_id):
+    """Edit competitor page"""
+    from models import CompetitorProfile
+    company = current_user.get_default_company()
+    
+    competitor = CompetitorProfile.query.get(competitor_id)
+    if not competitor or competitor.company_id != company.id:
+        flash('Competitor not found', 'error')
+        return redirect(url_for('main.competitor_analysis'))
+    
+    return render_template('competitor_edit.html', competitor=competitor)
 
 # ============= PERSONALIZATION =============
 @main_bp.route('/personalization')
@@ -5202,7 +7359,8 @@ print("✓ WordPress connection routes loaded")
 @main_bp.route('/crm-unified')
 @login_required
 def lux_crm():
-    """Unified LUX CRM with all features"""
+    """Unified LUX CRM with all features - Action-oriented coaching CRM"""
+    from datetime import timedelta
     company = current_user.get_default_company()
     
     deals = Deal.query.filter_by(company_id=company.id).all()
@@ -5211,12 +7369,70 @@ def lux_crm():
     personalization_rules = PersonalizationRule.query.filter_by(company_id=company.id).all()
     keywords = KeywordResearch.query.filter_by(company_id=company.id).all()
     
+    now = datetime.utcnow()
+    seven_days_ago = now - timedelta(days=7)
+    
+    new_leads = [c for c in all_contacts if getattr(c, 'created_at', None) and c.created_at > seven_days_ago]
+    
+    stale_deals = []
+    for d in deals:
+        if d.stage in ['won', 'lost', 'closed_won', 'closed_lost']:
+            continue
+        deal_timestamp = getattr(d, 'updated_at', None) or getattr(d, 'created_at', None)
+        if deal_timestamp and deal_timestamp < seven_days_ago:
+            stale_deals.append(d)
+    
+    hot_leads = [ls for ls in lead_scores if getattr(ls, 'lead_score', None) and ls.lead_score >= 70]
+    
+    active_deals = [d for d in deals if d.stage not in ['won', 'lost', 'closed_won', 'closed_lost']]
+    
+    next_actions = []
+    for deal in stale_deals[:3]:
+        next_actions.append({
+            'type': 'warning',
+            'icon': 'alert-triangle',
+            'action': f'Follow up on "{deal.title}" - idle for 7+ days',
+            'deal_id': deal.id,
+            'priority': 'high'
+        })
+    for lead in hot_leads[:3]:
+        contact = Contact.query.get(lead.contact_id) if getattr(lead, 'contact_id', None) else None
+        if contact:
+            next_actions.append({
+                'type': 'success',
+                'icon': 'zap',
+                'action': f'Send proposal to {contact.full_name} - lead score {int(lead.lead_score)}',
+                'contact_id': contact.id,
+                'priority': 'high'
+            })
+    for contact in new_leads[:3]:
+        next_actions.append({
+            'type': 'info',
+            'icon': 'user-plus',
+            'action': f'Reach out to new lead: {contact.full_name}',
+            'contact_id': contact.id,
+            'priority': 'medium'
+        })
+    
+    activity_stats = {
+        'new_leads_this_week': len(new_leads),
+        'active_deals': len(active_deals),
+        'stale_deals': len(stale_deals),
+        'hot_leads': len(hot_leads),
+        'total_contacts': len(all_contacts),
+        'deals_won_this_month': len([d for d in deals if d.stage in ['won', 'closed_won']]),
+    }
+    
     return render_template('lux_crm.html', 
         deals=deals, 
         all_contacts=all_contacts,
         lead_scores=lead_scores,
         personalization_rules=personalization_rules,
-        keywords=keywords
+        keywords=keywords,
+        next_actions=next_actions,
+        activity_stats=activity_stats,
+        stale_deals=stale_deals,
+        hot_leads=hot_leads
     )
 
 @main_bp.route('/crm/deals/create', methods=['POST'])
@@ -6177,6 +8393,140 @@ def generate_blog_content():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # ============= CUSTOMER ENGAGEMENT TRACKING ROUTES =============
+@main_bp.route('/customers/<int:contact_id>')
+@login_required
+def customer_profile(contact_id):
+    """View and edit customer profile with engagement tracking"""
+    contact = Contact.query.get_or_404(contact_id)
+    activities = ContactActivity.query.filter_by(contact_id=contact_id).order_by(ContactActivity.created_at.desc()).limit(50).all()
+    
+    stats = {
+        'emails_sent': ContactActivity.query.filter_by(contact_id=contact_id, activity_type='email').count(),
+        'emails_opened': 0,
+        'clicks': 0,
+        'sms_sent': ContactActivity.query.filter_by(contact_id=contact_id, activity_type='sms').count(),
+        'calls': ContactActivity.query.filter_by(contact_id=contact_id, activity_type='call').count(),
+        'website_visits': ContactActivity.query.filter_by(contact_id=contact_id, activity_type='website').count(),
+    }
+    
+    try:
+        from models import CampaignRecipient
+        stats['emails_sent'] += CampaignRecipient.query.filter_by(contact_id=contact_id, status='sent').count()
+        stats['emails_opened'] = CampaignRecipient.query.filter(
+            CampaignRecipient.contact_id == contact_id,
+            CampaignRecipient.opened_at.isnot(None)
+        ).count()
+        if hasattr(CampaignRecipient, 'clicked_at'):
+            stats['clicks'] = CampaignRecipient.query.filter(
+                CampaignRecipient.contact_id == contact_id,
+                CampaignRecipient.clicked_at.isnot(None)
+            ).count()
+    except Exception:
+        pass
+    
+    return render_template('customer_profile.html', contact=contact, activities=activities, stats=stats)
+
+@main_bp.route('/api/contacts/<int:contact_id>/update', methods=['POST'])
+@login_required
+def update_contact_profile(contact_id):
+    """Update contact profile via API"""
+    contact = Contact.query.get_or_404(contact_id)
+    
+    try:
+        form = request.form
+        
+        if form.get('first_name') is not None:
+            contact.first_name = form.get('first_name').strip() or contact.first_name
+        if form.get('last_name') is not None:
+            contact.last_name = form.get('last_name').strip() or contact.last_name
+        if form.get('email') is not None:
+            email = form.get('email').strip()
+            if email:
+                contact.email = email
+        if form.get('phone') is not None:
+            contact.phone = form.get('phone').strip() or None
+        if form.get('company') is not None:
+            contact.company = form.get('company').strip() or None
+        if form.get('website') is not None:
+            contact.website = form.get('website').strip() or None
+        if form.get('address') is not None:
+            contact.address = form.get('address').strip() or None
+        if form.get('city') is not None:
+            contact.city = form.get('city').strip() or None
+        if form.get('state') is not None:
+            contact.state = form.get('state').strip() or None
+        if form.get('zip_code') is not None:
+            contact.zip_code = form.get('zip_code').strip() or None
+        if form.get('segment') is not None:
+            contact.segment = form.get('segment').strip() or contact.segment
+        if form.get('tags') is not None:
+            contact.tags = form.get('tags').strip() or None
+        if form.get('notes') is not None:
+            contact.notes = form.get('notes').strip() or None
+        
+        lead_score_str = form.get('lead_score', '').strip()
+        if lead_score_str:
+            try:
+                lead_score = int(lead_score_str)
+                contact.lead_score = min(100, max(0, lead_score))
+            except ValueError:
+                pass
+        
+        contact.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Profile updated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating contact {contact_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/contacts/<int:contact_id>/activities/add', methods=['POST'])
+@login_required
+def add_contact_activity_api(contact_id):
+    """Add a new activity for a contact via API"""
+    contact = Contact.query.get_or_404(contact_id)
+    current_company = current_user.get_default_company()
+    
+    try:
+        activity = ContactActivity()
+        activity.contact_id = contact_id
+        activity.company_id = current_company.id if current_company else None
+        activity.user_id = current_user.id
+        activity.activity_type = request.form.get('activity_type', 'note')
+        activity.subject = request.form.get('subject', '')
+        activity.description = request.form.get('description', '')
+        activity.outcome = request.form.get('outcome', '') or None
+        
+        duration = request.form.get('duration_minutes', '').strip()
+        if duration and duration.isdigit():
+            activity.duration_minutes = int(duration)
+        
+        scheduled = request.form.get('scheduled_at', '').strip()
+        if scheduled:
+            try:
+                activity.scheduled_at = datetime.strptime(scheduled, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                pass
+        
+        is_completed = request.form.get('is_completed', 'on')
+        activity.is_completed = is_completed in ('on', 'true', '1', True)
+        if activity.is_completed:
+            activity.completed_at = datetime.utcnow()
+        
+        db.session.add(activity)
+        
+        contact.last_activity = datetime.utcnow()
+        contact.engagement_score = min(100, (contact.engagement_score or 0) + 5)
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Activity logged successfully'})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error adding activity for contact {contact_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @main_bp.route('/contacts/<int:contact_id>/activities')
 @login_required
 def contact_activities(contact_id):
@@ -6491,6 +8841,23 @@ def get_event_providers():
         logger.error(f"Event providers error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# ===== ADDITIONAL AUTOMATION ROUTES =====
+@main_bp.route('/automations/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_automation(id):
+    """Delete an automation"""
+    try:
+        automation = Automation.query.get_or_404(id)
+        db.session.delete(automation)
+        db.session.commit()
+        flash('Automation deleted successfully!', 'success')
+    except Exception as e:
+        logger.error(f"Error deleting automation: {e}")
+        flash(f'Error deleting automation: {str(e)}', 'error')
+    
+    return redirect(url_for('main.automation_dashboard'))
+
+print("✓ Delete automation route loaded: /automations/<id>/delete")
 print("✓ Blog post routes loaded: /blog, /blog/create, /blog/<id>/edit, /api/blog/generate")
 print("✓ Customer engagement tracking routes loaded: /contacts/<id>/activities")
 print("✓ Comprehensive analytics route loaded: /analytics/comprehensive")
@@ -6511,3 +8878,750 @@ print("  - POST /api/ai/execute-action (execute AI actions immediately)")
 print("  - GET /api/company/<id>/secrets (retrieve company secrets)")
 print("✓ CompanySecret model created for secure secret storage per company")
 print("✓ Secrets populated for Lucifer Cruz company from environment variables")
+
+# ===== AI AGENT INTERACTION API ROUTES =====
+
+# Default tasks to seed for each agent type
+_default_agent_tasks = {
+    'brand_strategy': [
+        ('Quarterly Strategy Review', 'Analyze market trends and update brand strategy', 'quarterly'),
+        ('Monthly Market Research', 'Research competitor activities and market changes', 'monthly'),
+    ],
+    'content_seo': [
+        ('Weekly Blog Post', 'Generate a blog post on trending topics', 'weekly'),
+        ('Monthly Content Calendar', 'Plan content for the upcoming month', 'monthly'),
+        ('SEO Audit', 'Analyze and optimize on-page SEO', 'weekly'),
+    ],
+    'analytics': [
+        ('Weekly Performance Summary', 'Compile marketing performance metrics', 'weekly'),
+        ('Monthly Report', 'Generate comprehensive monthly analytics report', 'monthly'),
+        ('Daily Recommendations', 'Provide daily optimization suggestions', 'daily'),
+    ],
+    'creative_design': [
+        ('Weekly Creative Assets', 'Generate social media graphics and ad creatives', 'weekly'),
+    ],
+    'advertising': [
+        ('Weekly Ad Performance Review', 'Analyze ad campaigns and suggest optimizations', 'weekly'),
+    ],
+    'social_media': [
+        ('Daily Post Generation', 'Create and schedule social media posts', 'daily'),
+        ('Engagement Analysis', 'Analyze social engagement and trends', 'weekly'),
+    ],
+    'email_crm': [
+        ('Weekly Email Campaign', 'Create and send weekly newsletter', 'weekly'),
+        ('Lead Nurturing Sequences', 'Manage automated email sequences', 'daily'),
+    ],
+    'sales_enablement': [
+        ('Weekly Lead Scoring', 'Score and prioritize leads for sales team', 'weekly'),
+    ],
+    'retention': [
+        ('Monthly Churn Analysis', 'Identify at-risk customers and recommend actions', 'monthly'),
+    ],
+    'operations': [
+        ('Daily Health Check', 'Monitor system integrations and report issues', 'daily'),
+    ],
+    'app_intelligence': [
+        ('Hourly Health Check', 'Monitor platform health and performance', 'hourly'),
+        ('Daily Usage Analysis', 'Analyze platform usage patterns', 'daily'),
+        ('Weekly Improvement Suggestions', 'Recommend platform improvements', 'weekly'),
+    ],
+}
+
+def seed_agent_tasks_if_needed(agent_type):
+    """Seed default tasks for an agent if none exist in database"""
+    from models import AgentAutomation
+    existing = AgentAutomation.query.filter_by(agent_type=agent_type).first()
+    if existing:
+        return  # Already has tasks
+    
+    defaults = _default_agent_tasks.get(agent_type, [])
+    for name, description, schedule in defaults:
+        task = AgentAutomation(
+            agent_type=agent_type,
+            name=name,
+            description=description,
+            schedule=schedule,
+            enabled=True
+        )
+        db.session.add(task)
+    
+    try:
+        db.session.commit()
+        logger.info(f"Seeded {len(defaults)} default tasks for agent: {agent_type}")
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error seeding tasks for {agent_type}: {e}")
+
+@main_bp.route('/api/agents/chat', methods=['POST'])
+@login_required
+def api_agent_chat():
+    """Chat with an AI marketing agent via API"""
+    try:
+        import os
+        from openai import OpenAI
+        
+        data = request.get_json()
+        agent_type = data.get('agent_type', '')
+        message = data.get('message', '').strip()
+        
+        if not message:
+            return jsonify({'success': False, 'error': 'Message required'}), 400
+        
+        # Agent personalities and expertise
+        agent_prompts = {
+            'brand_strategy': "You are the Brand & Strategy Agent, an expert in brand development, market research, and strategic planning. You help businesses define their brand identity, analyze competitors, and create long-term marketing strategies.",
+            'content_seo': "You are the Content & SEO Agent, an expert in content creation, SEO optimization, and content strategy. You help create blog posts, optimize content for search engines, and plan content calendars.",
+            'analytics': "You are the Analytics Agent, an expert in marketing analytics, data interpretation, and performance optimization. You help analyze marketing metrics, identify trends, and provide actionable insights.",
+            'creative_design': "You are the Creative & Design Agent, an expert in visual design, ad creatives, and brand aesthetics. You help with design direction, creative concepts, and visual branding.",
+            'advertising': "You are the Advertising Agent, an expert in paid advertising, PPC campaigns, and ad optimization. You help plan, execute, and optimize paid advertising campaigns across all platforms.",
+            'social_media': "You are the Social Media Agent, an expert in social media marketing, community management, and engagement strategies. You help create social content and manage social media presence.",
+            'email_crm': "You are the Email & CRM Agent, an expert in email marketing, customer relationship management, and marketing automation. You help design email campaigns and nurture customer relationships.",
+            'sales_enablement': "You are the Sales Enablement Agent, an expert in sales support, lead scoring, and sales content. You help equip sales teams with the tools and content they need to close deals.",
+            'retention': "You are the Customer Retention Agent, an expert in customer loyalty, churn prevention, and lifetime value optimization. You help keep customers engaged and reduce churn.",
+            'operations': "You are the Operations Agent, an expert in marketing technology, integrations, and process optimization. You help manage the marketing tech stack and improve operational efficiency.",
+            'app_intelligence': "You are the APP Intelligence Agent, an expert in platform monitoring, usage analytics, and feature recommendations. You help monitor the LUX platform and suggest improvements."
+        }
+        
+        system_prompt = agent_prompts.get(agent_type, "You are a helpful AI marketing assistant.")
+        system_prompt += "\n\nYou are part of the LUX Marketing Platform AI team. Be helpful, professional, and provide actionable advice. Keep responses concise but informative."
+        
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            return jsonify({'success': True, 'response': "I'm sorry, but I can't process your request right now. Please ensure the OpenAI API key is configured."})
+        
+        client = OpenAI(api_key=api_key)
+        
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": message}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+        
+        agent_response = response.choices[0].message.content
+        
+        return jsonify({'success': True, 'response': agent_response})
+        
+    except Exception as e:
+        logger.error(f"Agent chat error: {e}")
+        return jsonify({'success': True, 'response': f"I apologize, but I encountered an error. Please try again later."})
+
+@main_bp.route('/api/agents/<agent_type>/tasks', methods=['GET'])
+@login_required
+def get_agent_tasks(agent_type):
+    """Get tasks for a specific agent from database"""
+    from models import AgentAutomation
+    
+    # Seed default tasks if none exist for this agent
+    seed_agent_tasks_if_needed(agent_type)
+    
+    tasks = AgentAutomation.query.filter_by(agent_type=agent_type).order_by(AgentAutomation.created_at).all()
+    return jsonify({'success': True, 'tasks': [task.to_dict() for task in tasks]})
+
+@main_bp.route('/api/agents/<agent_type>/tasks', methods=['POST'])
+@login_required
+def add_agent_task(agent_type):
+    """Add a new task for an agent to database"""
+    from models import AgentAutomation
+    
+    try:
+        data = request.get_json()
+        
+        new_task = AgentAutomation(
+            agent_type=agent_type,
+            name=data.get('name', 'New Task'),
+            description=data.get('description', ''),
+            schedule=data.get('schedule', 'daily'),
+            enabled=data.get('enabled', True)
+        )
+        
+        db.session.add(new_task)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'task': new_task.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Add task error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/agents/<agent_type>/tasks/<task_id>', methods=['PATCH'])
+@login_required
+def update_agent_task(agent_type, task_id):
+    """Update an agent task in database"""
+    from models import AgentAutomation
+    
+    try:
+        data = request.get_json()
+        task = AgentAutomation.query.get(int(task_id))
+        
+        if not task or task.agent_type != agent_type:
+            return jsonify({'success': False, 'error': 'Task not found'}), 404
+        
+        if 'enabled' in data:
+            task.enabled = data['enabled']
+        if 'name' in data:
+            task.name = data['name']
+        if 'description' in data:
+            task.description = data['description']
+        if 'schedule' in data:
+            task.schedule = data['schedule']
+        
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Update task error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/agents/<agent_type>/tasks/<task_id>', methods=['DELETE'])
+@login_required
+def delete_agent_task(agent_type, task_id):
+    """Delete an agent task from database"""
+    from models import AgentAutomation
+    
+    try:
+        task = AgentAutomation.query.get(int(task_id))
+        
+        if not task or task.agent_type != agent_type:
+            return jsonify({'success': False, 'error': 'Task not found'}), 404
+        
+        db.session.delete(task)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Delete task error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/agents/<agent_type>/suggestions', methods=['POST'])
+@login_required
+def get_agent_suggestions(agent_type):
+    """Get AI-powered suggestions from an agent"""
+    try:
+        import os
+        from openai import OpenAI
+        
+        # Agent-specific suggestion prompts
+        suggestion_prompts = {
+            'brand_strategy': "Analyze current brand positioning and suggest 3 strategic improvements for better market differentiation.",
+            'content_seo': "Review content performance and suggest 3 high-impact content topics or SEO improvements.",
+            'analytics': "Based on typical marketing patterns, suggest 3 analytics improvements or metrics to track.",
+            'creative_design': "Suggest 3 creative improvements for better visual engagement and brand consistency.",
+            'advertising': "Recommend 3 advertising optimizations to improve ROI and campaign performance.",
+            'social_media': "Suggest 3 social media strategies to increase engagement and reach.",
+            'email_crm': "Recommend 3 email marketing improvements for better open rates and conversions.",
+            'sales_enablement': "Suggest 3 ways to better support the sales team with marketing content.",
+            'retention': "Recommend 3 customer retention strategies to reduce churn and increase loyalty.",
+            'operations': "Suggest 3 operational improvements for better marketing efficiency.",
+            'app_intelligence': "Recommend 3 platform improvements based on typical usage patterns."
+        }
+        
+        prompt = suggestion_prompts.get(agent_type, "Suggest 3 marketing improvements.")
+        
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            return jsonify({'success': True, 'suggestions': []})
+        
+        client = OpenAI(api_key=api_key)
+        
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": f"You are a marketing AI agent. Provide actionable suggestions in JSON format. Return a JSON object with a 'suggestions' array, where each item has 'title', 'description', 'priority' (high/medium/low), and 'impact' fields."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.8,
+            response_format={"type": "json_object"}
+        )
+        
+        import json
+        result = json.loads(response.choices[0].message.content)
+        suggestions = result.get('suggestions', [])
+        
+        # Add IDs to suggestions
+        for i, s in enumerate(suggestions):
+            s['id'] = f"sug_{agent_type}_{i+1}"
+        
+        return jsonify({'success': True, 'suggestions': suggestions})
+        
+    except Exception as e:
+        logger.error(f"Agent suggestions error: {e}")
+        return jsonify({'success': True, 'suggestions': []})
+
+print("✓ AI Agent interaction endpoints loaded:")
+print("  - POST /api/agents/chat (chat with any agent)")
+print("  - GET/POST /api/agents/<type>/tasks (manage agent tasks)")
+print("  - PATCH/DELETE /api/agents/<type>/tasks/<id> (update/delete tasks)")
+print("  - POST /api/agents/<type>/suggestions (get AI suggestions)")
+
+# =============================================================================
+# SUBSCRIBER SYNC ROUTES
+# =============================================================================
+from services.subscriber_sync_service import SubscriberSyncService
+
+@main_bp.route('/api/subscribers/sync', methods=['POST'])
+@login_required
+def sync_subscribers():
+    """Run full bidirectional sync between contacts and subscribers"""
+    try:
+        result = SubscriberSyncService.full_sync()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Subscriber sync error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/subscribers/sync-contacts-to-subscribers', methods=['POST'])
+@login_required
+def sync_contacts_to_subscribers():
+    """Sync newsletter contacts to become subscribers"""
+    try:
+        result = SubscriberSyncService.sync_contacts_to_subscribers()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Sync contacts to subscribers error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/subscribers/stats')
+@login_required
+def get_subscriber_stats():
+    """Get subscriber statistics"""
+    try:
+        result = SubscriberSyncService.get_subscriber_stats()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Get subscriber stats error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/subscribers')
+@login_required
+def get_subscribers():
+    """Get all subscribers with pagination"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        result = SubscriberSyncService.get_all_subscribers(page, per_page)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Get subscribers error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/contacts/<int:contact_id>/subscribe', methods=['POST'])
+@login_required
+def subscribe_contact(contact_id):
+    """Subscribe a contact to the newsletter"""
+    try:
+        source = request.json.get('source', 'manual') if request.is_json else 'manual'
+        result = SubscriberSyncService.subscribe_contact(contact_id, source)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Subscribe contact error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/contacts/<int:contact_id>/unsubscribe', methods=['POST'])
+@login_required
+def unsubscribe_contact(contact_id):
+    """Unsubscribe a contact from the newsletter"""
+    try:
+        result = SubscriberSyncService.unsubscribe_contact(contact_id)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Unsubscribe contact error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/contacts/bulk-subscribe', methods=['POST'])
+@login_required
+def bulk_subscribe_contacts():
+    """Subscribe multiple contacts at once"""
+    try:
+        data = request.get_json()
+        contact_ids = data.get('contact_ids', [])
+        source = data.get('source', 'bulk')
+        result = SubscriberSyncService.bulk_subscribe(contact_ids, source)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Bulk subscribe error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/contacts/bulk-unsubscribe', methods=['POST'])
+@login_required
+def bulk_unsubscribe_contacts():
+    """Unsubscribe multiple contacts at once"""
+    try:
+        data = request.get_json()
+        contact_ids = data.get('contact_ids', [])
+        result = SubscriberSyncService.bulk_unsubscribe(contact_ids)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Bulk unsubscribe error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+print("✓ Subscriber sync routes loaded:")
+print("  - POST /api/subscribers/sync (full bidirectional sync)")
+print("  - GET /api/subscribers (list all subscribers)")
+print("  - GET /api/subscribers/stats (subscriber statistics)")
+print("  - POST /api/contacts/<id>/subscribe (subscribe contact)")
+print("  - POST /api/contacts/<id>/unsubscribe (unsubscribe contact)")
+print("  - POST /api/contacts/bulk-subscribe (bulk subscribe)")
+print("  - POST /api/contacts/bulk-unsubscribe (bulk unsubscribe)")
+
+# =============================================================================
+# NEWSLETTER SEARCH & ADD SUBSCRIBER ROUTES
+# =============================================================================
+
+@main_bp.route('/api/newsletters/search')
+@login_required
+def search_newsletters():
+    """Search newsletter archives"""
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'success': True, 'newsletters': []})
+        
+        newsletters = NewsletterArchive.query.filter(
+            db.or_(
+                NewsletterArchive.title.ilike(f'%{query}%'),
+                NewsletterArchive.html_content.ilike(f'%{query}%')
+            )
+        ).order_by(NewsletterArchive.published_at.desc()).limit(10).all()
+        
+        return jsonify({
+            'success': True,
+            'newsletters': [
+                {
+                    'id': n.id,
+                    'title': n.title,
+                    'slug': n.slug,
+                    'published_at': n.published_at.strftime('%b %d, %Y') if n.published_at else None
+                }
+                for n in newsletters
+            ]
+        })
+    except Exception as e:
+        logger.error(f"Newsletter search error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/contacts/add-subscriber', methods=['POST'])
+@login_required
+def add_subscriber():
+    """Add a new subscriber contact"""
+    try:
+        from datetime import datetime
+        data = request.get_json()
+        
+        email = data.get('email', '').strip()
+        first_name = data.get('first_name', '').strip()
+        last_name = data.get('last_name', '').strip()
+        
+        if not email:
+            return jsonify({'success': False, 'error': 'Email is required'}), 400
+        
+        existing = Contact.query.filter_by(email=email).first()
+        if existing:
+            if not existing.is_subscribed:
+                existing.is_subscribed = True
+                existing.subscribed_at = datetime.utcnow()
+                existing.subscription_source = 'manual'
+                if existing.segment == 'lead':
+                    existing.segment = 'newsletter'
+                db.session.commit()
+                return jsonify({
+                    'success': True,
+                    'message': f'{email} has been subscribed to the newsletter'
+                })
+            return jsonify({
+                'success': False,
+                'error': 'This email is already subscribed'
+            }), 400
+        
+        contact = Contact(
+            email=email,
+            first_name=first_name or None,
+            last_name=last_name or None,
+            segment='newsletter',
+            source='manual',
+            is_subscribed=True,
+            subscribed_at=datetime.utcnow(),
+            subscription_source='manual',
+            is_active=True,
+            tags='newsletter'
+        )
+        db.session.add(contact)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{email} added as a subscriber!',
+            'contact_id': contact.id
+        })
+        
+    except Exception as e:
+        logger.error(f"Add subscriber error: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+print("✓ Newsletter search & subscriber routes loaded")
+
+# =============================================================================
+# APPROVAL QUEUE & FEATURE TOGGLE ROUTES
+# =============================================================================
+
+from services.approval_service import ApprovalService, FeatureToggleService
+
+@main_bp.route('/approval-queue')
+@login_required
+def approval_queue_dashboard():
+    """Admin approval queue dashboard"""
+    company = Company.query.first()
+    company_id = company.id if company else 1
+    
+    stats = ApprovalService.get_queue_stats(company_id)
+    pending_items = ApprovalService.get_pending_items(company_id)
+    toggles = FeatureToggleService.get_all_toggles(company_id)
+    
+    return render_template('approval_queue.html',
+                         stats=stats,
+                         pending_items=pending_items,
+                         toggles=toggles)
+
+@main_bp.route('/api/approval-queue', methods=['GET'])
+@login_required
+def get_approval_queue():
+    """Get approval queue items with filters"""
+    try:
+        company = Company.query.first()
+        company_id = company.id if company else 1
+        
+        filters = {}
+        if request.args.get('content_type'):
+            filters['content_type'] = request.args.get('content_type')
+        if request.args.get('creation_mode'):
+            filters['creation_mode'] = request.args.get('creation_mode')
+        if request.args.get('status'):
+            filters['status'] = request.args.get('status')
+        if request.args.get('risk_level'):
+            filters['risk_level'] = request.args.get('risk_level')
+        
+        items = ApprovalService.get_pending_items(company_id, filters)
+        stats = ApprovalService.get_queue_stats(company_id)
+        
+        return jsonify({
+            'success': True,
+            'items': items,
+            'stats': stats
+        })
+    except Exception as e:
+        logger.error(f"Get approval queue error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/approval-queue/<int:approval_id>', methods=['GET'])
+@login_required
+def get_approval_item(approval_id):
+    """Get a single approval queue item with full details"""
+    try:
+        item = ApprovalService.get_item(approval_id)
+        if not item:
+            return jsonify({'success': False, 'error': 'Item not found'}), 404
+        
+        audit_trail = ApprovalService.get_audit_trail(approval_id)
+        
+        return jsonify({
+            'success': True,
+            'item': item,
+            'audit_trail': audit_trail
+        })
+    except Exception as e:
+        logger.error(f"Get approval item error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/approval-queue/<int:approval_id>/approve', methods=['POST'])
+@login_required
+def approve_content(approval_id):
+    """Approve content for publishing"""
+    try:
+        data = request.get_json() or {}
+        schedule_at = None
+        if data.get('schedule_at'):
+            from datetime import datetime
+            schedule_at = datetime.fromisoformat(data['schedule_at'].replace('Z', '+00:00'))
+        
+        result = ApprovalService.approve(
+            approval_id=approval_id,
+            user_id=current_user.id,
+            notes=data.get('notes'),
+            schedule_at=schedule_at
+        )
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Approve content error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/approval-queue/<int:approval_id>/reject', methods=['POST'])
+@login_required
+def reject_content(approval_id):
+    """Reject content"""
+    try:
+        data = request.get_json() or {}
+        result = ApprovalService.reject(
+            approval_id=approval_id,
+            user_id=current_user.id,
+            reason=data.get('reason', 'No reason provided'),
+            request_regeneration=data.get('request_regeneration', False)
+        )
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Reject content error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/approval-queue/<int:approval_id>/edit', methods=['POST'])
+@login_required
+def edit_approval_content(approval_id):
+    """Edit content in the approval queue"""
+    try:
+        data = request.get_json() or {}
+        result = ApprovalService.edit_content(
+            approval_id=approval_id,
+            user_id=current_user.id,
+            updated_content=data.get('content', {}),
+            edit_notes=data.get('notes')
+        )
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Edit content error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/approval-queue/<int:approval_id>/cancel', methods=['POST'])
+@login_required
+def cancel_approval(approval_id):
+    """Cancel an approval queue item"""
+    try:
+        data = request.get_json() or {}
+        result = ApprovalService.cancel(
+            approval_id=approval_id,
+            user_id=current_user.id,
+            reason=data.get('reason')
+        )
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Cancel approval error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/approval-queue/stats', methods=['GET'])
+@login_required
+def get_approval_stats():
+    """Get approval queue statistics"""
+    try:
+        company = Company.query.first()
+        company_id = company.id if company else 1
+        stats = ApprovalService.get_queue_stats(company_id)
+        return jsonify({'success': True, 'stats': stats})
+    except Exception as e:
+        logger.error(f"Get approval stats error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Feature Toggle API Routes
+@main_bp.route('/api/feature-toggles', methods=['GET'])
+@login_required
+def get_feature_toggles():
+    """Get all feature toggles"""
+    try:
+        company = Company.query.first()
+        company_id = company.id if company else 1
+        category = request.args.get('category')
+        
+        toggles = FeatureToggleService.get_all_toggles(company_id, category)
+        return jsonify({'success': True, 'toggles': toggles})
+    except Exception as e:
+        logger.error(f"Get feature toggles error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/feature-toggles/<feature_key>', methods=['GET'])
+@login_required
+def get_feature_toggle(feature_key):
+    """Get a specific feature toggle"""
+    try:
+        company = Company.query.first()
+        company_id = company.id if company else 1
+        
+        toggle = FeatureToggleService.get_toggle(company_id, feature_key)
+        if not toggle:
+            return jsonify({'success': False, 'error': 'Toggle not found'}), 404
+        
+        return jsonify({'success': True, 'toggle': toggle})
+    except Exception as e:
+        logger.error(f"Get feature toggle error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/feature-toggles/<feature_key>', methods=['PATCH'])
+@login_required
+def update_feature_toggle(feature_key):
+    """Update a feature toggle"""
+    try:
+        company = Company.query.first()
+        company_id = company.id if company else 1
+        
+        data = request.get_json() or {}
+        result = FeatureToggleService.update_toggle(
+            company_id=company_id,
+            feature_key=feature_key,
+            updates=data,
+            user_id=current_user.id
+        )
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Update feature toggle error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/feature-toggles/emergency-stop', methods=['POST'])
+@login_required
+def emergency_stop_all():
+    """Emergency stop all automation"""
+    try:
+        company = Company.query.first()
+        company_id = company.id if company else 1
+        
+        result = FeatureToggleService.emergency_stop_all(company_id, current_user.id)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Emergency stop error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/feature-toggles/resume-all', methods=['POST'])
+@login_required
+def resume_all_automation():
+    """Clear emergency stop and resume automation"""
+    try:
+        company = Company.query.first()
+        company_id = company.id if company else 1
+        
+        result = FeatureToggleService.resume_all(company_id, current_user.id)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Resume automation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/feature-toggles/initialize', methods=['POST'])
+@login_required
+def initialize_toggles():
+    """Initialize default feature toggles for the company"""
+    try:
+        company = Company.query.first()
+        company_id = company.id if company else 1
+        
+        FeatureToggleService.initialize_toggles(company_id)
+        toggles = FeatureToggleService.get_all_toggles(company_id)
+        
+        return jsonify({'success': True, 'message': 'Toggles initialized', 'toggles': toggles})
+    except Exception as e:
+        logger.error(f"Initialize toggles error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+print("✓ Approval Queue & Feature Toggle routes loaded:")
+print("  - GET /approval-queue (Admin dashboard)")
+print("  - GET/POST /api/approval-queue (Queue management)")
+print("  - POST /api/approval-queue/<id>/approve|reject|edit|cancel")
+print("  - GET/PATCH /api/feature-toggles")
+print("  - POST /api/feature-toggles/emergency-stop|resume-all")

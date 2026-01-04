@@ -196,7 +196,14 @@ class AgentScheduler:
                 id='email_weekly_campaign',
                 name='Email CRM - Weekly Campaign'
             )
-            logger.info("Email CRM Agent scheduled")
+            # Daily subscriber sync
+            self.scheduler.add_job(
+                func=lambda: self._run_agent_task(agent, {'task_type': 'subscriber_sync'}),
+                trigger=CronTrigger(hour=7),
+                id='email_daily_subscriber_sync',
+                name='Email CRM - Daily Subscriber Sync'
+            )
+            logger.info("Email CRM Agent scheduled (with daily subscriber sync)")
         
         # Sales Enablement Agent - Weekly lead review
         if 'sales_enablement' in self.agents:

@@ -27,7 +27,7 @@ class LUXAgent:
             
             # Initialize OpenAI client with minimal parameters to avoid conflicts
             self.client = OpenAI(api_key=api_key)
-            self.model = "gpt-5-2025-08-07"  # Upgraded to GPT-5, launched August 7, 2025
+            self.model = "gpt-4o"  # Using GPT-4o for reliable performance
             self.agent_name = "LUX"
             self.agent_personality = """
             You are LUX, an expert email marketing automation agent. You are professional, data-driven, 

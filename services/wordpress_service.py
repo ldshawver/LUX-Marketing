@@ -101,4 +101,60 @@ class WordPressService:
             logger.error(f'WordPress fetch products error: {e}')
             return {'success': False, 'message': str(e)}
 
+    @staticmethod
+    def get_media(site_url, api_key, search='', per_page=20):
+        """Fetch media library images from WordPress"""
+        try:
+            if not site_url.startswith('http'):
+                site_url = 'https://' + site_url
+            if site_url.endswith('/'):
+                site_url = site_url[:-1]
+            
+            headers = {
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json'
+            }
+            
+            params = {
+                'per_page': per_page,
+                'media_type': 'image'
+            }
+            if search:
+                params['search'] = search
+            
+            response = requests.get(
+                f'{site_url}/wp-json/wp/v2/media',
+                headers=headers,
+                params=params,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                media_items = response.json()
+                images = []
+                for item in media_items:
+                    sizes = item.get('media_details', {}).get('sizes', {})
+                    thumbnail = sizes.get('thumbnail', {}).get('source_url') or sizes.get('medium', {}).get('source_url') or item.get('source_url')
+                    full_url = item.get('source_url')
+                    
+                    images.append({
+                        'id': item.get('id'),
+                        'title': item.get('title', {}).get('rendered', 'Untitled'),
+                        'thumbnail': thumbnail,
+                        'full_url': full_url,
+                        'alt': item.get('alt_text', ''),
+                        'caption': item.get('caption', {}).get('rendered', '')
+                    })
+                return {'success': True, 'images': images}
+            elif response.status_code == 401:
+                return {'success': False, 'message': 'WordPress API authentication failed'}
+            else:
+                return {'success': False, 'message': f'Failed to fetch media: {response.status_code}'}
+                
+        except requests.exceptions.Timeout:
+            return {'success': False, 'message': 'Request timeout - WordPress may be slow'}
+        except Exception as e:
+            logger.error(f'WordPress fetch media error: {e}')
+            return {'success': False, 'message': str(e)}
+
 print("✓ WordPress service loaded")

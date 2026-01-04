@@ -1,9 +1,9 @@
 {% extends "base_simple.html" %}
 
-{% block title %}LUX AI Agents Hub - LUX Marketing{% endblock %}
+{% block title %}AI Marketing Team - LUX Marketing{% endblock %}
 
 {% block page_header %}
-<span style="color: #c0c0c0;">LUX AI Agents</span>
+<span style="color: #c0c0c0;">AI Marketing Team</span>
 {% endblock %}
 
 {% block content %}
@@ -12,12 +12,18 @@
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     border: 2px solid #8b5cf6;
     transition: all 0.3s ease;
+    cursor: pointer;
   }
   
   .agent-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
     border-color: #4ade80;
+  }
+  
+  .agent-card.selected {
+    border-color: #4ade80;
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
   }
   
   .agent-status-active {
@@ -29,163 +35,216 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
   }
+  
+  .chat-container {
+    background: #1a1a2e;
+    border: 2px solid #8b5cf6;
+    border-radius: 15px;
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+  }
+  
+  .chat-message {
+    margin-bottom: 15px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    max-width: 85%;
+  }
+  
+  .chat-message.user {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    margin-left: auto;
+  }
+  
+  .chat-message.agent {
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+    border: 1px solid #4b5563;
+  }
+  
+  .task-item {
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid #4b5563;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+  }
+  
+  .task-item:hover {
+    border-color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.2);
+  }
+  
+  .task-item.enabled {
+    border-left: 4px solid #4ade80;
+  }
+  
+  .task-item.disabled {
+    border-left: 4px solid #ef4444;
+    opacity: 0.7;
+  }
+  
+  .suggestion-card {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+    border: 1px solid #fbbf24;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+  }
+  
+  .agent-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
 </style>
 
 <div class="container-fluid" style="background: #000000; min-height: 100vh; padding: 2rem;">
   <div class="row mb-4">
     <div class="col-12">
-      <h1 class="display-4"><i data-feather="cpu" style="color: gold;"></i> LUX AI Agents</h1>
-      <p class="lead">Intelligent AI assistants powering your marketing automation</p>
+      <h1 class="display-4"><i data-feather="users" style="color: #8b5cf6;"></i> AI Marketing Team</h1>
+      <p class="lead">Your 11 AI employees - each specialized in their area of marketing</p>
     </div>
   </div>
 
-  <div class="row g-4">
-    <div class="col-md-6 col-lg-4">
-      <div class="card agent-card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-3">
-            <h5 class="card-title"><i data-feather="mail"></i> Email Agent</h5>
-            <span class="badge bg-success agent-status-active">Active</span>
-          </div>
-          <p class="card-text">Generates compelling email content, subject lines, and optimizes send times</p>
-          <div class="mt-3">
-            <small class="text-muted">Performance: 94%</small>
-            <div class="progress mt-2" style="height: 5px;">
-              <div class="progress-bar bg-success" style="width: 94%"></div>
+  <div class="row">
+    <!-- Agent List (Left Side) -->
+    <div class="col-lg-4">
+      <div class="card bg-dark border-secondary mb-4">
+        <div class="card-header bg-dark">
+          <h5 class="mb-0"><i data-feather="cpu"></i> Your Marketing Team</h5>
+        </div>
+        <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+          {% for agent_key, agent_info in agents.items() %}
+          <div class="agent-card card mb-3 {{ 'selected' if loop.first else '' }}" 
+               data-agent="{{ agent_key }}" onclick="selectAgent('{{ agent_key }}')">
+            <div class="card-body py-3">
+              <div class="d-flex align-items-center">
+                <div class="agent-avatar me-3" style="background: {{ agent_info.color }};">
+                  {{ agent_info.icon }}
+                </div>
+                <div class="flex-grow-1">
+                  <h6 class="mb-0">{{ agent_info.name }}</h6>
+                  <small class="text-muted">{{ agent_info.role }}</small>
+                </div>
+                <span class="badge bg-success agent-status-active">Active</span>
+              </div>
             </div>
           </div>
-          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('Email')">Fine-tune Agent</button>
+          {% endfor %}
         </div>
       </div>
     </div>
 
-    <div class="col-md-6 col-lg-4">
-      <div class="card agent-card">
+    <!-- Agent Details (Right Side) -->
+    <div class="col-lg-8">
+      <!-- Agent Info Header -->
+      <div class="card bg-dark border-primary mb-4" id="agentInfoCard">
         <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-3">
-            <h5 class="card-title"><i data-feather="share-2"></i> Social Agent</h5>
-            <span class="badge bg-success agent-status-active">Active</span>
-          </div>
-          <p class="card-text">Creates engaging social media posts tailored to each platform</p>
-          <div class="mt-3">
-            <small class="text-muted">Performance: 91%</small>
-            <div class="progress mt-2" style="height: 5px;">
-              <div class="progress-bar bg-success" style="width: 91%"></div>
+          <div class="d-flex align-items-center mb-3">
+            <div class="agent-avatar me-3" id="selectedAgentAvatar" style="background: #8b5cf6; font-size: 32px;">
+              {{ (agents.values()|list)[0].icon if agents else '🤖' }}
+            </div>
+            <div>
+              <h3 class="mb-0" id="selectedAgentName">{{ (agents.values()|list)[0].name if agents else 'Select an Agent' }}</h3>
+              <p class="text-muted mb-0" id="selectedAgentRole">{{ (agents.values()|list)[0].role if agents else '' }}</p>
             </div>
           </div>
-          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('Social')">Fine-tune Agent</button>
+          <p id="selectedAgentDescription">{{ (agents.values()|list)[0].description if agents else '' }}</p>
+          <div class="d-flex gap-2">
+            <span class="badge bg-primary">{{ (agents.values()|list)[0].expertise[0] if agents and (agents.values()|list)[0].expertise else '' }}</span>
+            <span class="badge bg-info">{{ (agents.values()|list)[0].expertise[1] if agents and (agents.values()|list)[0].expertise|length > 1 else '' }}</span>
+            <span class="badge bg-secondary">{{ (agents.values()|list)[0].expertise[2] if agents and (agents.values()|list)[0].expertise|length > 2 else '' }}</span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="col-md-6 col-lg-4">
-      <div class="card agent-card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-3">
-            <h5 class="card-title"><i data-feather="search"></i> SEO Agent</h5>
-            <span class="badge bg-success agent-status-active">Active</span>
-          </div>
-          <p class="card-text">Analyzes keywords, suggests optimizations, and tracks rankings</p>
-          <div class="mt-3">
-            <small class="text-muted">Performance: 88%</small>
-            <div class="progress mt-2" style="height: 5px;">
-              <div class="progress-bar bg-success" style="width: 88%"></div>
-            </div>
-          </div>
-          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('SEO')">Fine-tune Agent</button>
-        </div>
-      </div>
-    </div>
+      <!-- Tabs for Chat, Tasks, Suggestions -->
+      <ul class="nav nav-tabs" id="agentTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat" type="button" role="tab">
+            <i data-feather="message-circle"></i> Chat with Agent
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="tasks-tab" data-bs-toggle="tab" data-bs-target="#tasks" type="button" role="tab">
+            <i data-feather="check-square"></i> Automated Tasks
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="suggestions-tab" data-bs-toggle="tab" data-bs-target="#suggestions" type="button" role="tab">
+            <i data-feather="lightbulb"></i> Suggestions
+          </button>
+        </li>
+      </ul>
 
-    <div class="col-md-6 col-lg-4">
-      <div class="card agent-card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-3">
-            <h5 class="card-title"><i data-feather="bar-chart-2"></i> Analytics Agent</h5>
-            <span class="badge bg-success agent-status-active">Active</span>
-          </div>
-          <p class="card-text">Provides insights, identifies trends, and suggests improvements</p>
-          <div class="mt-3">
-            <small class="text-muted">Performance: 96%</small>
-            <div class="progress mt-2" style="height: 5px;">
-              <div class="progress-bar bg-success" style="width: 96%"></div>
+      <div class="tab-content" id="agentTabsContent">
+        <!-- Chat Tab -->
+        <div class="tab-pane fade show active" id="chat" role="tabpanel">
+          <div class="chat-container mt-3">
+            <div class="chat-messages" id="chatMessages">
+              <div class="chat-message agent">
+                <strong id="chatAgentName">{{ (agents.values()|list)[0].name if agents else 'Agent' }}</strong>
+                <p class="mb-0 mt-1" id="chatWelcome">{{ (agents.values()|list)[0].welcome_message if agents else 'Hello! How can I help you?' }}</p>
+              </div>
+            </div>
+            <div class="p-3 border-top border-secondary">
+              <form id="chatForm" onsubmit="sendMessage(event)">
+                <div class="input-group">
+                  <input type="text" class="form-control bg-dark text-light border-secondary" 
+                         id="chatInput" placeholder="Ask me anything about marketing..." autocomplete="off">
+                  <button class="btn btn-primary" type="submit" id="sendBtn">
+                    <i data-feather="send"></i>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('Analytics')">Fine-tune Agent</button>
         </div>
-      </div>
-    </div>
 
-    <div class="col-md-6 col-lg-4">
-      <div class="card agent-card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-3">
-            <h5 class="card-title"><i data-feather="target"></i> Campaign Agent</h5>
-            <span class="badge bg-success agent-status-active">Active</span>
-          </div>
-          <p class="card-text">Builds complete multi-channel campaigns from simple prompts</p>
-          <div class="mt-3">
-            <small class="text-muted">Performance: 93%</small>
-            <div class="progress mt-2" style="height: 5px;">
-              <div class="progress-bar bg-success" style="width: 93%"></div>
+        <!-- Tasks Tab -->
+        <div class="tab-pane fade" id="tasks" role="tabpanel">
+          <div class="card bg-dark border-secondary mt-3">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+              <h5 class="mb-0"><i data-feather="list"></i> Automated Tasks</h5>
+              <button class="btn btn-sm btn-primary" onclick="addNewTask()">
+                <i data-feather="plus"></i> Add Task
+              </button>
+            </div>
+            <div class="card-body" id="tasksList">
+              <!-- Tasks will be loaded dynamically -->
+              <div class="text-center text-muted py-4">
+                <i data-feather="loader" class="spin"></i> Loading tasks...
+              </div>
             </div>
           </div>
-          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('Campaign')">Fine-tune Agent</button>
         </div>
-      </div>
-    </div>
 
-    <div class="col-md-6 col-lg-4">
-      <div class="card agent-card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-3">
-            <h5 class="card-title"><i data-feather="users"></i> Audience Agent</h5>
-            <span class="badge bg-warning">Training</span>
-          </div>
-          <p class="card-text">Segments audiences and predicts customer behavior</p>
-          <div class="mt-3">
-            <small class="text-muted">Performance: 78%</small>
-            <div class="progress mt-2" style="height: 5px;">
-              <div class="progress-bar bg-warning" style="width: 78%"></div>
+        <!-- Suggestions Tab -->
+        <div class="tab-pane fade" id="suggestions" role="tabpanel">
+          <div class="card bg-dark border-secondary mt-3">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+              <h5 class="mb-0"><i data-feather="zap"></i> AI Suggestions</h5>
+              <button class="btn btn-sm btn-warning" onclick="getSuggestions()" id="getSuggestionsBtn">
+                <i data-feather="refresh-cw"></i> Get New Suggestions
+              </button>
             </div>
-          </div>
-          <button class="btn btn-sm btn-outline-primary mt-3" onclick="fineTuneAgent('Audience')">Fine-tune Agent</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="row mt-5">
-    <div class="col-12">
-      <div class="card bg-dark border-primary">
-        <div class="card-header">
-          <h4><i data-feather="settings"></i> Agent Configuration</h4>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <h5>Training Data</h5>
-              <ul class="list-group list-group-flush mb-3">
-                <li class="list-group-item bg-dark">Brand voice and tone preferences</li>
-                <li class="list-group-item bg-dark">Historical campaign performance</li>
-                <li class="list-group-item bg-dark">Customer engagement patterns</li>
-                <li class="list-group-item bg-dark">Industry-specific knowledge</li>
-              </ul>
+            <div class="card-body" id="suggestionsList">
+              <div class="text-center text-muted py-4">
+                Click "Get New Suggestions" to receive AI-powered recommendations
+              </div>
             </div>
-            <div class="col-md-6">
-              <h5>Agent Capabilities</h5>
-              <ul class="list-group list-group-flush mb-3">
-                <li class="list-group-item bg-dark">Content generation and optimization</li>
-                <li class="list-group-item bg-dark">Predictive analytics</li>
-                <li class="list-group-item bg-dark">Automated A/B test creation</li>
-                <li class="list-group-item bg-dark">Real-time performance monitoring</li>
-              </ul>
-            </div>
-          </div>
-          <div class="text-center mt-4">
-            <a href="{{ url_for('main.lux_agent_dashboard') }}" class="btn btn-primary btn-lg">
-              <i data-feather="zap" style="color: gold;"></i> Open LUX AI Dashboard
-            </a>
           </div>
         </div>
       </div>
@@ -193,11 +252,332 @@
   </div>
 </div>
 
+<!-- Add Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title">Add Automated Task</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addTaskForm">
+          <div class="mb-3">
+            <label class="form-label">Task Name</label>
+            <input type="text" class="form-control bg-dark text-light border-secondary" id="taskName" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control bg-dark text-light border-secondary" id="taskDescription" rows="2"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Schedule</label>
+            <select class="form-select bg-dark text-light border-secondary" id="taskSchedule">
+              <option value="hourly">Hourly</option>
+              <option value="daily" selected>Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="taskEnabled" checked>
+            <label class="form-check-label" for="taskEnabled">Enable this task</label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveTask()">Save Task</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
-  feather.replace();
+// Agent data from server
+const agentsData = {{ agents_json|safe }};
+let currentAgent = '{{ (agents.keys()|list)[0] if agents else '' }}';
+
+function selectAgent(agentKey) {
+  currentAgent = agentKey;
+  const agent = agentsData[agentKey];
   
-  function fineTuneAgent(agentName) {
-    alert(`🎯 Fine-tuning ${agentName} Agent...\n\nThis feature allows you to customize the agent's behavior, training data, and performance parameters. Fine-tuning options will be available in the Advanced Configuration section.`);
+  // Update selected state
+  document.querySelectorAll('.agent-card').forEach(card => {
+    card.classList.remove('selected');
+    if (card.dataset.agent === agentKey) {
+      card.classList.add('selected');
+    }
+  });
+  
+  // Update agent info
+  document.getElementById('selectedAgentName').textContent = agent.name;
+  document.getElementById('selectedAgentRole').textContent = agent.role;
+  document.getElementById('selectedAgentDescription').textContent = agent.description;
+  document.getElementById('selectedAgentAvatar').innerHTML = agent.icon;
+  document.getElementById('selectedAgentAvatar').style.background = agent.color;
+  
+  // Update chat welcome
+  document.getElementById('chatAgentName').textContent = agent.name;
+  document.getElementById('chatWelcome').textContent = agent.welcome_message;
+  
+  // Clear and reset chat
+  const chatMessages = document.getElementById('chatMessages');
+  chatMessages.innerHTML = `
+    <div class="chat-message agent">
+      <strong>${agent.name}</strong>
+      <p class="mb-0 mt-1">${agent.welcome_message}</p>
+    </div>
+  `;
+  
+  // Load tasks for this agent
+  loadTasks(agentKey);
+  
+  // Reinitialize feather icons
+  if (typeof feather !== 'undefined') feather.replace();
+}
+
+async function sendMessage(event) {
+  event.preventDefault();
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message) return;
+  
+  const chatMessages = document.getElementById('chatMessages');
+  const agent = agentsData[currentAgent];
+  
+  // Add user message
+  chatMessages.innerHTML += `
+    <div class="chat-message user">
+      <p class="mb-0">${message}</p>
+    </div>
+  `;
+  
+  input.value = '';
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  // Show typing indicator
+  const typingId = 'typing-' + Date.now();
+  chatMessages.innerHTML += `
+    <div class="chat-message agent" id="${typingId}">
+      <strong>${agent.name}</strong>
+      <p class="mb-0 mt-1"><i>Thinking...</i></p>
+    </div>
+  `;
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  try {
+    const response = await fetch('/api/agents/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({
+        agent_type: currentAgent,
+        message: message
+      })
+    });
+    
+    const data = await response.json();
+    
+    // Remove typing indicator and add response
+    document.getElementById(typingId).remove();
+    
+    chatMessages.innerHTML += `
+      <div class="chat-message agent">
+        <strong>${agent.name}</strong>
+        <p class="mb-0 mt-1">${data.response || 'Sorry, I encountered an error. Please try again.'}</p>
+      </div>
+    `;
+    
+  } catch (error) {
+    document.getElementById(typingId).remove();
+    chatMessages.innerHTML += `
+      <div class="chat-message agent">
+        <strong>${agent.name}</strong>
+        <p class="mb-0 mt-1 text-warning">Sorry, I'm having trouble connecting. Please try again.</p>
+      </div>
+    `;
   }
+  
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function loadTasks(agentKey) {
+  const tasksList = document.getElementById('tasksList');
+  tasksList.innerHTML = '<div class="text-center text-muted py-4"><i data-feather="loader"></i> Loading tasks...</div>';
+  if (typeof feather !== 'undefined') feather.replace();
+  
+  try {
+    const response = await fetch(`/api/agents/${agentKey}/tasks`);
+    const data = await response.json();
+    
+    if (data.tasks && data.tasks.length > 0) {
+      tasksList.innerHTML = data.tasks.map(task => `
+        <div class="task-item ${task.enabled ? 'enabled' : 'disabled'}">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="mb-1">${task.name}</h6>
+              <p class="text-muted mb-1 small">${task.description || ''}</p>
+              <span class="badge bg-secondary">${task.schedule}</span>
+              ${task.last_run ? `<span class="badge bg-info ms-1">Last: ${task.last_run}</span>` : ''}
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline-${task.enabled ? 'success' : 'warning'}" 
+                      onclick="toggleTask('${agentKey}', '${task.id}', ${!task.enabled})">
+                <i data-feather="${task.enabled ? 'pause' : 'play'}"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-primary" onclick="editTask('${agentKey}', '${task.id}')">
+                <i data-feather="edit-2"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteTask('${agentKey}', '${task.id}')">
+                <i data-feather="trash-2"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      tasksList.innerHTML = `
+        <div class="text-center text-muted py-4">
+          <p>No automated tasks configured yet.</p>
+          <button class="btn btn-primary" onclick="addNewTask()">
+            <i data-feather="plus"></i> Add Your First Task
+          </button>
+        </div>
+      `;
+    }
+    
+    if (typeof feather !== 'undefined') feather.replace();
+    
+  } catch (error) {
+    tasksList.innerHTML = '<div class="text-center text-danger py-4">Error loading tasks</div>';
+  }
+}
+
+function addNewTask() {
+  const modal = new bootstrap.Modal(document.getElementById('addTaskModal'));
+  document.getElementById('addTaskForm').reset();
+  modal.show();
+}
+
+async function saveTask() {
+  const name = document.getElementById('taskName').value;
+  const description = document.getElementById('taskDescription').value;
+  const schedule = document.getElementById('taskSchedule').value;
+  const enabled = document.getElementById('taskEnabled').checked;
+  
+  try {
+    const response = await fetch(`/api/agents/${currentAgent}/tasks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({ name, description, schedule, enabled })
+    });
+    
+    if (response.ok) {
+      bootstrap.Modal.getInstance(document.getElementById('addTaskModal')).hide();
+      loadTasks(currentAgent);
+    } else {
+      alert('Error saving task');
+    }
+  } catch (error) {
+    alert('Error saving task');
+  }
+}
+
+async function toggleTask(agentKey, taskId, enabled) {
+  try {
+    await fetch(`/api/agents/${agentKey}/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({ enabled })
+    });
+    loadTasks(agentKey);
+  } catch (error) {
+    alert('Error updating task');
+  }
+}
+
+async function deleteTask(agentKey, taskId) {
+  if (!confirm('Are you sure you want to delete this task?')) return;
+  
+  try {
+    await fetch(`/api/agents/${agentKey}/tasks/${taskId}`, {
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+    });
+    loadTasks(agentKey);
+  } catch (error) {
+    alert('Error deleting task');
+  }
+}
+
+async function getSuggestions() {
+  const btn = document.getElementById('getSuggestionsBtn');
+  const suggestionsList = document.getElementById('suggestionsList');
+  
+  btn.disabled = true;
+  btn.innerHTML = '<i data-feather="loader"></i> Generating...';
+  if (typeof feather !== 'undefined') feather.replace();
+  
+  suggestionsList.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-warning"></div><p class="mt-2">Analyzing your marketing data...</p></div>';
+  
+  try {
+    const response = await fetch(`/api/agents/${currentAgent}/suggestions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.suggestions && data.suggestions.length > 0) {
+      suggestionsList.innerHTML = data.suggestions.map((suggestion, index) => `
+        <div class="suggestion-card">
+          <div class="d-flex align-items-start">
+            <span class="badge bg-warning me-2">${index + 1}</span>
+            <div class="flex-grow-1">
+              <h6 class="mb-1">${suggestion.title}</h6>
+              <p class="mb-2 text-muted small">${suggestion.description}</p>
+              <div class="d-flex gap-2">
+                <span class="badge bg-${suggestion.priority === 'high' ? 'danger' : suggestion.priority === 'medium' ? 'warning' : 'info'}">${suggestion.priority} priority</span>
+                <span class="badge bg-secondary">${suggestion.impact || 'Potential impact'}</span>
+              </div>
+              ${suggestion.action ? `<button class="btn btn-sm btn-outline-success mt-2" onclick="implementSuggestion('${suggestion.id}')"><i data-feather="check"></i> Implement</button>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      suggestionsList.innerHTML = '<div class="text-center text-muted py-4">No suggestions available at this time. Your marketing is looking great!</div>';
+    }
+    
+  } catch (error) {
+    suggestionsList.innerHTML = '<div class="text-center text-danger py-4">Error generating suggestions. Please try again.</div>';
+  }
+  
+  btn.disabled = false;
+  btn.innerHTML = '<i data-feather="refresh-cw"></i> Get New Suggestions';
+  if (typeof feather !== 'undefined') feather.replace();
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  if (currentAgent) {
+    loadTasks(currentAgent);
+  }
+  if (typeof feather !== 'undefined') feather.replace();
+});
 </script>
 {% endblock %}

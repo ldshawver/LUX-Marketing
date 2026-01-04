@@ -3,14 +3,21 @@
 class CampaignTaggingService:
     """Service for managing campaign tags"""
     
+    _tags = {}
+    
+    @staticmethod
+    def get_all_tags():
+        """Get all campaign tags"""
+        return list(CampaignTaggingService._tags.values())
+    
     @staticmethod
     def create_tag(tag_name):
         """Create a campaign tag"""
-        # Placeholder: Implement tag creation when needed
-        return type('Tag', (), {'id': 1, 'name': tag_name})()
+        tag = type('Tag', (), {'id': len(CampaignTaggingService._tags) + 1, 'name': tag_name})()
+        CampaignTaggingService._tags[tag_name] = tag
+        return tag
     
     @staticmethod
     def sync_tags_for_object(tag_ids, object_type, object_id):
         """Sync tags for a campaign object"""
-        # Placeholder: Implement tag syncing when needed
         pass

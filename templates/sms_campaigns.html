@@ -50,14 +50,28 @@
                         <td>{{ campaign.sent_at.strftime('%Y-%m-%d %H:%M') if campaign.sent_at else '-' }}</td>
                         <td>{{ campaign.created_at.strftime('%Y-%m-%d') }}</td>
                         <td>
-                            {% if campaign.status == 'draft' %}
-                            <form method="POST" action="{{ url_for('main.send_sms_campaign', campaign_id=campaign.id) }}" style="display: inline;">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Send this SMS campaign to {{ campaign.recipients.count() }} recipients?')">
-                                    <i data-feather="send"></i> Send
+                            <div class="btn-group btn-group-sm">
+                                {% if campaign.status == 'draft' %}
+                                <form method="POST" action="{{ url_for('main.send_sms_campaign', campaign_id=campaign.id) }}" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Send this SMS campaign to {{ campaign.recipients.count() }} recipients?')" title="Send">
+                                        <i data-feather="send" style="width:14px;height:14px;"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('{{ campaign.message|replace("'", "\\'")|replace("\n", " ") }}')" title="Copy Text">
+                                    <i data-feather="copy" style="width:14px;height:14px;"></i>
                                 </button>
-                            </form>
-                            {% endif %}
+                                <a href="{{ url_for('main.edit_sms_campaign', campaign_id=campaign.id) }}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                    <i data-feather="edit-2" style="width:14px;height:14px;"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('main.archive_sms_campaign', campaign_id=campaign.id) }}" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Archive this campaign?')" title="Archive">
+                                        <i data-feather="archive" style="width:14px;height:14px;"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -91,4 +105,23 @@
         </ul>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Message copied to clipboard!');
+    }).catch(err => {
+        console.error('Copy failed:', err);
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('Message copied!');
+    });
+}
+</script>
 {% endblock %}

@@ -90,6 +90,22 @@ def inject_tracking_pixels():
         pass
     return {'facebook_app_id': facebook_app_id, 'tiktok_pixel_id': tiktok_pixel_id}
 
+@app.template_filter('campaign_status_color')
+def campaign_status_color(status):
+    """Return Bootstrap color class for campaign status"""
+    colors = {
+        'draft': 'secondary',
+        'scheduled': 'info',
+        'sending': 'warning',
+        'sent': 'success',
+        'partial': 'warning',
+        'failed': 'danger',
+        'paused': 'secondary',
+        'completed': 'success',
+        'active': 'primary'
+    }
+    return colors.get(status, 'secondary')
+
 # Register blueprints
 from routes import main_bp
 from auth import auth_bp
@@ -173,11 +189,11 @@ with app.app_context():
     except Exception as e:
         logging.error(f"Error initializing error logging: {e}")
 
-    # Initialize agents
+    # Initialize agents - Register all 11 marketing AI agents
     try:
-        from agents.app_agent import AppAgent
-        from agent_scheduler import AgentScheduler, get_agent_scheduler
+        from agent_scheduler import initialize_agent_scheduler, get_agent_scheduler
+        initialize_agent_scheduler()
         app.agent_scheduler = get_agent_scheduler()
-        logging.info("AI Agent Scheduler initialized successfully")
+        logging.info(f"AI Agent Scheduler initialized with {len(app.agent_scheduler.agents)} agents")
     except Exception as e:
         logging.error(f"Error initializing AI Agent Scheduler: {e}")

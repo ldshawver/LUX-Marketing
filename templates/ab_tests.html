@@ -62,9 +62,34 @@
                             {% endif %}
                         </td>
                         <td>
-                            <button class="btn btn-sm btn-outline-info" title="View Results">
-                                <i data-feather="bar-chart-2"></i>
-                            </button>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('main.ab_test_results', test_id=test.id) }}" class="btn btn-outline-info" title="View Results">
+                                    <i data-feather="bar-chart-2"></i>
+                                </a>
+                                {% if test.status == 'draft' %}
+                                <form method="POST" action="{{ url_for('main.run_ab_test', test_id=test.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-outline-success" title="Run Test">
+                                        <i data-feather="play"></i>
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('main.edit_ab_test', test_id=test.id) }}" class="btn btn-outline-warning" title="Edit">
+                                    <i data-feather="edit"></i>
+                                </a>
+                                {% endif %}
+                                <form method="POST" action="{{ url_for('main.duplicate_ab_test', test_id=test.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-outline-secondary" title="Duplicate">
+                                        <i data-feather="copy"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('main.delete_ab_test', test_id=test.id) }}" class="d-inline" onsubmit="return confirm('Delete this A/B test?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

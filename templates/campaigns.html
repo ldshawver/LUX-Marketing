@@ -94,8 +94,12 @@
                                 <a href="{{ url_for('main.preview_campaign', campaign_id=campaign.id) }}" class="btn btn-outline-info" title="Preview">
                                     <i data-feather="eye"></i>
                                 </a>
+                                <a href="{{ url_for('main.edit_campaign', campaign_id=campaign.id) }}" class="btn btn-outline-warning" title="Edit">
+                                    <i data-feather="edit"></i>
+                                </a>
                                 {% if campaign.status in ['draft', 'scheduled'] %}
                                 <form method="POST" action="{{ url_for('main.send_campaign', campaign_id=campaign.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to send this campaign?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <button type="submit" class="btn btn-outline-success" title="Send Now">
                                         <i data-feather="send"></i>
                                     </button>

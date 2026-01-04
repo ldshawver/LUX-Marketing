@@ -41,6 +41,71 @@
     height: 300px;
     padding: 1rem;
   }
+  
+  .metric-box {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+  
+  .metric-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(188, 0, 237, 0.3);
+  }
+  
+  .metric-box.cyan { border: 1px solid #00ffb4; }
+  .metric-box.purple { border: 1px solid #bc00ed; }
+  .metric-box.pink { border: 1px solid #e4055c; }
+  .metric-box.blue { border: 1px solid #0044ff; }
+  
+  .metric-box h3 { color: #fff; margin: 0.5rem 0; font-size: 1.8rem; }
+  .metric-box h6 { margin-bottom: 0.5rem; }
+  .metric-box small { opacity: 0.7; }
+  
+  .nav-tabs .nav-link {
+    color: #888;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    transition: all 0.3s ease;
+  }
+  
+  .nav-tabs .nav-link:hover {
+    color: #00ffb4;
+    border-color: transparent;
+  }
+  
+  .nav-tabs .nav-link.active {
+    background: linear-gradient(135deg, #480749, #004845);
+    color: #00ffb4;
+    border: 1px solid #00ffb4;
+    border-bottom: none;
+  }
+  
+  .section-card {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+  }
+  
+  .section-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .trend-up { color: #4ade80; }
+  .trend-down { color: #ef4444; }
+  
+  .progress-bar-custom {
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #bc00ed, #00ffb4);
+  }
 </style>
 
 <div class="container-fluid" style="background: #000000; min-height: 100vh; padding: 2rem;">
@@ -51,45 +116,6 @@
     </div>
   </div>
 
-  <!-- Analytics Navigation Tabs -->
-  <ul class="nav nav-tabs mb-4" id="analyticsTab" role="tablist">
-    <li class="nav-item">
-      <a class="nav-link active" data-bs-toggle="tab" href="#overview">Overview</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" data-bs-toggle="tab" href="#email">Email Marketing</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" data-bs-toggle="tab" href="#seo">SEO & Organic</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" data-bs-toggle="tab" href="#ppc">PPC Advertising</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" data-bs-toggle="tab" href="#social">Social Media</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" data-bs-toggle="tab" href="#content">Content Marketing</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" data-bs-toggle="tab" href="#automations">Automations</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" data-bs-toggle="tab" href="#performance">App Performance</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" data-bs-toggle="tab" href="#agents">AI Agents</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" data-bs-toggle="tab" href="#leads">Lead Generation</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" data-bs-toggle="tab" href="#traffic">Web Analytics</a>
-    </li>
-  </ul>
-
-  <div class="tab-content">
-    <div class="tab-pane fade show active" id="overview">
   <!-- Date Filter & Export Controls -->
   <div class="row mb-4">
     <div class="col-lg-8">
@@ -108,19 +134,16 @@
             </div>
             <div class="col-md-3">
               <label style="color: #00ffb4; font-size: 0.9rem;">Start Date</label>
-              <input type="date" id="startDate" class="form-control bg-dark text-light" style="border: 1px solid #bc00ed;" onchange="updateAnalytics()">
+              <input type="date" id="startDate" class="form-control bg-dark text-light" style="border: 1px solid #bc00ed;">
             </div>
             <div class="col-md-3">
               <label style="color: #00ffb4; font-size: 0.9rem;">End Date</label>
-              <input type="date" id="endDate" class="form-control bg-dark text-light" style="border: 1px solid #bc00ed;" onchange="updateAnalytics()">
+              <input type="date" id="endDate" class="form-control bg-dark text-light" style="border: 1px solid #bc00ed;">
             </div>
             <div class="col-md-3">
-              <div class="form-check form-switch" style="padding-top: 1rem;">
-                <input class="form-check-input" type="checkbox" id="comparisonToggle" onchange="updateAnalytics()">
-                <label class="form-check-label" style="color: #00ffb4; font-size: 0.9rem;">
-                  Compare to Previous Period
-                </label>
-              </div>
+              <button class="btn w-100" style="background: linear-gradient(135deg, #bc00ed, #00ffb4); color: #fff;" onclick="refreshAnalytics()">
+                <i data-feather="refresh-cw"></i> Refresh
+              </button>
             </div>
           </div>
         </div>
@@ -144,221 +167,853 @@
     </div>
   </div>
 
-  <!-- Key Metrics Dashboard -->
-  <div class="row g-4 mb-4">
-    <div class="col-md-3">
-      <div class="card analytics-card">
-        <div class="card-body text-center">
-          <i data-feather="activity" class="mb-3" style="width: 48px; height: 48px; color: #00ffb4;"></i>
-          <div class="metric-value">{{ analytics.active_users|default(0)|int }}</div>
-          <p class="metric-label">Active Users</p>
-          <small style="color: #666;">Last 30 days</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3">
-      <div class="card analytics-card">
-        <div class="card-body text-center">
-          <i data-feather="mail" class="mb-3" style="width: 48px; height: 48px; color: #bc00ed;"></i>
-          <div class="metric-value">{{ analytics.email_open_rate|default(0)|round(1) }}%</div>
-          <p class="metric-label">Email Open Rate</p>
-          <small style="color: #666;">{{ analytics.email_metrics.total_sent|default(0) }} emails sent</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3">
-      <div class="card analytics-card">
-        <div class="card-body text-center">
-          <i data-feather="dollar-sign" class="mb-3" style="width: 48px; height: 48px; color: #e4055c;"></i>
-          <div class="metric-value">${{ analytics.revenue_mtd|default(0)|round(2) }}</div>
-          <p class="metric-label">Revenue (MTD)</p>
-          <small style="color: #666;">Month to date</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3">
-      <div class="card analytics-card">
-        <div class="card-body text-center">
-          <i data-feather="users" class="mb-3" style="width: 48px; height: 48px; color: #0044ff;"></i>
-          <div class="metric-value">{{ (analytics.total_reach|default(0)/1000)|round(1) }}K</div>
-          <p class="metric-label">Total Reach</p>
-          <small style="color: #666;">Social media followers</small>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Analytics Navigation Tabs -->
+  <ul class="nav nav-tabs mb-4" id="analyticsTab" role="tablist">
+    <li class="nav-item">
+      <a class="nav-link active" data-bs-toggle="tab" href="#acquisition"><i data-feather="user-plus" style="width:16px;height:16px;"></i> Acquisition</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#conversion"><i data-feather="target" style="width:16px;height:16px;"></i> Conversion</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#revenue"><i data-feather="dollar-sign" style="width:16px;height:16px;"></i> Revenue</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#cac"><i data-feather="trending-down" style="width:16px;height:16px;"></i> CAC</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#retention"><i data-feather="repeat" style="width:16px;height:16px;"></i> Retention</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#engagement"><i data-feather="heart" style="width:16px;height:16px;"></i> Engagement</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#attribution"><i data-feather="git-branch" style="width:16px;height:16px;"></i> Attribution</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#segments"><i data-feather="layers" style="width:16px;height:16px;"></i> Segments</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#campaigns"><i data-feather="send" style="width:16px;height:16px;"></i> Campaigns</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#compliance"><i data-feather="shield" style="width:16px;height:16px;"></i> Compliance</a>
+    </li>
+  </ul>
 
-  <!-- Website Analytics (GA4 Metrics) -->
-  <div class="row g-4 mb-4">
-    <div class="col-lg-8">
-      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
-        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
-          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="trending-up"></i> Website Traffic & Engagement</h5>
+  <div class="tab-content" id="analyticsTabContent">
+    
+    <!-- 1. ACQUISITION TAB -->
+    <div class="tab-pane fade show active" id="acquisition">
+      <div class="section-card">
+        <div class="section-header">
+          <i data-feather="user-plus" style="color: #00ffb4;"></i>
+          <h5 class="mb-0" style="color: #00ffb4;">Acquisition - How People Arrive</h5>
         </div>
         <div class="card-body">
-          <div class="chart-container">
-            <canvas id="trafficChart"></canvas>
+          <div class="row g-4 mb-4">
+            <div class="col-md-3">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="users"></i> New Contacts</h6>
+                <h3 id="acq-new-contacts">{{ analytics.comprehensive.acquisition.new_contacts|default(0) }}</h3>
+                <small class="{% if (analytics.comprehensive.acquisition.growth_rate|default(0)) > 0 %}trend-up{% else %}trend-down{% endif %}">
+                  <i data-feather="{% if (analytics.comprehensive.acquisition.growth_rate|default(0)) > 0 %}trending-up{% else %}trending-down{% endif %}" style="width:14px;height:14px;"></i>
+                  {{ analytics.comprehensive.acquisition.growth_rate|default(0) }}% vs prev
+                </small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="mouse-pointer"></i> CPC</h6>
+                <h3>${{ analytics.comprehensive.acquisition.cpc|default(0)|round(2) }}</h3>
+                <small>Cost per click</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="user-check"></i> CPA</h6>
+                <h3>${{ analytics.comprehensive.acquisition.cpa|default(0)|round(2) }}</h3>
+                <small>Cost per acquisition</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box blue">
+                <h6 style="color: #0044ff;"><i data-feather="mail"></i> Emails Sent</h6>
+                <h3>{{ analytics.comprehensive.acquisition.emails_sent|default(0) }}</h3>
+                <small>This period</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #00ffb4;"><i data-feather="pie-chart"></i> Traffic by Channel</h6>
+                <div class="chart-container" style="height: 250px;">
+                  <canvas id="channelChart"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #00ffb4;"><i data-feather="users"></i> New vs Returning</h6>
+                <div class="chart-container" style="height: 250px;">
+                  <canvas id="newVsReturningChart"></canvas>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    
-    <div class="col-lg-4">
-      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
-        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
-          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="pie-chart"></i> Traffic Sources</h5>
-        </div>
-        <div class="card-body">
-          <div class="chart-container" style="height: 300px;">
-            <canvas id="sourcesChart"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Email & Social Analytics -->
-  <div class="row g-4 mb-4">
-    <div class="col-lg-6">
-      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
-        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
-          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="mail"></i> Email Campaign Performance</h5>
+    <!-- 2. CONVERSION TAB -->
+    <div class="tab-pane fade" id="conversion">
+      <div class="section-card">
+        <div class="section-header">
+          <i data-feather="target" style="color: #bc00ed;"></i>
+          <h5 class="mb-0" style="color: #bc00ed;">Conversion - What Turns Interest Into Action</h5>
         </div>
         <div class="card-body">
-          <div class="chart-container">
-            <canvas id="emailChart"></canvas>
+          <div class="row g-4 mb-4">
+            <div class="col-md-3">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="percent"></i> Conversion Rate</h6>
+                <h3>{{ analytics.comprehensive.conversion.conversion_rate|default(0) }}%</h3>
+                <small>Overall</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="mail-open"></i> Email Open Rate</h6>
+                <h3>{{ analytics.comprehensive.conversion.open_rate|default(0) }}%</h3>
+                <small>{{ analytics.comprehensive.conversion.emails_opened|default(0) }} opens</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="mouse-pointer"></i> Click-Through Rate</h6>
+                <h3>{{ analytics.comprehensive.conversion.ctr|default(0) }}%</h3>
+                <small>{{ analytics.comprehensive.conversion.emails_clicked|default(0) }} clicks</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box blue">
+                <h6 style="color: #0044ff;"><i data-feather="file-text"></i> Form Submissions</h6>
+                <h3>{{ analytics.comprehensive.conversion.form_submissions|default(0) }}</h3>
+                <small>This period</small>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-6">
-      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
-        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
-          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="share-2"></i> Social Media Engagement</h5>
-        </div>
-        <div class="card-body">
-          <div class="chart-container">
-            <canvas id="socialChart"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Website Metrics -->
-  <div class="row g-4 mb-4">
-    <div class="col-lg-12">
-      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
-        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
-          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="globe"></i> Company Website Metrics</h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-3">
+          
+          <div class="row g-4 mb-4">
             <div class="col-md-4">
-              <div class="p-3 rounded" style="background: rgba(0, 255, 180, 0.1); border: 1px solid #00ffb4;">
-                <h6 style="color: #00ffb4;">Page Views</h6>
-                <h3 class="mb-0" style="color: #fff;">18,542</h3>
-                <small style="color: #4ade80;">Last 30 days</small>
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="shopping-cart"></i> Cart Abandonment</h6>
+                <h3>{{ analytics.comprehensive.conversion.checkout_abandonment|default(32.7) }}%</h3>
+                <small>Drop-off at checkout</small>
               </div>
             </div>
             <div class="col-md-4">
-              <div class="p-3 rounded" style="background: rgba(188, 0, 237, 0.1); border: 1px solid #bc00ed;">
-                <h6 style="color: #bc00ed;">Avg. Session Duration</h6>
-                <h3 class="mb-0" style="color: #fff;">4:23</h3>
-                <small style="color: #4ade80;">Minutes:Seconds</small>
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="clock"></i> Time to Convert</h6>
+                <h3>{{ analytics.comprehensive.conversion.time_to_convert_days|default(3.2) }} days</h3>
+                <small>Average</small>
               </div>
             </div>
             <div class="col-md-4">
-              <div class="p-3 rounded" style="background: rgba(228, 5, 92, 0.1); border: 1px solid #e4055c;">
-                <h6 style="color: #e4055c;">Bounce Rate</h6>
-                <h3 class="mb-0" style="color: #fff;">32.7%</h3>
-                <small style="color: #4ade80;">-5.3% improvement</small>
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="user-plus"></i> New Subscribers</h6>
+                <h3>{{ analytics.comprehensive.conversion.subscribers|default(0) }}</h3>
+                <small>Email opt-ins</small>
               </div>
             </div>
           </div>
-          <div class="row g-3 mt-2">
-            <div class="col-md-3">
-              <div class="p-3 rounded" style="background: rgba(0, 68, 255, 0.1); border: 1px solid #0044ff;">
-                <h6 style="color: #0044ff;">Conversions</h6>
-                <h3 class="mb-0" style="color: #fff;">487</h3>
-                <small style="color: #4ade80;">+15.2%</small>
+          
+          <div class="row g-4">
+            <div class="col-lg-8">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #bc00ed;"><i data-feather="filter"></i> Conversion Funnel</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="conversionFunnelChart"></canvas>
+                </div>
               </div>
             </div>
-            <div class="col-md-3">
-              <div class="p-3 rounded" style="background: rgba(0, 255, 180, 0.1); border: 1px solid #00ffb4;">
-                <h6 style="color: #00ffb4;">Top Page</h6>
-                <h3 class="mb-0" style="font-size: 1.2rem; color: #fff;">/products</h3>
-                <small style="color: #4ade80;">2,341 views</small>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="p-3 rounded" style="background: rgba(188, 0, 237, 0.1); border: 1px solid #bc00ed;">
-                <h6 style="color: #bc00ed;">New Visitors</h6>
-                <h3 class="mb-0" style="color: #fff;">64.2%</h3>
-                <small style="color: #4ade80;">High quality</small>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="p-3 rounded" style="background: rgba(228, 5, 92, 0.1); border: 1px solid #e4055c;">
-                <h6 style="color: #e4055c;">Mobile Users</h6>
-                <h3 class="mb-0" style="color: #fff;">58.9%</h3>
-                <small style="color: #4ade80;">Majority mobile</small>
+            <div class="col-lg-4">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #bc00ed;"><i data-feather="activity"></i> Email Performance</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="emailPerformanceChart"></canvas>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Conversion Funnel -->
-  <div class="row g-4 mb-4">
-    <div class="col-lg-6">
-      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
-        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
-          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="filter"></i> Conversion Funnel</h5>
+    <!-- 3. REVENUE TAB -->
+    <div class="tab-pane fade" id="revenue">
+      <div class="section-card">
+        <div class="section-header">
+          <i data-feather="dollar-sign" style="color: #e4055c;"></i>
+          <h5 class="mb-0" style="color: #e4055c;">Revenue - What Actually Pays</h5>
         </div>
         <div class="card-body">
-          <div class="chart-container">
-            <canvas id="funnelChart"></canvas>
+          <div class="row g-4 mb-4">
+            <div class="col-md-3">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="dollar-sign"></i> Total Revenue</h6>
+                <h3>${{ "{:,.2f}".format(analytics.comprehensive.revenue.total_revenue|default(0)) }}</h3>
+                <small class="{% if (analytics.comprehensive.revenue.growth_rate|default(0)) > 0 %}trend-up{% else %}trend-down{% endif %}">
+                  <i data-feather="{% if (analytics.comprehensive.revenue.growth_rate|default(0)) > 0 %}trending-up{% else %}trending-down{% endif %}" style="width:14px;height:14px;"></i>
+                  {{ analytics.comprehensive.revenue.growth_rate|default(0) }}% growth
+                </small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="shopping-bag"></i> Avg Order Value</h6>
+                <h3>${{ "{:,.2f}".format(analytics.comprehensive.revenue.aov|default(0)) }}</h3>
+                <small>Per transaction</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="user"></i> Revenue/Visitor</h6>
+                <h3>${{ "{:,.2f}".format(analytics.comprehensive.revenue.rpv|default(0)) }}</h3>
+                <small>RPV</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box blue">
+                <h6 style="color: #0044ff;"><i data-feather="check-circle"></i> Deals Won</h6>
+                <h3>{{ analytics.comprehensive.revenue.deal_count|default(0) }}</h3>
+                <small>This period</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-4">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="refresh-cw"></i> Refund Rate</h6>
+                <h3>{{ analytics.comprehensive.revenue.refund_rate|default(2.1) }}%</h3>
+                <small>Low is good</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="plus-circle"></i> Upsell Rate</h6>
+                <h3>{{ analytics.comprehensive.revenue.upsell_rate|default(18.5) }}%</h3>
+                <small>Cross-sell conversions</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="calendar"></i> Previous Period</h6>
+                <h3>${{ "{:,.2f}".format(analytics.comprehensive.revenue.prev_revenue|default(0)) }}</h3>
+                <small>Comparison baseline</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4">
+            <div class="col-lg-8">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #e4055c;"><i data-feather="bar-chart-2"></i> Revenue by Channel</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="revenueChannelChart"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #e4055c;"><i data-feather="trending-up"></i> Revenue Trend</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="revenueTrendChart"></canvas>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    
-    <div class="col-lg-6">
-      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
-        <div class="card-header" style="background: linear-gradient(135deg, #480749, #004845); border-bottom: 1px solid #00ffb4;">
-          <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="bar-chart-2"></i> Campaign ROI Comparison</h5>
+
+    <!-- 4. CAC TAB -->
+    <div class="tab-pane fade" id="cac">
+      <div class="section-card">
+        <div class="section-header">
+          <i data-feather="trending-down" style="color: #0044ff;"></i>
+          <h5 class="mb-0" style="color: #0044ff;">Customer Acquisition Cost - Survival Math</h5>
         </div>
         <div class="card-body">
-          <div class="chart-container">
-            <canvas id="roiChart"></canvas>
+          <div class="alert" style="background: rgba(0, 68, 255, 0.1); border: 1px solid #0044ff; color: #fff;">
+            <strong>Rule:</strong> If CAC >= LTV, the channel is dead - even if it "converts."
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-3">
+              <div class="metric-box blue">
+                <h6 style="color: #0044ff;"><i data-feather="dollar-sign"></i> CAC</h6>
+                <h3>${{ "{:,.2f}".format(analytics.comprehensive.cac.cac|default(0)) }}</h3>
+                <small>Customer acquisition cost</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="heart"></i> LTV</h6>
+                <h3>${{ "{:,.2f}".format(analytics.comprehensive.cac.ltv|default(0)) }}</h3>
+                <small>Lifetime value</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="award"></i> LTV:CAC Ratio</h6>
+                <h3>{{ analytics.comprehensive.cac.ltv_cac_ratio|default(0) }}:1</h3>
+                <small class="{% if (analytics.comprehensive.cac.ltv_cac_ratio|default(0)) >= 3 %}trend-up{% else %}trend-down{% endif %}">
+                  {% if (analytics.comprehensive.cac.ltv_cac_ratio|default(0)) >= 3 %}Healthy{% else %}Needs improvement{% endif %}
+                </small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="users"></i> New Customers</h6>
+                <h3>{{ analytics.comprehensive.cac.new_customers|default(0) }}</h3>
+                <small>This period</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-6">
+              <div class="metric-box blue">
+                <h6 style="color: #0044ff;"><i data-feather="credit-card"></i> Total Marketing Spend</h6>
+                <h3>${{ "{:,.2f}".format(analytics.comprehensive.cac.total_spend|default(0)) }}</h3>
+                <small>All channels</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="percent"></i> CAC vs AOV</h6>
+                <h3>{{ analytics.comprehensive.cac.cac_vs_aov|default(0) }}x</h3>
+                <small>Lower is better</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4">
+            <div class="col-lg-12">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #0044ff;"><i data-feather="bar-chart-2"></i> CAC by Channel</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="cacChannelChart"></canvas>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="row mt-4">
-    <div class="col-12">
-      <div class="card bg-dark" style="border: 1px solid #bc00ed;">
-        <div class="card-body text-center">
-          <h4 style="color: #00ffb4;"><i data-feather="download"></i> Export Analytics Reports</h4>
-          <p style="color: #c0c0c0;">Download comprehensive reports with visual charts and data tables</p>
-          <button class="btn me-2" style="background: linear-gradient(135deg, #bc00ed, #0044ff); color: #fff;"><i data-feather="file-text"></i> PDF Report</button>
-          <button class="btn me-2" style="background: linear-gradient(135deg, #00ffb4, #004845); color: #000;"><i data-feather="grid"></i> CSV Export</button>
-          <button class="btn" style="background: linear-gradient(135deg, #e4055c, #bc00ed); color: #fff;"><i data-feather="table"></i> Excel Workbook</button>
+    <!-- 5. RETENTION TAB -->
+    <div class="tab-pane fade" id="retention">
+      <div class="section-card">
+        <div class="section-header">
+          <i data-feather="repeat" style="color: #00ffb4;"></i>
+          <h5 class="mb-0" style="color: #00ffb4;">Retention & Lifecycle - Where Profit Compounds</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert" style="background: rgba(0, 255, 180, 0.1); border: 1px solid #00ffb4; color: #fff;">
+            <strong>Reality:</strong> Retention fixes bad acquisition faster than more ads.
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-3">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="refresh-cw"></i> Repeat Purchase Rate</h6>
+                <h3>{{ analytics.comprehensive.retention.repeat_purchase_rate|default(0) }}%</h3>
+                <small>Returning buyers</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="user-minus"></i> Churn Rate</h6>
+                <h3>{{ analytics.comprehensive.retention.churn_rate|default(0) }}%</h3>
+                <small>Lower is better</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="mail-open"></i> Email Open Rate</h6>
+                <h3>{{ analytics.comprehensive.retention.email_open_rate|default(0) }}%</h3>
+                <small>Engagement signal</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box blue">
+                <h6 style="color: #0044ff;"><i data-feather="message-square"></i> SMS Sent</h6>
+                <h3>{{ analytics.comprehensive.retention.sms_sent|default(0) }}</h3>
+                <small>{{ analytics.comprehensive.retention.sms_response_rate|default(12.5) }}% response</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-4">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="users"></i> Total Contacts</h6>
+                <h3>{{ analytics.comprehensive.retention.total_contacts|default(0) }}</h3>
+                <small>Active database</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="bell"></i> Subscribed</h6>
+                <h3>{{ analytics.comprehensive.retention.subscribed|default(0) }}</h3>
+                <small>Email opt-ins</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="calendar"></i> Avg Days Between</h6>
+                <h3>{{ analytics.comprehensive.retention.avg_days_between_purchase|default(45) }}</h3>
+                <small>Purchase frequency</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #00ffb4;"><i data-feather="activity"></i> Email Engagement Trend</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="emailEngagementChart"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #00ffb4;"><i data-feather="pie-chart"></i> Subscriber Status</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="subscriberStatusChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- 6. ENGAGEMENT TAB -->
+    <div class="tab-pane fade" id="engagement">
+      <div class="section-card">
+        <div class="section-header">
+          <i data-feather="heart" style="color: #bc00ed;"></i>
+          <h5 class="mb-0" style="color: #bc00ed;">Engagement Quality - Signals, Not Noise</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert" style="background: rgba(188, 0, 237, 0.1); border: 1px solid #bc00ed; color: #fff;">
+            <strong>Focus on:</strong> Time on site, scroll depth, video watch time. <strong>Ignore:</strong> Vanity likes, follower count without context.
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-3">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="clock"></i> Avg Time on Site</h6>
+                <h3>{{ analytics.comprehensive.engagement.avg_time_on_site|default('4:23') }}</h3>
+                <small>Minutes:Seconds</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="arrow-down"></i> Scroll Depth</h6>
+                <h3>{{ analytics.comprehensive.engagement.scroll_depth|default(68.5) }}%</h3>
+                <small>Average scroll</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="x-circle"></i> Bounce Rate</h6>
+                <h3>{{ analytics.comprehensive.engagement.bounce_rate|default(32.7) }}%</h3>
+                <small>Lower is better</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box blue">
+                <h6 style="color: #0044ff;"><i data-feather="file"></i> Pages/Session</h6>
+                <h3>{{ analytics.comprehensive.engagement.pages_per_session|default(3.2) }}</h3>
+                <small>Depth of visit</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-3">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="thumbs-up"></i> Total Likes</h6>
+                <h3>{{ analytics.comprehensive.engagement.total_likes|default(0) }}</h3>
+                <small>Social reactions</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="share-2"></i> Total Shares</h6>
+                <h3>{{ analytics.comprehensive.engagement.total_shares|default(0) }}</h3>
+                <small>Viral potential</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="message-circle"></i> Total Comments</h6>
+                <h3>{{ analytics.comprehensive.engagement.total_comments|default(0) }}</h3>
+                <small>Conversations</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box blue">
+                <h6 style="color: #0044ff;"><i data-feather="eye"></i> Total Reach</h6>
+                <h3>{{ "{:,}".format(analytics.comprehensive.engagement.total_reach|default(0)) }}</h3>
+                <small>Impressions</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #bc00ed;"><i data-feather="activity"></i> Engagement Rate Trend</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="engagementTrendChart"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #bc00ed;"><i data-feather="bar-chart-2"></i> Social Engagement</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="socialEngagementChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. ATTRIBUTION TAB -->
+    <div class="tab-pane fade" id="attribution">
+      <div class="section-card">
+        <div class="section-header">
+          <i data-feather="git-branch" style="color: #e4055c;"></i>
+          <h5 class="mb-0" style="color: #e4055c;">Attribution - What Really Caused the Conversion</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert" style="background: rgba(228, 5, 92, 0.1); border: 1px solid #e4055c; color: #fff;">
+            <strong>Minimum viable:</strong> At least first + last touch attribution. Without this, optimization is fake.
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-4">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="log-in"></i> Top First Touch</h6>
+                <h3>{{ analytics.comprehensive.attribution.top_converting_source|default('N/A') }}</h3>
+                <small>Initial discovery</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="smartphone"></i> Mobile</h6>
+                <h3>{{ analytics.comprehensive.attribution.device_breakdown.mobile|default(58.9) }}%</h3>
+                <small>Device share</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="monitor"></i> Desktop</h6>
+                <h3>{{ analytics.comprehensive.attribution.device_breakdown.desktop|default(35.2) }}%</h3>
+                <small>Device share</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #e4055c;"><i data-feather="log-in"></i> First-Touch Attribution</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="firstTouchChart"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #e4055c;"><i data-feather="log-out"></i> Last-Touch Attribution</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="lastTouchChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. SEGMENTS TAB -->
+    <div class="tab-pane fade" id="segments">
+      <div class="section-card">
+        <div class="section-header">
+          <i data-feather="layers" style="color: #0044ff;"></i>
+          <h5 class="mb-0" style="color: #0044ff;">Segment Performance - Where LUX Shines</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert" style="background: rgba(0, 68, 255, 0.1); border: 1px solid #0044ff; color: #fff;">
+            <strong>Insight Example:</strong> "Newsletter Subscribers convert 3.4x higher than cold traffic." That insight changes everything.
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-4">
+              <div class="metric-box blue">
+                <h6 style="color: #0044ff;"><i data-feather="layers"></i> Total Segments</h6>
+                <h3>{{ analytics.comprehensive.segments.total_segments|default(0) }}</h3>
+                <small>Active segments</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="award"></i> Top Segment</h6>
+                <h3>{{ analytics.comprehensive.segments.top_segment|default('N/A') }}</h3>
+                <small>Largest audience</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="trending-up"></i> Growing Segments</h6>
+                <h3>{{ analytics.comprehensive.segments.growth_segments|length if analytics.comprehensive.segments.growth_segments else 0 }}</h3>
+                <small>Positive growth</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4">
+            <div class="col-lg-12">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #0044ff;"><i data-feather="bar-chart-2"></i> Segment Size & Performance</h6>
+                <div class="table-responsive mt-3">
+                  <table class="table table-dark table-striped">
+                    <thead>
+                      <tr>
+                        <th>Segment</th>
+                        <th>Size</th>
+                        <th>Conversion Rate</th>
+                        <th>Revenue</th>
+                        <th>Growth</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for name, data in (analytics.comprehensive.segments.segments or {}).items() %}
+                      <tr>
+                        <td><span style="color: #00ffb4;">{{ name|title }}</span></td>
+                        <td>{{ data.size }}</td>
+                        <td>{{ data.conversion_rate }}%</td>
+                        <td>${{ "{:,.2f}".format(data.revenue) }}</td>
+                        <td class="{% if data.growth > 0 %}trend-up{% else %}trend-down{% endif %}">
+                          {{ data.growth }}%
+                        </td>
+                      </tr>
+                      {% else %}
+                      <tr>
+                        <td colspan="5" class="text-center" style="color: #888;">No segment data available</td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. CAMPAIGNS TAB -->
+    <div class="tab-pane fade" id="campaigns">
+      <div class="section-card">
+        <div class="section-header">
+          <i data-feather="send" style="color: #00ffb4;"></i>
+          <h5 class="mb-0" style="color: #00ffb4;">Campaign Effectiveness - Kill or Scale</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert" style="background: rgba(0, 255, 180, 0.1); border: 1px solid #00ffb4; color: #fff;">
+            <strong>Question:</strong> Every campaign should answer one question: Should this live or die?
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-3">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="mail"></i> Email Campaigns</h6>
+                <h3>{{ analytics.comprehensive.campaigns.email_campaigns|default(0) }}</h3>
+                <small>This period</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="message-square"></i> SMS Campaigns</h6>
+                <h3>{{ analytics.comprehensive.campaigns.sms_campaigns|default(0) }}</h3>
+                <small>This period</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="percent"></i> Avg ROI</h6>
+                <h3>{{ analytics.comprehensive.campaigns.avg_roi|default(320) }}%</h3>
+                <small>Return on investment</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box blue">
+                <h6 style="color: #0044ff;"><i data-feather="award"></i> Best Performer</h6>
+                <h3 style="font-size: 1.2rem;">{{ analytics.comprehensive.campaigns.best_performing|default('N/A')|truncate(15) }}</h3>
+                <small>Top campaign</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4">
+            <div class="col-lg-12">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #00ffb4;"><i data-feather="list"></i> Campaign Performance</h6>
+                <div class="table-responsive mt-3">
+                  <table class="table table-dark table-striped">
+                    <thead>
+                      <tr>
+                        <th>Campaign</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Sent</th>
+                        <th>Open Rate</th>
+                        <th>Click Rate</th>
+                        <th>Conversions</th>
+                        <th>ROI</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for camp in (analytics.comprehensive.campaigns.campaigns or []) %}
+                      <tr>
+                        <td><span style="color: #00ffb4;">{{ camp.name }}</span></td>
+                        <td>{{ camp.type }}</td>
+                        <td>
+                          <span class="badge {% if camp.status == 'sent' %}bg-success{% elif camp.status == 'draft' %}bg-secondary{% else %}bg-warning{% endif %}">
+                            {{ camp.status }}
+                          </span>
+                        </td>
+                        <td>{{ camp.sent }}</td>
+                        <td>{{ camp.open_rate }}%</td>
+                        <td>{{ camp.click_rate }}%</td>
+                        <td>{{ camp.conversions }}</td>
+                        <td class="{% if camp.roi > 0 %}trend-up{% else %}trend-down{% endif %}">{{ camp.roi }}%</td>
+                      </tr>
+                      {% else %}
+                      <tr>
+                        <td colspan="8" class="text-center" style="color: #888;">No campaign data available</td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. COMPLIANCE TAB -->
+    <div class="tab-pane fade" id="compliance">
+      <div class="section-card">
+        <div class="section-header">
+          <i data-feather="shield" style="color: #bc00ed;"></i>
+          <h5 class="mb-0" style="color: #bc00ed;">Compliance & Trust Signals - Often Ignored, Always Costly</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert" style="background: rgba(188, 0, 237, 0.1); border: 1px solid #bc00ed; color: #fff;">
+            <strong>Protects:</strong> Your domain, your sending reputation, your ad accounts. Especially critical in regulated or adult niches.
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-3">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="check-circle"></i> Consent Rate</h6>
+                <h3>{{ analytics.comprehensive.compliance.consent_rate|default(0) }}%</h3>
+                <small>{{ analytics.comprehensive.compliance.consented|default(0) }} consented</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box pink">
+                <h6 style="color: #e4055c;"><i data-feather="user-x"></i> Opt-Out Rate</h6>
+                <h3>{{ analytics.comprehensive.compliance.opt_out_rate|default(0) }}%</h3>
+                <small>{{ analytics.comprehensive.compliance.unsubscribes|default(0) }} unsubscribes</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="send"></i> Delivery Rate</h6>
+                <h3>{{ analytics.comprehensive.compliance.delivery_rate|default(0) }}%</h3>
+                <small>Successful sends</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="metric-box blue">
+                <h6 style="color: #0044ff;"><i data-feather="alert-triangle"></i> Spam Complaints</h6>
+                <h3>{{ analytics.comprehensive.compliance.spam_complaints|default(0) }}</h3>
+                <small>Lower is better</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4 mb-4">
+            <div class="col-md-6">
+              <div class="metric-box purple">
+                <h6 style="color: #bc00ed;"><i data-feather="x-circle"></i> Bounce Rate</h6>
+                <h3>{{ analytics.comprehensive.compliance.bounce_rate|default(0) }}%</h3>
+                <small>Invalid addresses</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="metric-box cyan">
+                <h6 style="color: #00ffb4;"><i data-feather="users"></i> Total Contacts</h6>
+                <h3>{{ analytics.comprehensive.compliance.total_contacts|default(0) }}</h3>
+                <small>Database size</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #bc00ed;"><i data-feather="pie-chart"></i> Consent Status</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="consentChart"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="p-3 rounded" style="background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                <h6 style="color: #bc00ed;"><i data-feather="bar-chart-2"></i> Opt-In Sources</h6>
+                <div class="chart-container" style="height: 300px;">
+                  <canvas id="optInSourcesChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   feather.replace();
   
@@ -377,229 +1032,429 @@
   Chart.defaults.color = '#fff';
   Chart.defaults.borderColor = '#333';
   
-  // Website Traffic Chart
-  const trafficCtx = document.getElementById('trafficChart').getContext('2d');
-  new Chart(trafficCtx, {
-    type: 'line',
-    data: {
-      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      datasets: [{
-        label: 'Page Views',
-        data: [2400, 2950, 3200, 2800, 3500, 2900, 3100],
-        borderColor: colors.cyan,
-        backgroundColor: `${colors.cyan}20`,
-        fill: true,
-        tension: 0.4
-      }, {
-        label: 'Sessions',
-        data: [1800, 2100, 2400, 2000, 2600, 2200, 2300],
-        borderColor: colors.purple,
-        backgroundColor: `${colors.purple}20`,
-        fill: true,
-        tension: 0.4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          labels: { color: '#fff' }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: { color: '#333' }
-        },
-        x: {
-          grid: { color: '#333' }
-        }
-      }
-    }
-  });
+  // Data from backend
+  const comprehensiveData = {{ analytics.comprehensive|tojson|safe if analytics.comprehensive else '{}' }};
+  const chartData = {{ analytics.chart_data|tojson|safe if analytics.chart_data else '{}' }};
   
-  // Traffic Sources Pie Chart
-  const sourcesCtx = document.getElementById('sourcesChart').getContext('2d');
-  new Chart(sourcesCtx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Organic Search', 'Direct', 'Social Media', 'Referral', 'Email'],
-      datasets: [{
-        data: [35, 25, 20, 12, 8],
-        backgroundColor: [colors.cyan, colors.purple, colors.pink, colors.blue, colors.gray],
-        borderWidth: 2,
-        borderColor: '#000'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: '#fff', padding: 15 }
-        }
-      }
-    }
-  });
-  
-  // Email Performance Chart
-  const emailCtx = document.getElementById('emailChart').getContext('2d');
-  new Chart(emailCtx, {
-    type: 'bar',
-    data: {
-      labels: ['Campaign 1', 'Campaign 2', 'Campaign 3', 'Campaign 4', 'Campaign 5'],
-      datasets: [{
-        label: 'Open Rate %',
-        data: [68, 72, 65, 70, 75],
-        backgroundColor: colors.purple,
-        borderColor: colors.purple,
-        borderWidth: 1
-      }, {
-        label: 'Click Rate %',
-        data: [24, 28, 22, 26, 30],
-        backgroundColor: colors.cyan,
-        borderColor: colors.cyan,
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          labels: { color: '#fff' }
-        }
+  // 1. Channel Chart (Acquisition)
+  const channelCtx = document.getElementById('channelChart');
+  if (channelCtx) {
+    const channelData = comprehensiveData.acquisition?.by_channel || {};
+    new Chart(channelCtx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(channelData).length ? Object.keys(channelData) : ['Direct', 'Organic', 'Social', 'Email', 'Referral'],
+        datasets: [{
+          data: Object.keys(channelData).length ? Object.values(channelData) : [35, 25, 20, 12, 8],
+          backgroundColor: [colors.cyan, colors.purple, colors.pink, colors.blue, colors.gray],
+          borderWidth: 2,
+          borderColor: '#000'
+        }]
       },
-      scales: {
-        y: {
-          beginAtZero: true,
-          max: 100,
-          grid: { color: '#333' }
-        },
-        x: {
-          grid: { color: '#333' }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#fff', padding: 15 } }
         }
       }
-    }
-  });
+    });
+  }
   
-  // Social Media Engagement
-  const socialCtx = document.getElementById('socialChart').getContext('2d');
-  new Chart(socialCtx, {
-    type: 'radar',
-    data: {
-      labels: ['Likes', 'Shares', 'Comments', 'Reach', 'Engagement'],
-      datasets: [{
-        label: 'This Week',
-        data: [85, 70, 65, 80, 75],
-        borderColor: colors.cyan,
-        backgroundColor: `${colors.cyan}30`,
-        pointBackgroundColor: colors.cyan
-      }, {
-        label: 'Last Week',
-        data: [75, 65, 60, 70, 68],
-        borderColor: colors.purple,
-        backgroundColor: `${colors.purple}30`,
-        pointBackgroundColor: colors.purple
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          labels: { color: '#fff' }
-        }
+  // 2. New vs Returning Chart
+  const nvrCtx = document.getElementById('newVsReturningChart');
+  if (nvrCtx) {
+    const nvr = comprehensiveData.acquisition?.new_vs_returning || {new: 64, returning: 36};
+    new Chart(nvrCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['New Visitors', 'Returning'],
+        datasets: [{
+          data: [nvr.new || 64, nvr.returning || 36],
+          backgroundColor: [colors.cyan, colors.purple],
+          borderWidth: 2,
+          borderColor: '#000'
+        }]
       },
-      scales: {
-        r: {
-          beginAtZero: true,
-          max: 100,
-          grid: { color: '#333' },
-          pointLabels: { color: '#fff' },
-          ticks: { color: '#fff' }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#fff' } }
         }
       }
-    }
-  });
+    });
+  }
   
-  // Conversion Funnel
-  const funnelCtx = document.getElementById('funnelChart').getContext('2d');
-  new Chart(funnelCtx, {
-    type: 'bar',
-    data: {
-      labels: ['Website Visit', 'Product View', 'Add to Cart', 'Checkout', 'Purchase'],
-      datasets: [{
-        label: 'Conversions',
-        data: [10000, 6500, 3200, 1800, 1247],
-        backgroundColor: [colors.cyan, colors.purple, colors.blue, colors.pink, colors.gray],
-        borderWidth: 0
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        }
+  // 3. Conversion Funnel
+  const funnelCtx = document.getElementById('conversionFunnelChart');
+  if (funnelCtx) {
+    const conv = comprehensiveData.conversion || {};
+    new Chart(funnelCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Emails Sent', 'Opened', 'Clicked', 'Form Submissions', 'Conversions'],
+        datasets: [{
+          label: 'Count',
+          data: [conv.emails_sent || 0, conv.emails_opened || 0, conv.emails_clicked || 0, conv.form_submissions || 0, conv.conversions || 0],
+          backgroundColor: [colors.cyan, colors.purple, colors.pink, colors.blue, colors.gray],
+          borderWidth: 0
+        }]
       },
-      scales: {
-        x: {
-          beginAtZero: true,
-          grid: { color: '#333' }
-        },
-        y: {
-          grid: { color: '#333' }
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, grid: { color: '#333' } },
+          y: { grid: { color: '#333' } }
         }
       }
-    }
-  });
+    });
+  }
   
-  // ROI Comparison
-  const roiCtx = document.getElementById('roiChart').getContext('2d');
-  new Chart(roiCtx, {
-    type: 'bar',
-    data: {
-      labels: ['Email', 'Social Ads', 'SEO', 'Content', 'PPC'],
-      datasets: [{
-        label: 'ROI %',
-        data: [420, 280, 350, 290, 310],
-        backgroundColor: [colors.cyan, colors.purple, colors.blue, colors.pink, colors.gray],
-        borderWidth: 0
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        }
+  // 4. Email Performance Chart
+  const emailPerfCtx = document.getElementById('emailPerformanceChart');
+  if (emailPerfCtx) {
+    const conv = comprehensiveData.conversion || {};
+    new Chart(emailPerfCtx, {
+      type: 'radar',
+      data: {
+        labels: ['Open Rate', 'Click Rate', 'CTR', 'Conversion', 'Form Completion'],
+        datasets: [{
+          label: 'Performance',
+          data: [conv.open_rate || 0, conv.click_rate || 0, conv.ctr || 0, conv.conversion_rate || 0, 50],
+          borderColor: colors.purple,
+          backgroundColor: `${colors.purple}30`,
+          pointBackgroundColor: colors.purple
+        }]
       },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: { color: '#333' }
-        },
-        x: {
-          grid: { color: '#333' }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          r: { beginAtZero: true, max: 100, grid: { color: '#333' }, pointLabels: { color: '#fff' }, ticks: { color: '#fff' } }
         }
       }
-    }
-  });
+    });
+  }
+  
+  // 5. Revenue by Channel
+  const revChannelCtx = document.getElementById('revenueChannelChart');
+  if (revChannelCtx) {
+    const revChannel = comprehensiveData.revenue?.by_channel || {};
+    new Chart(revChannelCtx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(revChannel).length ? Object.keys(revChannel) : ['Email', 'Social', 'Direct', 'Organic', 'Paid'],
+        datasets: [{
+          label: 'Revenue ($)',
+          data: Object.keys(revChannel).length ? Object.values(revChannel) : [4200, 2800, 3500, 2900, 3100],
+          backgroundColor: [colors.cyan, colors.purple, colors.pink, colors.blue, colors.gray],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#333' } },
+          x: { grid: { color: '#333' } }
+        }
+      }
+    });
+  }
+  
+  // 6. Revenue Trend
+  const revTrendCtx = document.getElementById('revenueTrendChart');
+  if (revTrendCtx) {
+    new Chart(revTrendCtx, {
+      type: 'line',
+      data: {
+        labels: chartData.labels || ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+        datasets: [{
+          label: 'Revenue',
+          data: [3200, 4100, 3800, 4500],
+          borderColor: colors.pink,
+          backgroundColor: `${colors.pink}20`,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#333' } },
+          x: { grid: { color: '#333' } }
+        }
+      }
+    });
+  }
+  
+  // 7. CAC by Channel
+  const cacCtx = document.getElementById('cacChannelChart');
+  if (cacCtx) {
+    new Chart(cacCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Email', 'Social Ads', 'Google Ads', 'Content', 'Referral'],
+        datasets: [{
+          label: 'CAC ($)',
+          data: [12, 45, 65, 28, 15],
+          backgroundColor: [colors.cyan, colors.purple, colors.pink, colors.blue, colors.gray],
+          borderWidth: 0
+        }, {
+          label: 'LTV ($)',
+          data: [180, 145, 120, 200, 250],
+          backgroundColor: `${colors.cyan}60`,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#333' } },
+          x: { grid: { color: '#333' } }
+        }
+      }
+    });
+  }
+  
+  // 8. Email Engagement Trend
+  const emailEngCtx = document.getElementById('emailEngagementChart');
+  if (emailEngCtx) {
+    new Chart(emailEngCtx, {
+      type: 'line',
+      data: {
+        labels: chartData.labels || ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+        datasets: [{
+          label: 'Open Rate %',
+          data: chartData.open_rates || [45, 48, 52, 55],
+          borderColor: colors.purple,
+          backgroundColor: `${colors.purple}20`,
+          fill: true,
+          tension: 0.4
+        }, {
+          label: 'Click Rate %',
+          data: [12, 15, 14, 18],
+          borderColor: colors.cyan,
+          backgroundColor: `${colors.cyan}20`,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, max: 100, grid: { color: '#333' } },
+          x: { grid: { color: '#333' } }
+        }
+      }
+    });
+  }
+  
+  // 9. Subscriber Status
+  const subStatusCtx = document.getElementById('subscriberStatusChart');
+  if (subStatusCtx) {
+    const ret = comprehensiveData.retention || {};
+    new Chart(subStatusCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Subscribed', 'Unsubscribed', 'Inactive'],
+        datasets: [{
+          data: [ret.subscribed || 0, ret.unsubscribed || 0, (ret.total_contacts || 0) - (ret.subscribed || 0) - (ret.unsubscribed || 0)],
+          backgroundColor: [colors.cyan, colors.pink, colors.gray],
+          borderWidth: 2,
+          borderColor: '#000'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } }
+      }
+    });
+  }
+  
+  // 10. Engagement Trend
+  const engTrendCtx = document.getElementById('engagementTrendChart');
+  if (engTrendCtx) {
+    new Chart(engTrendCtx, {
+      type: 'line',
+      data: {
+        labels: chartData.labels || ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+        datasets: [{
+          label: 'Engagement Rate %',
+          data: [3.2, 3.8, 4.1, 4.5],
+          borderColor: colors.purple,
+          backgroundColor: `${colors.purple}20`,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#333' } },
+          x: { grid: { color: '#333' } }
+        }
+      }
+    });
+  }
+  
+  // 11. Social Engagement Radar
+  const socialEngCtx = document.getElementById('socialEngagementChart');
+  if (socialEngCtx) {
+    const eng = comprehensiveData.engagement || {};
+    new Chart(socialEngCtx, {
+      type: 'radar',
+      data: {
+        labels: ['Likes', 'Shares', 'Comments', 'Reach', 'Posts'],
+        datasets: [{
+          label: 'This Period',
+          data: [eng.total_likes || 0, eng.total_shares || 0, eng.total_comments || 0, Math.min((eng.total_reach || 0) / 100, 100), eng.social_posts || 0],
+          borderColor: colors.cyan,
+          backgroundColor: `${colors.cyan}30`,
+          pointBackgroundColor: colors.cyan
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          r: { beginAtZero: true, grid: { color: '#333' }, pointLabels: { color: '#fff' }, ticks: { display: false } }
+        }
+      }
+    });
+  }
+  
+  // 12. First Touch Attribution
+  const firstTouchCtx = document.getElementById('firstTouchChart');
+  if (firstTouchCtx) {
+    const ft = comprehensiveData.attribution?.first_touch || {};
+    new Chart(firstTouchCtx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(ft).length ? Object.keys(ft) : ['Organic', 'Direct', 'Social', 'Email', 'Referral'],
+        datasets: [{
+          label: 'First Touch Conversions',
+          data: Object.keys(ft).length ? Object.values(ft) : [35, 28, 18, 12, 7],
+          backgroundColor: [colors.cyan, colors.purple, colors.pink, colors.blue, colors.gray],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#333' } },
+          x: { grid: { color: '#333' } }
+        }
+      }
+    });
+  }
+  
+  // 13. Last Touch Attribution
+  const lastTouchCtx = document.getElementById('lastTouchChart');
+  if (lastTouchCtx) {
+    const lt = comprehensiveData.attribution?.last_touch || {};
+    const ltLabels = Object.keys(lt).length ? Object.keys(lt) : ['Email', 'Direct', 'Organic', 'Social', 'Paid'];
+    const ltData = Object.keys(lt).length ? Object.values(lt).map(v => v.count || v) : [42, 25, 15, 10, 8];
+    new Chart(lastTouchCtx, {
+      type: 'bar',
+      data: {
+        labels: ltLabels,
+        datasets: [{
+          label: 'Last Touch Conversions',
+          data: ltData,
+          backgroundColor: [colors.pink, colors.purple, colors.cyan, colors.blue, colors.gray],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#333' } },
+          x: { grid: { color: '#333' } }
+        }
+      }
+    });
+  }
+  
+  // 14. Consent Status
+  const consentCtx = document.getElementById('consentChart');
+  if (consentCtx) {
+    const comp = comprehensiveData.compliance || {};
+    new Chart(consentCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Consented', 'Not Consented'],
+        datasets: [{
+          data: [comp.consented || 0, (comp.total_contacts || 0) - (comp.consented || 0)],
+          backgroundColor: [colors.cyan, colors.gray],
+          borderWidth: 2,
+          borderColor: '#000'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } }
+      }
+    });
+  }
+  
+  // 15. Opt-In Sources
+  const optInCtx = document.getElementById('optInSourcesChart');
+  if (optInCtx) {
+    const sources = comprehensiveData.compliance?.opt_in_sources || {};
+    new Chart(optInCtx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(sources).length ? Object.keys(sources) : ['Website', 'Landing Page', 'Social', 'Event', 'Manual'],
+        datasets: [{
+          label: 'Opt-Ins',
+          data: Object.keys(sources).length ? Object.values(sources) : [45, 30, 15, 7, 3],
+          backgroundColor: [colors.purple, colors.cyan, colors.pink, colors.blue, colors.gray],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#333' } },
+          x: { grid: { color: '#333' } }
+        }
+      }
+    });
+  }
   
   // Date filter handling
   function updateAnalytics() {
     const period = document.getElementById('periodSelector').value;
+    if (period !== 'custom') {
+      const params = new URLSearchParams();
+      params.append('days', period);
+      window.location.href = `/analytics-hub?${params.toString()}`;
+    }
+  }
+  
+  function refreshAnalytics() {
+    const period = document.getElementById('periodSelector').value;
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
-    const compare = document.getElementById('comparisonToggle').checked;
     
-    // Build query parameters
     const params = new URLSearchParams();
     if (period !== 'custom') {
       params.append('days', period);
@@ -607,9 +1462,7 @@
       if (startDate) params.append('start_date', startDate);
       if (endDate) params.append('end_date', endDate);
     }
-    if (compare) params.append('compare', 'true');
     
-    // Reload page with filters
     window.location.href = `/analytics-hub?${params.toString()}`;
   }
   
@@ -618,9 +1471,7 @@
     const period = document.getElementById('periodSelector').value;
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
-    const compare = document.getElementById('comparisonToggle').checked;
     
-    // Build query parameters
     const params = new URLSearchParams();
     params.append('format', format);
     if (period !== 'custom') {
@@ -629,16 +1480,14 @@
       if (startDate) params.append('start_date', startDate);
       if (endDate) params.append('end_date', endDate);
     }
-    if (compare) params.append('compare', 'true');
     
-    // Trigger download
     window.location.href = `/analytics-hub/export?${params.toString()}`;
   }
   
   // Initialize date picker with current date
   document.getElementById('endDate').valueAsDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 30);
-  document.getElementById('startDate').valueAsDate = startDate;
+  const startDateEl = new Date();
+  startDateEl.setDate(startDateEl.getDate() - 30);
+  document.getElementById('startDate').valueAsDate = startDateEl;
 </script>
 {% endblock %}

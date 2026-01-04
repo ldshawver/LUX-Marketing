@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% block title %}{{ contact.full_name }} - Customer Profile{% endblock %}
+{% block content %}
+<style>
+.profile-header { background: linear-gradient(135deg, rgba(188,0,237,0.2), rgba(0,255,180,0.1)); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; border: 1px solid rgba(188,0,237,0.3); }
+.profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #bc00ed, #00ffb4); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: white; font-weight: bold; }
+.score-badge { display: inline-block; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600; }
+.score-hot { background: rgba(255,107,107,0.2); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.4); }
+.score-warm { background: rgba(255,193,7,0.2); color: #ffc107; border: 1px solid rgba(255,193,7,0.4); }
+.score-cold { background: rgba(136,136,136,0.2); color: #888; border: 1px solid rgba(136,136,136,0.4); }
+.info-card { background: rgba(0,0,0,0.3); border: 1px solid rgba(188,0,237,0.3); border-radius: 12px; }
+.info-card .card-header { background: transparent; border-bottom: 1px solid rgba(188,0,237,0.3); color: #00ffb4; }
+.edit-field { background: rgba(255,255,255,0.05); border: 1px solid rgba(188,0,237,0.3); color: white; }
+.edit-field:focus { border-color: #00ffb4; background: rgba(255,255,255,0.1); color: white; box-shadow: 0 0 0 2px rgba(0,255,180,0.2); }
+.timeline-item { position: relative; padding-left: 30px; padding-bottom: 1.5rem; border-left: 2px solid rgba(188,0,237,0.3); margin-left: 10px; }
+.timeline-item:last-child { border-left: none; padding-bottom: 0; }
+.timeline-dot { position: absolute; left: -8px; top: 0; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #bc00ed; background: #000; }
+.timeline-dot.email { border-color: #00bfff; }
+.timeline-dot.sms { border-color: #00ff88; }
+.timeline-dot.call { border-color: #ffc107; }
+.timeline-dot.meeting { border-color: #bc00ed; }
+.timeline-dot.website { border-color: #ff6b6b; }
+.timeline-dot.note { border-color: #888; }
+.activity-type-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
+.type-email { background: rgba(0,191,255,0.2); color: #00bfff; }
+.type-sms { background: rgba(0,255,136,0.2); color: #00ff88; }
+.type-call { background: rgba(255,193,7,0.2); color: #ffc107; }
+.type-meeting { background: rgba(188,0,237,0.2); color: #bc00ed; }
+.type-website { background: rgba(255,107,107,0.2); color: #ff6b6b; }
+.type-note { background: rgba(136,136,136,0.2); color: #888; }
+.engagement-stat { text-align: center; padding: 1rem; background: rgba(188,0,237,0.1); border-radius: 8px; }
+.engagement-stat .value { font-size: 1.5rem; font-weight: bold; color: #00ffb4; }
+.engagement-stat .label { font-size: 0.8rem; color: #888; }
+.notes-area { background: rgba(255,255,255,0.05); border: 1px solid rgba(188,0,237,0.3); border-radius: 8px; color: white; min-height: 150px; }
+.notes-area:focus { border-color: #00ffb4; box-shadow: 0 0 0 2px rgba(0,255,180,0.2); }
+.quick-action-btn { background: rgba(188,0,237,0.2); border: 1px solid rgba(188,0,237,0.4); color: #fff; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.quick-action-btn:hover { background: rgba(188,0,237,0.4); transform: translateY(-2px); color: #fff; }
+.tag-badge { background: rgba(0,255,180,0.2); color: #00ffb4; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; margin-right: 5px; margin-bottom: 5px; display: inline-block; }
+</style>
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{{ url_for('main.lux_crm') }}" class="btn btn-outline-secondary">
+            <i data-feather="arrow-left"></i> Back to CRM
+        </a>
+        <div>
+            <button class="btn btn-primary" id="saveProfileBtn" onclick="saveProfile()">
+                <i data-feather="save"></i> Save Changes
+            </button>
+        </div>
+    </div>
+
+    <div class="profile-header">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="profile-avatar">{{ (contact.first_name or 'C')[0]|upper }}</div>
+            </div>
+            <div class="col">
+                <h2 class="mb-1">{{ contact.full_name }}</h2>
+                <p class="mb-2" style="color: #888;">
+                    <i data-feather="mail" style="width: 14px; height: 14px;"></i> {{ contact.email }}
+                    {% if contact.phone %}
+                    <span class="ms-3"><i data-feather="phone" style="width: 14px; height: 14px;"></i> {{ contact.phone }}</span>
+                    {% endif %}
+                </p>
+                <div>
+                    {% if contact.lead_score and contact.lead_score >= 70 %}
+                    <span class="score-badge score-hot"><i data-feather="zap" style="width: 14px; height: 14px;"></i> Hot Lead ({{ contact.lead_score }})</span>
+                    {% elif contact.lead_score and contact.lead_score >= 40 %}
+                    <span class="score-badge score-warm"><i data-feather="thermometer" style="width: 14px; height: 14px;"></i> Warm ({{ contact.lead_score }})</span>
+                    {% else %}
+                    <span class="score-badge score-cold"><i data-feather="snowflake" style="width: 14px; height: 14px;"></i> Cold ({{ contact.lead_score or 0 }})</span>
+                    {% endif %}
+                    <span class="badge ms-2" style="background: rgba(188,0,237,0.3);">{{ contact.segment|title }}</span>
+                    {% if contact.is_subscribed %}
+                    <span class="badge ms-2" style="background: rgba(0,255,136,0.3); color: #00ff88;">Subscribed</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="text-end">
+                    <div style="color: #888; font-size: 0.9rem;">Customer Since</div>
+                    <div style="color: #00ffb4; font-size: 1.2rem;">{{ contact.created_at.strftime('%b %d, %Y') }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="card info-card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i data-feather="user"></i> Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <form id="profileForm">
+                        <input type="hidden" name="contact_id" value="{{ contact.id }}">
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label" style="color: #888;">First Name</label>
+                                <input type="text" name="first_name" class="form-control edit-field" value="{{ contact.first_name or '' }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" style="color: #888;">Last Name</label>
+                                <input type="text" name="last_name" class="form-control edit-field" value="{{ contact.last_name or '' }}">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #888;">Email</label>
+                            <input type="email" name="email" class="form-control edit-field" value="{{ contact.email }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #888;">Phone</label>
+                            <input type="tel" name="phone" class="form-control edit-field" value="{{ contact.phone or '' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #888;">Company</label>
+                            <input type="text" name="company" class="form-control edit-field" value="{{ contact.company or '' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #888;">Website</label>
+                            <input type="url" name="website" class="form-control edit-field" value="{{ contact.website or '' }}" placeholder="https://">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #888;">Address</label>
+                            <input type="text" name="address" class="form-control edit-field" value="{{ contact.address or '' }}">
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label" style="color: #888;">City</label>
+                                <input type="text" name="city" class="form-control edit-field" value="{{ contact.city or '' }}">
+                            </div>
+                            <div class="col-3">
+                                <label class="form-label" style="color: #888;">State</label>
+                                <input type="text" name="state" class="form-control edit-field" value="{{ contact.state or '' }}">
+                            </div>
+                            <div class="col-3">
+                                <label class="form-label" style="color: #888;">ZIP</label>
+                                <input type="text" name="zip_code" class="form-control edit-field" value="{{ contact.zip_code or '' }}">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #888;">Segment</label>
+                            <select name="segment" class="form-select edit-field">
+                                <option value="lead" {% if contact.segment == 'lead' %}selected{% endif %}>Lead</option>
+                                <option value="customer" {% if contact.segment == 'customer' %}selected{% endif %}>Customer</option>
+                                <option value="newsletter" {% if contact.segment == 'newsletter' %}selected{% endif %}>Newsletter</option>
+                                <option value="vip" {% if contact.segment == 'vip' %}selected{% endif %}>VIP</option>
+                                <option value="partner" {% if contact.segment == 'partner' %}selected{% endif %}>Partner</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #888;">Lead Score (0-100)</label>
+                            <input type="number" name="lead_score" class="form-control edit-field" min="0" max="100" value="{{ contact.lead_score or 0 }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #888;">Tags</label>
+                            <input type="text" name="tags" class="form-control edit-field" value="{{ contact.tags or '' }}" placeholder="tag1, tag2, tag3">
+                        </div>
+                    </form>
+                    {% if contact.tags %}
+                    <div class="mt-2">
+                        {% for tag in contact.tags.split(',') %}
+                        <span class="tag-badge">{{ tag.strip() }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card info-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i data-feather="edit-3"></i> Notes</h5>
+                </div>
+                <div class="card-body">
+                    <textarea name="notes" form="profileForm" class="form-control notes-area" placeholder="Add notes about this customer...">{{ contact.notes or '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="card info-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i data-feather="bar-chart-2"></i> Engagement Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="engagement-stat">
+                                <div class="value">{{ stats.emails_sent or 0 }}</div>
+                                <div class="label">Emails Sent</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="engagement-stat">
+                                <div class="value">{{ stats.emails_opened or 0 }}</div>
+                                <div class="label">Opens</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="engagement-stat">
+                                <div class="value">{{ stats.clicks or 0 }}</div>
+                                <div class="label">Clicks</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-4">
+                            <div class="engagement-stat">
+                                <div class="value">{{ stats.sms_sent or 0 }}</div>
+                                <div class="label">SMS Sent</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="engagement-stat">
+                                <div class="value">{{ stats.calls or 0 }}</div>
+                                <div class="label">Calls</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="engagement-stat">
+                                <div class="value">{{ stats.website_visits or 0 }}</div>
+                                <div class="label">Site Visits</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card info-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i data-feather="activity"></i> Activity Timeline</h5>
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addActivityModal">
+                        <i data-feather="plus" style="width: 14px; height: 14px;"></i> Log Activity
+                    </button>
+                </div>
+                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                    <div class="mb-3">
+                        <button class="quick-action-btn me-2" onclick="logQuickActivity('email')"><i data-feather="mail" style="width: 14px; height: 14px;"></i> Email</button>
+                        <button class="quick-action-btn me-2" onclick="logQuickActivity('call')"><i data-feather="phone" style="width: 14px; height: 14px;"></i> Call</button>
+                        <button class="quick-action-btn" onclick="logQuickActivity('sms')"><i data-feather="message-square" style="width: 14px; height: 14px;"></i> SMS</button>
+                    </div>
+                    
+                    {% if activities %}
+                    <div class="timeline mt-4">
+                        {% for activity in activities %}
+                        <div class="timeline-item">
+                            <div class="timeline-dot {{ activity.activity_type }}"></div>
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <span class="activity-type-badge type-{{ activity.activity_type }}">{{ activity.activity_type }}</span>
+                                <small style="color: #666;">{{ activity.created_at.strftime('%b %d, %H:%M') }}</small>
+                            </div>
+                            <div style="color: #eee;">{{ activity.subject or activity.activity_type|title }}</div>
+                            {% if activity.description %}
+                            <div style="color: #888; font-size: 0.9rem; margin-top: 0.25rem;">{{ activity.description[:100] }}{% if activity.description|length > 100 %}...{% endif %}</div>
+                            {% endif %}
+                            {% if activity.outcome %}
+                            <div class="mt-1"><span class="badge" style="background: rgba(0,255,136,0.2); color: #00ff88;">{{ activity.outcome }}</span></div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4" style="color: #666;">
+                        <i data-feather="inbox" style="width: 40px; height: 40px; margin-bottom: 1rem;"></i>
+                        <p>No activities recorded yet.<br>Start logging interactions above.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addActivityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background: #1a1a2e; border: 1px solid rgba(188,0,237,0.3);">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(188,0,237,0.3);">
+                <h5 class="modal-title" style="color: #00ffb4;">Log Activity</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="activityForm">
+                <div class="modal-body">
+                    <input type="hidden" name="contact_id" value="{{ contact.id }}">
+                    <div class="mb-3">
+                        <label class="form-label" style="color: #888;">Activity Type</label>
+                        <select name="activity_type" class="form-select edit-field" required>
+                            <option value="email">Email</option>
+                            <option value="sms">SMS</option>
+                            <option value="call">Call</option>
+                            <option value="meeting">Meeting</option>
+                            <option value="website">Website Visit</option>
+                            <option value="note">Note</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="color: #888;">Subject</label>
+                        <input type="text" name="subject" class="form-control edit-field" placeholder="Brief summary...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="color: #888;">Description</label>
+                        <textarea name="description" class="form-control edit-field" rows="3" placeholder="Details about this activity..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="color: #888;">Outcome</label>
+                        <select name="outcome" class="form-select edit-field">
+                            <option value="">-- Select outcome --</option>
+                            <option value="positive">Positive</option>
+                            <option value="neutral">Neutral</option>
+                            <option value="negative">Negative</option>
+                            <option value="no_response">No Response</option>
+                            <option value="follow_up_needed">Follow-up Needed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid rgba(188,0,237,0.3);">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Log Activity</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+feather.replace();
+
+function saveProfile() {
+    const form = document.getElementById('profileForm');
+    const formData = new FormData(form);
+    const notesField = document.querySelector('textarea[name="notes"]');
+    formData.append('notes', notesField.value);
+    
+    fetch('/api/contacts/{{ contact.id }}/update', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Profile saved successfully!');
+        } else {
+            alert('Error: ' + (data.error || 'Failed to save'));
+        }
+    })
+    .catch(err => {
+        alert('Error saving profile');
+        console.error(err);
+    });
+}
+
+function logQuickActivity(type) {
+    const subject = prompt(`Log ${type} activity - Enter brief subject:`);
+    if (subject) {
+        const formData = new FormData();
+        formData.append('contact_id', '{{ contact.id }}');
+        formData.append('activity_type', type);
+        formData.append('subject', subject);
+        
+        fetch('/api/contacts/{{ contact.id }}/activities/add', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to log activity'));
+            }
+        });
+    }
+}
+
+document.getElementById('activityForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch('/api/contacts/{{ contact.id }}/activities/add', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to log activity'));
+        }
+    });
+});
+</script>
+{% endblock %}

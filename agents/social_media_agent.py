@@ -39,18 +39,39 @@ class SocialMediaAgent(BaseAgent):
             return {'success': False, 'error': f'Unknown task type: {task_type}'}
     
     def generate_daily_posts(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate daily social media posts"""
+        """Generate daily social media posts - submits to approval queue"""
         try:
+            if not self.check_feature_enabled():
+                return {'success': False, 'reason': 'Social Media Agent is disabled'}
+            
             platforms = params.get('platforms', ['LinkedIn', 'Twitter', 'Facebook'])
             theme = params.get('theme', 'industry insights')
             
-            prompt = f"Create engaging social media posts for {', '.join(platforms)} about {theme}. Include captions and hashtags."
+            prompt = f"""Create engaging social media posts for {', '.join(platforms)} about {theme}. 
+            Return JSON with structure: {{"posts": [{{"platform": "...", "content": "...", "hashtags": ["..."]}}]}}"""
             
             result = self.generate_with_ai(prompt, response_format={"type": "json_object"}, temperature=0.7)
             
-            if result:
-                self.log_activity('daily_posts_generation', {'platforms': platforms}, 'success')
-                return {'success': True, 'posts': result, 'generated_at': datetime.now().isoformat()}
+            if result and result.get('posts'):
+                submitted = []
+                for post in result.get('posts', []):
+                    approval_result = self.submit_for_approval(
+                        content_type='social_post',
+                        title=f"Social Post - {post.get('platform', 'Unknown')}",
+                        content=post,
+                        target_platform=post.get('platform', '').lower(),
+                        confidence_score=0.85,
+                        rationale=f"Daily automated post for {post.get('platform')} about {theme}"
+                    )
+                    submitted.append(approval_result)
+                
+                self.log_activity('daily_posts_generation', {'platforms': platforms, 'submitted_count': len(submitted)}, 'success')
+                return {
+                    'success': True, 
+                    'message': f'{len(submitted)} posts submitted for admin approval',
+                    'submissions': submitted,
+                    'generated_at': datetime.now().isoformat()
+                }
             return {'success': False, 'error': 'Failed to generate posts'}
             
         except Exception as e:

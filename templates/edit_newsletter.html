@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Edit Newsletter - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i data-feather="edit"></i> Edit Newsletter</h1>
+    <a href="{{ url_for('main.newsletters') }}" class="btn btn-outline-secondary">
+        <i data-feather="arrow-left"></i> Back to Newsletters
+    </a>
+</div>
+
+<form method="POST" action="{{ url_for('main.edit_newsletter', newsletter_id=newsletter.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Newsletter Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" required value="{{ newsletter.title }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">URL Slug <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">/newsletter/</span>
+                            <input type="text" name="slug" class="form-control" required value="{{ newsletter.slug }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Content <span class="text-danger">*</span></label>
+                        <textarea name="html_content" class="form-control font-monospace" rows="15" required>{{ newsletter.html_content }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="badge bg-{{ 'success' if newsletter.is_public else 'secondary' }} mb-2">
+                            {{ 'Published' if newsletter.is_public else 'Draft' }}
+                        </span>
+                        {% if newsletter.published_at %}
+                        <br><small class="text-muted">Published: {{ newsletter.published_at.strftime('%b %d, %Y') }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="is_public" id="is_public" {{ 'checked' if newsletter.is_public }}>
+                            <label class="form-check-label" for="is_public">Published</label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Views:</strong> {{ newsletter.view_count }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <button type="submit" class="btn btn-primary w-100 mb-2">
+                        <i data-feather="save"></i> Save Changes
+                    </button>
+                    <a href="{{ url_for('main.view_newsletter', slug=newsletter.slug) }}" class="btn btn-outline-info w-100 mb-2" target="_blank">
+                        <i data-feather="eye"></i> Preview
+                    </a>
+                    <a href="{{ url_for('main.newsletters') }}" class="btn btn-outline-secondary w-100">
+                        Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}

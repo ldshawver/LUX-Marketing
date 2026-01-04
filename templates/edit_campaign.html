@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Edit Campaign - LUX Marketing{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>Edit Campaign</h1>
+        <p class="text-muted">Modify your scheduled campaign</p>
+    </div>
+    <a href="{{ url_for('main.campaigns') }}" class="btn btn-outline-secondary">
+        <i data-feather="arrow-left"></i> Back to Campaigns
+    </a>
+</div>
+
+<form method="POST" action="{{ url_for('main.edit_campaign', campaign_id=campaign.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Campaign Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Campaign Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required value="{{ campaign.name }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Subject Line <span class="text-danger">*</span></label>
+                        <input type="text" name="subject" class="form-control" required value="{{ campaign.subject }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Email Template</label>
+                        <select name="template_id" class="form-select">
+                            {% for template in templates %}
+                            <option value="{{ template.id }}" {% if campaign.template_id == template.id %}selected{% endif %}>
+                                {{ template.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Schedule</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Scheduled Send Time</label>
+                        <input type="datetime-local" name="scheduled_at" class="form-control" 
+                               value="{{ campaign.scheduled_at.strftime('%Y-%m-%dT%H:%M') if campaign.scheduled_at else '' }}">
+                        <small class="text-muted">Leave empty to save as draft</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Campaign Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="badge bg-{{ 'success' if campaign.status == 'sent' else ('warning' if campaign.status == 'scheduled' else ('info' if campaign.status == 'sending' else 'secondary')) }} me-2">
+                            {{ campaign.status|title }}
+                        </span>
+                        {% if campaign.scheduled_at %}
+                        <small class="text-muted">Scheduled for {{ campaign.scheduled_at.strftime('%b %d, %Y at %H:%M') }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Recipients:</strong> {{ campaign.recipients.count() }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Created:</strong> {{ campaign.created_at.strftime('%b %d, %Y') if campaign.created_at else 'N/A' }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <button type="submit" class="btn btn-primary w-100 mb-2">
+                        <i data-feather="save"></i> Save Changes
+                    </button>
+                    <a href="{{ url_for('main.preview_campaign', campaign_id=campaign.id) }}" class="btn btn-outline-info w-100 mb-2">
+                        <i data-feather="eye"></i> Preview
+                    </a>
+                    <a href="{{ url_for('main.campaigns') }}" class="btn btn-outline-secondary w-100">
+                        Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}

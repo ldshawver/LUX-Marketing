@@ -49,9 +49,17 @@
                         </td>
                         <td>{{ segment.created_at.strftime('%Y-%m-%d') if segment.created_at else '-' }}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" title="View Members">
-                                <i data-feather="users"></i>
-                            </button>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" title="View Members">
+                                    <i data-feather="users"></i>
+                                </button>
+                                <form method="POST" action="{{ url_for('main.refresh_segment', segment_id=segment.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-outline-success" title="Refresh/Compile Segment">
+                                        <i data-feather="refresh-cw"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

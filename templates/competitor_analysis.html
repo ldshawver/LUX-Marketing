@@ -1,60 +1,523 @@
 {% extends "base.html" %}
-{% block title %}Competitor Analysis - LUX Marketing{% endblock %}
+{% block title %}Competitor Intelligence - LUX Marketing{% endblock %}
 {% block content %}
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1><i data-feather="shield"></i> Competitor Analysis</h1>
-        <button class="btn btn-primary"><i data-feather="plus"></i> Add Competitor</button>
+        <h1><i data-feather="target"></i> Competitor Intelligence</h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCompetitorModal">
+            <i data-feather="plus"></i> Add Competitor
+        </button>
     </div>
 
-    <!-- Competitor Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-dark text-white">
+                <div class="card-body text-center">
+                    <h3 class="text-info">{{ competitors|length }}</h3>
+                    <small>Competitors Tracked</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-dark text-white">
+                <div class="card-body text-center">
+                    <h3 class="text-success">{{ competitors|selectattr('last_analyzed')|list|length }}</h3>
+                    <small>Recently Analyzed</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-dark text-white">
+                <div class="card-body text-center">
+                    <h3 class="text-warning">{{ competitors|selectattr('opportunities')|list|length }}</h3>
+                    <small>With Opportunities</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if competitors %}
     <div class="row">
         {% for competitor in competitors %}
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5>{{ competitor.competitor_name }}</h5>
-                    {% if competitor.website_url %}
-                    <p class="text-muted small"><a href="{{ competitor.website_url }}" target="_blank">{{ competitor.website_url }}</a></p>
-                    {% endif %}
-                    
-                    <div class="row mt-3">
-                        <div class="col-6">
-                            <h6>Strengths</h6>
-                            {% if competitor.strengths %}
-                                <ul class="small">
-                                    {% for strength in competitor.strengths %}
-                                    <li><i data-feather="check-circle" class="text-success"></i> {{ strength }}</li>
-                                    {% endfor %}
-                                </ul>
-                            {% else %}
-                            <p class="text-muted small">-</p>
-                            {% endif %}
+        <div class="col-xl-6 mb-4">
+            <div class="card h-100 bg-dark border-secondary">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        {% if competitor.logo_url %}
+                        <img src="{{ competitor.logo_url }}" alt="{{ competitor.competitor_name }}" class="me-3" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;">
+                        {% else %}
+                        <div class="me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <span class="text-white fw-bold">{{ competitor.competitor_name[0] }}</span>
                         </div>
-                        <div class="col-6">
-                            <h6>Weaknesses</h6>
-                            {% if competitor.weaknesses %}
-                                <ul class="small">
-                                    {% for weakness in competitor.weaknesses %}
-                                    <li><i data-feather="x-circle" class="text-danger"></i> {{ weakness }}</li>
-                                    {% endfor %}
-                                </ul>
-                            {% else %}
-                            <p class="text-muted small">-</p>
+                        {% endif %}
+                        <div>
+                            <h5 class="mb-0 text-white">{{ competitor.competitor_name }}</h5>
+                            {% if competitor.website_url %}
+                            <a href="{{ competitor.website_url }}" target="_blank" class="text-muted small">
+                                <i data-feather="external-link" style="width: 12px; height: 12px;"></i> {{ competitor.website_url|truncate(40) }}
+                            </a>
                             {% endif %}
                         </div>
                     </div>
-                    
-                    <hr>
-                    <small class="text-muted">Last analyzed: {{ competitor.last_analyzed.strftime('%Y-%m-%d') if competitor.last_analyzed else 'Never' }}</small>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark">
+                            <li><a class="dropdown-item" href="#" onclick="editCompetitor({{ competitor.id }})"><i data-feather="edit-2"></i> Edit</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="viewCompetitor({{ competitor.id }})"><i data-feather="eye"></i> View Details</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteCompetitor({{ competitor.id }})"><i data-feather="trash-2"></i> Delete</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if competitor.core_promise %}
+                    <div class="mb-3">
+                        <small class="text-muted">Core Promise</small>
+                        <p class="mb-0 text-light">{{ competitor.core_promise }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Price Position</small>
+                            {% if competitor.price_positioning %}
+                            <span class="badge bg-{% if competitor.price_positioning == 'premium' %}warning{% elif competitor.price_positioning == 'mid' %}info{% else %}success{% endif %}">
+                                {{ competitor.price_positioning|title }}
+                            </span>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Funnel Type</small>
+                            <span class="text-light">{{ competitor.funnel_type or '-' }}</span>
+                        </div>
+                    </div>
+
+                    {% if competitor.primary_channels %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Primary Channels</small>
+                        {% for channel in competitor.primary_channels[:4] %}
+                        <span class="badge bg-secondary me-1">{{ channel }}</span>
+                        {% endfor %}
+                        {% if competitor.primary_channels|length > 4 %}
+                        <span class="badge bg-dark">+{{ competitor.primary_channels|length - 4 }}</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted d-block mb-1">Strengths</small>
+                            {% if competitor.strengths %}
+                            <ul class="list-unstyled small mb-0">
+                                {% for s in competitor.strengths[:3] %}
+                                <li class="text-success"><i data-feather="check" style="width: 12px;"></i> {{ s }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}<span class="text-muted small">Not tracked</span>{% endif %}
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block mb-1">Weaknesses</small>
+                            {% if competitor.weaknesses %}
+                            <ul class="list-unstyled small mb-0">
+                                {% for w in competitor.weaknesses[:3] %}
+                                <li class="text-danger"><i data-feather="x" style="width: 12px;"></i> {{ w }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}<span class="text-muted small">Not tracked</span>{% endif %}
+                        </div>
+                    </div>
+
+                    {% if competitor.opportunities %}
+                    <div class="mt-3 p-2 rounded" style="background: rgba(40, 167, 69, 0.1); border: 1px solid rgba(40, 167, 69, 0.3);">
+                        <small class="text-success d-block mb-1"><i data-feather="zap" style="width: 12px;"></i> Opportunities</small>
+                        <ul class="list-unstyled small mb-0 text-light">
+                            {% for o in competitor.opportunities[:2] %}
+                            <li>• {{ o }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent border-secondary">
+                    <small class="text-muted">
+                        Last analyzed: {{ competitor.last_analyzed.strftime('%b %d, %Y') if competitor.last_analyzed else 'Never' }}
+                    </small>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
-
-    {% if not competitors %}
-    <div class="alert alert-info text-center">Add competitors to track their positioning and stay ahead of the market.</div>
+    {% else %}
+    <div class="card bg-dark border-secondary">
+        <div class="card-body text-center py-5">
+            <i data-feather="target" class="text-muted mb-3" style="width: 4rem; height: 4rem;"></i>
+            <h4 class="text-white">No Competitors Tracked Yet</h4>
+            <p class="text-muted mb-4">Start tracking your competitors to understand market positioning and find opportunities.</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCompetitorModal">
+                <i data-feather="plus"></i> Add Your First Competitor
+            </button>
+        </div>
+    </div>
     {% endif %}
 </div>
+
+<div class="modal fade" id="addCompetitorModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title"><i data-feather="plus-circle"></i> Add Competitor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addCompetitorForm" method="POST" action="{{ url_for('main.save_competitor') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <ul class="nav nav-tabs mb-4" role="tablist">
+                        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-basic">Basic Info</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-positioning">Positioning</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-channels">Channels</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-messaging">Messaging</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-funnel">Funnel</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-swot">SWOT</a></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="tab-basic">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Competitor Name *</label>
+                                    <input type="text" class="form-control bg-secondary text-white border-0" name="competitor_name" required placeholder="e.g., Acme Corp">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Website URL</label>
+                                    <input type="url" class="form-control bg-secondary text-white border-0" name="website_url" placeholder="https://competitor.com">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Logo URL</label>
+                                    <input type="url" class="form-control bg-secondary text-white border-0" name="logo_url" placeholder="https://...">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Market Share (%)</label>
+                                    <input type="number" step="0.1" min="0" max="100" class="form-control bg-secondary text-white border-0" name="market_share" placeholder="e.g., 15.5">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Notes</label>
+                                    <textarea class="form-control bg-secondary text-white border-0" name="notes" rows="3" placeholder="General notes about this competitor..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tab-positioning">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Core Promise (1-sentence value proposition)</label>
+                                    <input type="text" class="form-control bg-secondary text-white border-0" name="core_promise" placeholder="What's their main promise to customers?">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Target Persona</label>
+                                    <textarea class="form-control bg-secondary text-white border-0" name="target_persona" rows="2" placeholder="Who are they really talking to?"></textarea>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Price Positioning</label>
+                                    <select class="form-select bg-secondary text-white border-0" name="price_positioning">
+                                        <option value="">Select...</option>
+                                        <option value="premium">Premium</option>
+                                        <option value="mid">Mid-Market</option>
+                                        <option value="discount">Discount/Budget</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Emotional Tone</label>
+                                    <input type="text" class="form-control bg-secondary text-white border-0" name="emotional_tone" placeholder="luxury, edgy, safe, etc.">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Transparency Level</label>
+                                    <select class="form-select bg-secondary text-white border-0" name="transparency_level">
+                                        <option value="">Select...</option>
+                                        <option value="high">High</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="low">Low</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Brand Notes</label>
+                                    <textarea class="form-control bg-secondary text-white border-0" name="brand_notes" rows="2" placeholder="Additional brand strategy observations..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tab-channels">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Primary Acquisition Channels</label>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% for ch in ['Google Ads', 'Meta Ads', 'TikTok Ads', 'SEO', 'YouTube', 'Influencers', 'Affiliates', 'Email', 'Content', 'PR'] %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="primary_channels" value="{{ ch }}" id="ch_{{ loop.index }}">
+                                            <label class="form-check-label" for="ch_{{ loop.index }}">{{ ch }}</label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Geographic Focus</label>
+                                    <select class="form-select bg-secondary text-white border-0" name="geographic_focus">
+                                        <option value="">Select...</option>
+                                        <option value="local">Local</option>
+                                        <option value="regional">Regional</option>
+                                        <option value="national">National</option>
+                                        <option value="global">Global</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" name="influencer_usage" id="influencer_usage">
+                                        <label class="form-check-label" for="influencer_usage">Uses Influencers</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" name="referral_program" id="referral_program">
+                                        <label class="form-check-label" for="referral_program">Referral Program</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tab-messaging">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Lead Magnet (what they offer to capture leads)</label>
+                                    <input type="text" class="form-control bg-secondary text-white border-0" name="lead_magnet" placeholder="e.g., Free ebook, discount code, free trial">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Entry Offer</label>
+                                    <input type="text" class="form-control bg-secondary text-white border-0" name="entry_offer" placeholder="First purchase offer">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">CTA Style</label>
+                                    <select class="form-select bg-secondary text-white border-0" name="cta_style">
+                                        <option value="">Select...</option>
+                                        <option value="soft">Soft</option>
+                                        <option value="aggressive">Aggressive</option>
+                                        <option value="educational">Educational</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Risk Reversal</label>
+                                    <input type="text" class="form-control bg-secondary text-white border-0" name="risk_reversal" placeholder="Guarantees, trials, etc.">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Key Headlines (one per line)</label>
+                                    <textarea class="form-control bg-secondary text-white border-0" name="key_headlines" rows="3" placeholder="Headlines and hooks they use..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tab-funnel">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Funnel Type</label>
+                                    <select class="form-select bg-secondary text-white border-0" name="funnel_type">
+                                        <option value="">Select...</option>
+                                        <option value="direct">Direct Sale</option>
+                                        <option value="tripwire">Tripwire</option>
+                                        <option value="webinar">Webinar</option>
+                                        <option value="free_trial">Free Trial</option>
+                                        <option value="freemium">Freemium</option>
+                                        <option value="consultation">Consultation</option>
+                                        <option value="membership">Membership</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signup Friction</label>
+                                    <select class="form-select bg-secondary text-white border-0" name="signup_friction">
+                                        <option value="">Select...</option>
+                                        <option value="low">Low (1-2 fields)</option>
+                                        <option value="medium">Medium (3-5 fields)</option>
+                                        <option value="high">High (6+ fields)</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Pricing Model</label>
+                                    <textarea class="form-control bg-secondary text-white border-0" name="pricing_model" rows="2" placeholder="Describe their pricing structure..."></textarea>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="subscription_model" id="subscription_model">
+                                        <label class="form-check-label" for="subscription_model">Subscription Model</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="cart_recovery" id="cart_recovery">
+                                        <label class="form-check-label" for="cart_recovery">Cart Recovery</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="sms_usage" id="sms_usage">
+                                        <label class="form-check-label" for="sms_usage">SMS Usage</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="loyalty_program" id="loyalty_program">
+                                        <label class="form-check-label" for="loyalty_program">Loyalty Program</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="long_form_content" id="long_form_content">
+                                        <label class="form-check-label" for="long_form_content">Long-Form Content</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tab-swot">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label text-success">Strengths (one per line)</label>
+                                    <textarea class="form-control bg-secondary text-white border-0" name="strengths" rows="4" placeholder="Strong brand recognition&#10;Great customer service&#10;Low prices"></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-danger">Weaknesses (one per line)</label>
+                                    <textarea class="form-control bg-secondary text-white border-0" name="weaknesses" rows="4" placeholder="Slow website&#10;Limited product range&#10;Poor mobile experience"></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label text-warning">Opportunities for Us (one per line)</label>
+                                    <textarea class="form-control bg-secondary text-white border-0" name="opportunities" rows="3" placeholder="Target their underserved segments&#10;Compete on speed/convenience"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i data-feather="save"></i> Save Competitor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="viewCompetitorModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="viewCompetitorTitle">Competitor Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="viewCompetitorBody" style="max-height: 70vh; overflow-y: auto;">
+                <div class="text-center py-4">
+                    <span class="spinner-border text-primary"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function viewCompetitor(id) {
+    const modal = new bootstrap.Modal(document.getElementById('viewCompetitorModal'));
+    modal.show();
+    
+    fetch(`/api/competitors/${id}`)
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const c = data.competitor;
+            document.getElementById('viewCompetitorTitle').textContent = c.competitor_name;
+            document.getElementById('viewCompetitorBody').innerHTML = buildCompetitorDetailHTML(c);
+            feather.replace();
+        }
+    });
+}
+
+function buildCompetitorDetailHTML(c) {
+    let html = '<div class="row g-4">';
+    
+    html += `<div class="col-md-6">
+        <h6 class="text-info mb-3"><i data-feather="target"></i> Positioning</h6>
+        <table class="table table-dark table-sm">
+            <tr><td class="text-muted">Core Promise</td><td>${c.core_promise || '-'}</td></tr>
+            <tr><td class="text-muted">Target Persona</td><td>${c.target_persona || '-'}</td></tr>
+            <tr><td class="text-muted">Price Position</td><td>${c.price_positioning || '-'}</td></tr>
+            <tr><td class="text-muted">Emotional Tone</td><td>${c.emotional_tone || '-'}</td></tr>
+        </table>
+    </div>`;
+    
+    html += `<div class="col-md-6">
+        <h6 class="text-info mb-3"><i data-feather="share-2"></i> Channels</h6>
+        <table class="table table-dark table-sm">
+            <tr><td class="text-muted">Primary Channels</td><td>${(c.primary_channels || []).join(', ') || '-'}</td></tr>
+            <tr><td class="text-muted">Geographic Focus</td><td>${c.geographic_focus || '-'}</td></tr>
+            <tr><td class="text-muted">Influencers</td><td>${c.influencer_usage ? 'Yes' : 'No'}</td></tr>
+            <tr><td class="text-muted">Referral Program</td><td>${c.referral_program ? 'Yes' : 'No'}</td></tr>
+        </table>
+    </div>`;
+    
+    html += `<div class="col-md-6">
+        <h6 class="text-info mb-3"><i data-feather="message-circle"></i> Messaging</h6>
+        <table class="table table-dark table-sm">
+            <tr><td class="text-muted">Lead Magnet</td><td>${c.lead_magnet || '-'}</td></tr>
+            <tr><td class="text-muted">Entry Offer</td><td>${c.entry_offer || '-'}</td></tr>
+            <tr><td class="text-muted">CTA Style</td><td>${c.cta_style || '-'}</td></tr>
+            <tr><td class="text-muted">Risk Reversal</td><td>${c.risk_reversal || '-'}</td></tr>
+        </table>
+    </div>`;
+    
+    html += `<div class="col-md-6">
+        <h6 class="text-info mb-3"><i data-feather="filter"></i> Funnel</h6>
+        <table class="table table-dark table-sm">
+            <tr><td class="text-muted">Funnel Type</td><td>${c.funnel_type || '-'}</td></tr>
+            <tr><td class="text-muted">Signup Friction</td><td>${c.signup_friction || '-'}</td></tr>
+            <tr><td class="text-muted">Subscription</td><td>${c.subscription_model ? 'Yes' : 'No'}</td></tr>
+            <tr><td class="text-muted">Cart Recovery</td><td>${c.cart_recovery ? 'Yes' : 'No'}</td></tr>
+        </table>
+    </div>`;
+    
+    html += `<div class="col-md-4">
+        <h6 class="text-success mb-2">Strengths</h6>
+        <ul class="list-unstyled">${(c.strengths || []).map(s => `<li><i data-feather="check" style="width:12px;"></i> ${s}</li>`).join('') || '<li class="text-muted">-</li>'}</ul>
+    </div>`;
+    
+    html += `<div class="col-md-4">
+        <h6 class="text-danger mb-2">Weaknesses</h6>
+        <ul class="list-unstyled">${(c.weaknesses || []).map(w => `<li><i data-feather="x" style="width:12px;"></i> ${w}</li>`).join('') || '<li class="text-muted">-</li>'}</ul>
+    </div>`;
+    
+    html += `<div class="col-md-4">
+        <h6 class="text-warning mb-2">Opportunities</h6>
+        <ul class="list-unstyled">${(c.opportunities || []).map(o => `<li><i data-feather="zap" style="width:12px;"></i> ${o}</li>`).join('') || '<li class="text-muted">-</li>'}</ul>
+    </div>`;
+    
+    html += '</div>';
+    return html;
+}
+
+function editCompetitor(id) {
+    window.location.href = `/competitors/${id}/edit`;
+}
+
+function deleteCompetitor(id) {
+    if (confirm('Are you sure you want to delete this competitor?')) {
+        fetch(`/api/competitors/${id}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to delete');
+            }
+        });
+    }
+}
+</script>
 {% endblock %}

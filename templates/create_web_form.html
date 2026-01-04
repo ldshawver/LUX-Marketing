@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}Create Web Form - LUX Marketing{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>Create Web Form</h1>
+        <p class="text-muted">Build signup forms to capture leads and grow your email list</p>
+    </div>
+    <a href="{{ url_for('main.forms_dashboard') }}" class="btn btn-outline-secondary">
+        <i data-feather="arrow-left"></i> Back to Forms
+    </a>
+</div>
+
+<form method="POST" action="{{ url_for('main.create_web_form') }}" id="createFormForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input type="hidden" name="fields_data" id="fieldsData" value="[]"/>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Form Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Form Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="e.g., Newsletter Signup">
+                        <small class="text-muted">Internal name for your reference</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Form Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g., Join Our Newsletter">
+                        <small class="text-muted">Displayed to visitors on the form</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="e.g., Get weekly updates and exclusive offers"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Form Fields</h5>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addField()">
+                        <i data-feather="plus"></i> Add Field
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="fieldsContainer">
+                        <div class="field-row mb-3 p-3 border rounded" data-index="0">
+                            <div class="row align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label">Field Label</label>
+                                    <input type="text" class="form-control field-label" value="Email" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Field Type</label>
+                                    <select class="form-select field-type">
+                                        <option value="email" selected>Email</option>
+                                        <option value="text">Text</option>
+                                        <option value="tel">Phone</option>
+                                        <option value="select">Dropdown</option>
+                                        <option value="textarea">Text Area</option>
+                                        <option value="checkbox">Checkbox</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input field-required" type="checkbox" checked>
+                                        <label class="form-check-label">Required</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeField(this)" disabled>
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="field-row mb-3 p-3 border rounded" data-index="1">
+                            <div class="row align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label">Field Label</label>
+                                    <input type="text" class="form-control field-label" value="First Name">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Field Type</label>
+                                    <select class="form-select field-type">
+                                        <option value="email">Email</option>
+                                        <option value="text" selected>Text</option>
+                                        <option value="tel">Phone</option>
+                                        <option value="select">Dropdown</option>
+                                        <option value="textarea">Text Area</option>
+                                        <option value="checkbox">Checkbox</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input field-required" type="checkbox">
+                                        <label class="form-check-label">Required</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeField(this)">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">After Submission</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Success Message</label>
+                        <input type="text" name="success_message" class="form-control" placeholder="Thank you for signing up!" value="Thank you for signing up!">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Redirect URL (optional)</label>
+                        <input type="url" name="redirect_url" class="form-control" placeholder="https://example.com/thank-you">
+                        <small class="text-muted">Leave empty to show success message on the form</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Preview</h5>
+                </div>
+                <div class="card-body">
+                    <div id="formPreview" class="p-3 border rounded bg-light">
+                        <h5 id="previewTitle">Join Our Newsletter</h5>
+                        <p id="previewDescription" class="text-muted small">Get weekly updates and exclusive offers</p>
+                        <div id="previewFields">
+                            <div class="mb-2">
+                                <label class="form-label small">Email *</label>
+                                <input type="email" class="form-control form-control-sm" disabled>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small">First Name</label>
+                                <input type="text" class="form-control form-control-sm" disabled>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-sm w-100 mt-2" disabled>Subscribe</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <button type="submit" class="btn btn-primary w-100 mb-2">
+                        <i data-feather="save"></i> Create Form
+                    </button>
+                    <a href="{{ url_for('main.forms_dashboard') }}" class="btn btn-outline-secondary w-100">
+                        Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+let fieldIndex = 2;
+
+function addField() {
+    const container = document.getElementById('fieldsContainer');
+    const fieldHtml = `
+        <div class="field-row mb-3 p-3 border rounded" data-index="${fieldIndex}">
+            <div class="row align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Field Label</label>
+                    <input type="text" class="form-control field-label" placeholder="Field name">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Field Type</label>
+                    <select class="form-select field-type">
+                        <option value="text">Text</option>
+                        <option value="email">Email</option>
+                        <option value="tel">Phone</option>
+                        <option value="select">Dropdown</option>
+                        <option value="textarea">Text Area</option>
+                        <option value="checkbox">Checkbox</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input field-required" type="checkbox">
+                        <label class="form-check-label">Required</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeField(this)">
+                        <i data-feather="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', fieldHtml);
+    fieldIndex++;
+    feather.replace();
+    updatePreview();
+}
+
+function removeField(btn) {
+    btn.closest('.field-row').remove();
+    updatePreview();
+}
+
+function updatePreview() {
+    const title = document.querySelector('input[name="title"]').value || 'Your Form Title';
+    const description = document.querySelector('textarea[name="description"]').value || '';
+    
+    document.getElementById('previewTitle').textContent = title;
+    document.getElementById('previewDescription').textContent = description;
+    
+    const fields = document.querySelectorAll('.field-row');
+    let previewHtml = '';
+    
+    fields.forEach(field => {
+        const label = field.querySelector('.field-label').value || 'Field';
+        const type = field.querySelector('.field-type').value;
+        const required = field.querySelector('.field-required').checked;
+        
+        previewHtml += `<div class="mb-2">
+            <label class="form-label small">${label}${required ? ' *' : ''}</label>`;
+        
+        if (type === 'textarea') {
+            previewHtml += `<textarea class="form-control form-control-sm" disabled rows="2"></textarea>`;
+        } else if (type === 'select') {
+            previewHtml += `<select class="form-select form-select-sm" disabled><option>Select...</option></select>`;
+        } else if (type === 'checkbox') {
+            previewHtml += `<div class="form-check"><input type="checkbox" class="form-check-input" disabled><label class="form-check-label small">${label}</label></div>`;
+        } else {
+            previewHtml += `<input type="${type}" class="form-control form-control-sm" disabled>`;
+        }
+        
+        previewHtml += `</div>`;
+    });
+    
+    document.getElementById('previewFields').innerHTML = previewHtml;
+}
+
+function collectFieldsData() {
+    const fields = [];
+    document.querySelectorAll('.field-row').forEach(row => {
+        fields.push({
+            label: row.querySelector('.field-label').value,
+            type: row.querySelector('.field-type').value,
+            required: row.querySelector('.field-required').checked
+        });
+    });
+    document.getElementById('fieldsData').value = JSON.stringify(fields);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelector('input[name="title"]').addEventListener('input', updatePreview);
+    document.querySelector('textarea[name="description"]').addEventListener('input', updatePreview);
+    document.getElementById('fieldsContainer').addEventListener('input', updatePreview);
+    document.getElementById('fieldsContainer').addEventListener('change', updatePreview);
+    
+    document.getElementById('createFormForm').addEventListener('submit', function(e) {
+        collectFieldsData();
+    });
+});
+</script>
+{% endblock %}

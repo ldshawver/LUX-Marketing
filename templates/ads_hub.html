@@ -1,202 +1,467 @@
 {% extends "base_simple.html" %}
 
-{% block title %}Ads Hub - LUX Marketing{% endblock %}
+{% block title %}Advertising & Demand Gen Agent - LUX Marketing{% endblock %}
 
 {% block page_header %}
-<span style="color: #c0c0c0;">Ads Management Hub</span>
+<span style="color: #c0c0c0;">Advertising & Demand Generation Agent</span>
 {% endblock %}
 
 {% block content %}
 <style>
+  .agent-header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #0f0f23 100%);
+    border: 2px solid #f59e0b;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+  .agent-avatar {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+  }
+  .status-active { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+  .section-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid #2d2d4a;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .section-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #2d2d4a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-body { padding: 1.5rem; }
+  .specialization-tag {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    margin: 4px;
+  }
+  .integration-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+  .integration-item .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 12px;
+  }
+  .status-dot.connected { background: #10b981; }
+  .status-dot.pending { background: #f59e0b; }
+  .status-dot.not-configured { background: #6b7280; }
+  .task-item {
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 3px solid #f59e0b;
+  }
+  .suggestion-item {
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05));
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  .metric-card {
+    text-align: center;
+    padding: 1.5rem;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+  }
+  .metric-value { font-size: 2rem; font-weight: 700; color: #f59e0b; }
+  .metric-label { color: #9ca3af; font-size: 0.85rem; }
+  .implementation-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .implementation-item:last-child { border-bottom: none; }
+  .check-icon { color: #10b981; flex-shrink: 0; }
+  .pending-icon { color: #f59e0b; flex-shrink: 0; }
+  .coming-icon { color: #8b5cf6; flex-shrink: 0; }
   .ad-type-card {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     border: 2px solid transparent;
+    border-radius: 12px;
     transition: all 0.3s ease;
+    height: 100%;
   }
-  
   .ad-type-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(74, 222, 128, 0.3);
+    box-shadow: 0 15px 35px rgba(245, 158, 11, 0.2);
   }
-  
   .ad-type-card.display { border-color: #3b82f6; }
   .ad-type-card.search { border-color: #f59e0b; }
   .ad-type-card.shopping { border-color: #10b981; }
   .ad-type-card.press { border-color: #8b5cf6; }
+  .automation-item {
+    padding: 12px 16px;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+  .report-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+  .nav-tabs .nav-link {
+    color: #9ca3af;
+    border: none;
+    padding: 12px 20px;
+  }
+  .nav-tabs .nav-link.active {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+    border-bottom: 2px solid #f59e0b;
+  }
+  .nav-tabs .nav-link:hover { color: #f59e0b; }
 </style>
 
 <div class="container-fluid" style="background: #000000; min-height: 100vh; padding: 2rem;">
-  <div class="row mb-4">
-    <div class="col-12">
-      <h1 class="display-4">Ads Management Hub</h1>
-      <p class="lead">Manage Display, Search, and Shopping ads with full Google Ads integration</p>
-    </div>
-  </div>
-
-  <div class="row g-4 mb-4">
-    <div class="col-md-6 col-lg-3">
-      <div class="card ad-type-card display h-100">
-        <div class="card-body text-center">
-          <i data-feather="image" class="mb-3" style="width: 64px; height: 64px; color: #3b82f6;"></i>
-          <h4>Display Ads</h4>
-          <p class="text-muted">Visual banner ads across the web</p>
-          <button class="btn btn-primary">Manage Display</button>
+  
+  <div class="agent-header">
+    <div class="row align-items-center">
+      <div class="col-auto">
+        <div class="agent-avatar">
+          <i data-feather="trending-up" style="width: 40px; height: 40px; color: #fff;"></i>
         </div>
       </div>
-    </div>
-
-    <div class="col-md-6 col-lg-3">
-      <div class="card ad-type-card search h-100">
-        <div class="card-body text-center">
-          <i data-feather="search" class="mb-3" style="width: 64px; height: 64px; color: #f59e0b;"></i>
-          <h4>Search Ads</h4>
-          <p class="text-muted">Text ads in search results</p>
-          <button class="btn btn-warning">Manage Search</button>
-        </div>
+      <div class="col">
+        <h2 class="mb-1">Advertising & Demand Generation Agent</h2>
+        <p class="text-muted mb-2">Manages paid advertising campaigns, demand generation, and performance optimization across all ad platforms</p>
+        <span class="status-badge status-active">
+          <i data-feather="activity" style="width: 14px; height: 14px;"></i> Active
+        </span>
+        <span class="status-badge" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; margin-left: 8px;">
+          <i data-feather="clock" style="width: 14px; height: 14px;"></i> Weekly Strategy Review
+        </span>
       </div>
-    </div>
-
-    <div class="col-md-6 col-lg-3">
-      <div class="card ad-type-card shopping h-100">
-        <div class="card-body text-center">
-          <i data-feather="shopping-cart" class="mb-3" style="width: 64px; height: 64px; color: #10b981;"></i>
-          <h4>Shopping Ads</h4>
-          <p class="text-muted">Product listings with images</p>
-          <button class="btn btn-success">Manage Shopping</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6 col-lg-3">
-      <div class="card ad-type-card press h-100">
-        <div class="card-body text-center">
-          <i data-feather="file-text" class="mb-3" style="width: 64px; height: 64px; color: #8b5cf6;"></i>
-          <h4>Press Release</h4>
-          <p class="text-muted">PR Wire distribution</p>
-          <button class="btn btn-secondary">Create PR</button>
-        </div>
+      <div class="col-auto">
+        <button class="btn btn-warning" onclick="chatWithAgent()">
+          <i data-feather="message-circle"></i> Chat with Agent
+        </button>
       </div>
     </div>
   </div>
 
-  <div class="row g-4">
-    <div class="col-lg-8">
-      <div class="card bg-dark border-primary">
-        <div class="card-header bg-primary">
-          <h5 class="mb-0"><i data-feather="cpu" style="color: gold;"></i> AI Campaign Generator</h5>
+  <ul class="nav nav-tabs mb-4" id="agentTabs" role="tablist">
+    <li class="nav-item">
+      <a class="nav-link active" data-bs-toggle="tab" href="#overview">Overview</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#campaigns">Campaigns</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#integrations">Integrations</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#automations">Automations</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#reports">Reports & Analytics</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#roadmap">Roadmap</a>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    
+    <div class="tab-pane fade show active" id="overview">
+      <div class="row">
+        <div class="col-lg-4 mb-4">
+          <div class="section-card h-100">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="target" class="me-2" style="color: #f59e0b;"></i> Key Specializations</h5>
+            </div>
+            <div class="section-body">
+              <div class="specialization-tag">Google Ads Management</div>
+              <div class="specialization-tag">Display Advertising</div>
+              <div class="specialization-tag">Search Campaigns</div>
+              <div class="specialization-tag">Shopping Ads</div>
+              <div class="specialization-tag">Retargeting</div>
+              <div class="specialization-tag">A/B Testing</div>
+              <div class="specialization-tag">Budget Optimization</div>
+              <div class="specialization-tag">ROAS Improvement</div>
+              <div class="specialization-tag">Audience Targeting</div>
+              <div class="specialization-tag">Bid Management</div>
+              <div class="specialization-tag">Ad Copy Generation</div>
+              <div class="specialization-tag">Landing Page Optimization</div>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <p class="lead">Let AI create optimized ad campaigns across all platforms</p>
-          
-          <div class="mb-3">
-            <label class="form-label">Campaign Objective</label>
-            <select class="form-select bg-dark text-light">
-              <option>Increase Brand Awareness</option>
-              <option>Drive Website Traffic</option>
-              <option>Generate Leads</option>
-              <option>Boost Sales</option>
-              <option>App Promotion</option>
-            </select>
-          </div>
 
-          <div class="mb-3">
-            <label class="form-label">Target Audience</label>
-            <input type="text" class="form-control bg-dark text-light" placeholder="Describe your target audience...">
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Monthly Budget</label>
-            <div class="input-group">
-              <span class="input-group-text bg-dark text-light">$</span>
-              <input type="number" class="form-control bg-dark text-light" placeholder="1000">
+        <div class="col-lg-4 mb-4">
+          <div class="section-card h-100">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="list" class="me-2" style="color: #f59e0b;"></i> Agent Tasks</h5>
+            </div>
+            <div class="section-body">
+              <div class="task-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Weekly Strategy Review</span>
+                  <span class="badge bg-success">Scheduled</span>
+                </div>
+                <small class="text-muted">Every Friday at 9:00 AM</small>
+              </div>
+              <div class="task-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Campaign Performance Check</span>
+                  <span class="badge bg-primary">Daily</span>
+                </div>
+                <small class="text-muted">Monitor ROAS and spend</small>
+              </div>
+              <div class="task-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Budget Optimization</span>
+                  <span class="badge bg-warning">Weekly</span>
+                </div>
+                <small class="text-muted">Reallocate based on performance</small>
+              </div>
+              <div class="task-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>A/B Test Analysis</span>
+                  <span class="badge bg-info">Bi-weekly</span>
+                </div>
+                <small class="text-muted">Evaluate ad variations</small>
+              </div>
             </div>
           </div>
+        </div>
 
-          <div class="mb-3">
-            <label class="form-label">Ad Platforms</label>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="googleAds" checked>
-              <label class="form-check-label" for="googleAds">Google Ads</label>
+        <div class="col-lg-4 mb-4">
+          <div class="section-card h-100">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="zap" class="me-2" style="color: #f59e0b;"></i> AI Suggestions</h5>
+              <button class="btn btn-sm btn-outline-warning" onclick="refreshSuggestions()">Refresh</button>
             </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="displayNetwork" checked>
-              <label class="form-check-label" for="displayNetwork">Display Network</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="shoppingAds" checked>
-              <label class="form-check-label" for="shoppingAds">Shopping Ads</label>
+            <div class="section-body" id="suggestionsContainer">
+              <div class="suggestion-item">
+                <div class="d-flex align-items-start">
+                  <i data-feather="trending-up" class="me-3" style="color: #10b981;"></i>
+                  <div>
+                    <strong>Increase Shopping Ads Budget</strong>
+                    <p class="mb-0 text-muted small">Shopping campaigns showing 4.2x ROAS. Consider 20% budget increase.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="suggestion-item">
+                <div class="d-flex align-items-start">
+                  <i data-feather="alert-triangle" class="me-3" style="color: #f59e0b;"></i>
+                  <div>
+                    <strong>Pause Underperforming Ads</strong>
+                    <p class="mb-0 text-muted small">3 display ads with CTR below 0.5%. Recommend pausing.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="suggestion-item">
+                <div class="d-flex align-items-start">
+                  <i data-feather="users" class="me-3" style="color: #3b82f6;"></i>
+                  <div>
+                    <strong>New Audience Segment</strong>
+                    <p class="mb-0 text-muted small">Similar audience from top converters could expand reach 35%.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <button class="btn btn-primary btn-lg w-100">
-            <i data-feather="zap" style="color: gold;"></i> Generate AI Campaign
-          </button>
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="metric-card">
+            <div class="metric-value">12</div>
+            <div class="metric-label">Active Campaigns</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="metric-card">
+            <div class="metric-value">$4,532</div>
+            <div class="metric-label">Monthly Spend</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="metric-card">
+            <div class="metric-value">3.8x</div>
+            <div class="metric-label">Average ROAS</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="metric-card">
+            <div class="metric-value">256K</div>
+            <div class="metric-label">Total Impressions</div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="col-lg-4">
-      <div class="card bg-dark border-success mb-4">
-        <div class="card-header bg-success">
-          <h5 class="mb-0"><i data-feather="link"></i> Google Ads Integration</h5>
-        </div>
-        <div class="card-body">
-          <div class="d-flex align-items-center mb-3">
-            <div class="flex-grow-1">
-              <h6 class="mb-0">Account Status</h6>
-              <small class="text-success"><i data-feather="check-circle"></i> Connected</small>
+    <div class="tab-pane fade" id="campaigns">
+      <div class="row g-4 mb-4">
+        <div class="col-md-6 col-lg-3">
+          <div class="card ad-type-card display">
+            <div class="card-body text-center p-4">
+              <i data-feather="image" class="mb-3" style="width: 48px; height: 48px; color: #3b82f6;"></i>
+              <h5>Display Ads</h5>
+              <p class="text-muted small">Visual banner ads across the Google Display Network</p>
+              <div class="mb-3">
+                <span class="text-muted">Active: </span><strong>4 campaigns</strong>
+              </div>
+              <button class="btn btn-primary w-100">Manage Display</button>
             </div>
-            <button class="btn btn-sm btn-outline-success">Manage</button>
           </div>
-          
-          <hr>
-          
-          <div class="mb-2">
-            <small class="text-muted">Active Campaigns</small>
-            <h4 class="mb-0">12</h4>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+          <div class="card ad-type-card search">
+            <div class="card-body text-center p-4">
+              <i data-feather="search" class="mb-3" style="width: 48px; height: 48px; color: #f59e0b;"></i>
+              <h5>Search Ads</h5>
+              <p class="text-muted small">Text ads appearing in Google search results</p>
+              <div class="mb-3">
+                <span class="text-muted">Active: </span><strong>5 campaigns</strong>
+              </div>
+              <button class="btn btn-warning w-100">Manage Search</button>
+            </div>
           </div>
-          
-          <div class="mb-2">
-            <small class="text-muted">Total Spend (30d)</small>
-            <h4 class="mb-0">$4,532</h4>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+          <div class="card ad-type-card shopping">
+            <div class="card-body text-center p-4">
+              <i data-feather="shopping-cart" class="mb-3" style="width: 48px; height: 48px; color: #10b981;"></i>
+              <h5>Shopping Ads</h5>
+              <p class="text-muted small">Product listings with images and prices</p>
+              <div class="mb-3">
+                <span class="text-muted">Active: </span><strong>3 campaigns</strong>
+              </div>
+              <button class="btn btn-success w-100">Manage Shopping</button>
+            </div>
           </div>
-          
-          <div class="mb-2">
-            <small class="text-muted">Avg. ROAS</small>
-            <h4 class="mb-0">3.8x</h4>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+          <div class="card ad-type-card press">
+            <div class="card-body text-center p-4">
+              <i data-feather="file-text" class="mb-3" style="width: 48px; height: 48px; color: #8b5cf6;"></i>
+              <h5>Press Release</h5>
+              <p class="text-muted small">PR Wire distribution to 400+ news outlets</p>
+              <div class="mb-3">
+                <span class="text-muted">Published: </span><strong>2 releases</strong>
+              </div>
+              <button class="btn btn-secondary w-100">Create PR</button>
+            </div>
           </div>
-          
-          <button class="btn btn-success w-100 mt-3">View in Google Ads</button>
         </div>
       </div>
 
-      <div class="card bg-dark border-secondary">
-        <div class="card-header bg-secondary">
-          <h5 class="mb-0"><i data-feather="file-text"></i> PR Wire</h5>
+      <div class="section-card">
+        <div class="section-header">
+          <h5 class="mb-0"><i data-feather="cpu" class="me-2" style="color: #f59e0b;"></i> AI Campaign Generator</h5>
         </div>
-        <div class="card-body">
-          <p>Distribute press releases to major news outlets</p>
-          <ul class="list-unstyled">
-            <li><i data-feather="check"></i> 400+ news sites</li>
-            <li><i data-feather="check"></i> Industry targeting</li>
-            <li><i data-feather="check"></i> SEO benefits</li>
-            <li><i data-feather="check"></i> Performance tracking</li>
-          </ul>
-          <button class="btn btn-secondary w-100 mt-2">Create Press Release</button>
+        <div class="section-body">
+          <div class="row">
+            <div class="col-lg-8">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Campaign Objective</label>
+                  <select class="form-select bg-dark text-light">
+                    <option>Increase Brand Awareness</option>
+                    <option>Drive Website Traffic</option>
+                    <option>Generate Leads</option>
+                    <option>Boost Sales</option>
+                    <option>App Promotion</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Monthly Budget</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark text-light">$</span>
+                    <input type="number" class="form-control bg-dark text-light" placeholder="1000">
+                  </div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Target Audience Description</label>
+                <textarea class="form-control bg-dark text-light" rows="2" placeholder="Describe your ideal customer..."></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Ad Platforms</label>
+                <div class="row">
+                  <div class="col-auto">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="googleAds" checked>
+                      <label class="form-check-label" for="googleAds">Google Ads</label>
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="displayNetwork" checked>
+                      <label class="form-check-label" for="displayNetwork">Display Network</label>
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="shoppingAds" checked>
+                      <label class="form-check-label" for="shoppingAds">Shopping Ads</label>
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="youtubeAds">
+                      <label class="form-check-label" for="youtubeAds">YouTube Ads</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-warning btn-lg">
+                <i data-feather="zap"></i> Generate AI Campaign
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <div class="row mt-4">
-    <div class="col-12">
-      <div class="card bg-dark">
-        <div class="card-header">
-          <h5 class="mb-0"><i data-feather="trending-up"></i> Recent Campaigns</h5>
+      <div class="section-card">
+        <div class="section-header">
+          <h5 class="mb-0"><i data-feather="trending-up" class="me-2"></i> Recent Campaigns</h5>
         </div>
-        <div class="card-body">
+        <div class="section-body p-0">
           <div class="table-responsive">
-            <table class="table table-dark table-hover">
+            <table class="table table-dark table-hover mb-0">
               <thead>
                 <tr>
                   <th>Campaign</th>
@@ -218,33 +483,27 @@
                   <td>3,421</td>
                   <td>$842</td>
                   <td>4.2x</td>
-                  <td>
-                    <button class="btn btn-sm btn-outline-primary">Edit</button>
-                  </td>
+                  <td><button class="btn btn-sm btn-outline-primary">Edit</button></td>
                 </tr>
                 <tr>
                   <td>Black Friday</td>
-                  <td><span class="badge bg-warning">Search</span></td>
+                  <td><span class="badge bg-warning text-dark">Search</span></td>
                   <td><span class="badge bg-success">Active</span></td>
                   <td>89,234</td>
                   <td>5,612</td>
                   <td>$1,234</td>
                   <td>5.1x</td>
-                  <td>
-                    <button class="btn btn-sm btn-outline-primary">Edit</button>
-                  </td>
+                  <td><button class="btn btn-sm btn-outline-primary">Edit</button></td>
                 </tr>
                 <tr>
                   <td>New Product Launch</td>
                   <td><span class="badge bg-success">Shopping</span></td>
-                  <td><span class="badge bg-warning">Paused</span></td>
+                  <td><span class="badge bg-secondary">Paused</span></td>
                   <td>42,156</td>
                   <td>1,823</td>
                   <td>$623</td>
                   <td>3.3x</td>
-                  <td>
-                    <button class="btn btn-sm btn-outline-primary">Edit</button>
-                  </td>
+                  <td><button class="btn btn-sm btn-outline-primary">Edit</button></td>
                 </tr>
               </tbody>
             </table>
@@ -252,10 +511,568 @@
         </div>
       </div>
     </div>
+
+    <div class="tab-pane fade" id="integrations">
+      <div class="row">
+        <div class="col-lg-6">
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="link" class="me-2" style="color: #10b981;"></i> Connected Platforms</h5>
+            </div>
+            <div class="section-body">
+              <div class="integration-item">
+                <div class="status-dot connected"></div>
+                <img src="https://www.gstatic.com/images/branding/product/1x/ads_48dp.png" style="width: 32px; height: 32px; margin-right: 12px;">
+                <div class="flex-grow-1">
+                  <strong>Google Ads</strong>
+                  <div class="text-muted small">Account ID: xxx-xxx-1234</div>
+                </div>
+                <span class="badge bg-success">Connected</span>
+              </div>
+              
+              <div class="integration-item">
+                <div class="status-dot pending"></div>
+                <img src="https://static.xx.fbcdn.net/rsrc.php/v3/yr/r/uvDdBNLT0gd.png" style="width: 32px; height: 32px; margin-right: 12px;">
+                <div class="flex-grow-1">
+                  <strong>Facebook Ads</strong>
+                  <div class="text-muted small">Requires configuration</div>
+                </div>
+                <button class="btn btn-sm btn-outline-warning">Configure</button>
+              </div>
+              
+              <div class="integration-item">
+                <div class="status-dot not-configured"></div>
+                <i data-feather="linkedin" style="width: 32px; height: 32px; margin-right: 12px; color: #0077b5;"></i>
+                <div class="flex-grow-1">
+                  <strong>LinkedIn Ads</strong>
+                  <div class="text-muted small">Not configured</div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary">Setup</button>
+              </div>
+              
+              <div class="integration-item">
+                <div class="status-dot not-configured"></div>
+                <i data-feather="twitter" style="width: 32px; height: 32px; margin-right: 12px; color: #1da1f2;"></i>
+                <div class="flex-grow-1">
+                  <strong>X (Twitter) Ads</strong>
+                  <div class="text-muted small">Not configured</div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary">Setup</button>
+              </div>
+              
+              <div class="integration-item">
+                <div class="status-dot not-configured"></div>
+                <i data-feather="video" style="width: 32px; height: 32px; margin-right: 12px; color: #ff0000;"></i>
+                <div class="flex-grow-1">
+                  <strong>TikTok Ads</strong>
+                  <div class="text-muted small">Not configured</div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary">Setup</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="settings" class="me-2" style="color: #8b5cf6;"></i> API Credentials</h5>
+            </div>
+            <div class="section-body">
+              <p class="text-muted mb-3">Configure API keys in <a href="/settings" class="text-warning">Settings > Integrations</a></p>
+              
+              <div class="integration-item">
+                <div class="status-dot connected"></div>
+                <div class="flex-grow-1">
+                  <strong>Google Ads API</strong>
+                  <div class="text-muted small">Client ID configured</div>
+                </div>
+                <i data-feather="check-circle" style="color: #10b981;"></i>
+              </div>
+              
+              <div class="integration-item">
+                <div class="status-dot pending"></div>
+                <div class="flex-grow-1">
+                  <strong>Facebook Marketing API</strong>
+                  <div class="text-muted small">Access token needed</div>
+                </div>
+                <i data-feather="alert-circle" style="color: #f59e0b;"></i>
+              </div>
+              
+              <div class="integration-item">
+                <div class="status-dot not-configured"></div>
+                <div class="flex-grow-1">
+                  <strong>Google Analytics 4</strong>
+                  <div class="text-muted small">For conversion tracking</div>
+                </div>
+                <i data-feather="x-circle" style="color: #6b7280;"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="share-2" class="me-2" style="color: #3b82f6;"></i> Agent Interactions</h5>
+            </div>
+            <div class="section-body">
+              <div class="integration-item">
+                <i data-feather="bar-chart-2" class="me-3" style="color: #10b981;"></i>
+                <div class="flex-grow-1">
+                  <strong>Analytics Agent</strong>
+                  <div class="text-muted small">Shares conversion data & ROAS metrics</div>
+                </div>
+              </div>
+              <div class="integration-item">
+                <i data-feather="edit-3" class="me-3" style="color: #f59e0b;"></i>
+                <div class="flex-grow-1">
+                  <strong>Creative Agent</strong>
+                  <div class="text-muted small">Generates ad visuals & copy</div>
+                </div>
+              </div>
+              <div class="integration-item">
+                <i data-feather="users" class="me-3" style="color: #8b5cf6;"></i>
+                <div class="flex-grow-1">
+                  <strong>Email & CRM Agent</strong>
+                  <div class="text-muted small">Syncs audience segments</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="automations">
+      <div class="row">
+        <div class="col-lg-8">
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="cpu" class="me-2" style="color: #8b5cf6;"></i> Active Automations</h5>
+              <button class="btn btn-sm btn-outline-purple" style="border-color: #8b5cf6; color: #8b5cf6;">+ New Automation</button>
+            </div>
+            <div class="section-body">
+              <div class="automation-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>Auto-Pause Low Performers</strong>
+                    <div class="text-muted small">Pause ads with CTR < 0.5% after 1000 impressions</div>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" checked>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="automation-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>Budget Reallocation</strong>
+                    <div class="text-muted small">Move budget from underperformers to top campaigns</div>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" checked>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="automation-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>Bid Adjustment</strong>
+                    <div class="text-muted small">Auto-adjust bids based on conversion rate</div>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox">
+                  </div>
+                </div>
+              </div>
+              
+              <div class="automation-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>Daily Performance Alert</strong>
+                    <div class="text-muted small">Notify when spend exceeds budget by 10%</div>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" checked>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="automation-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>Weekly Report Generation</strong>
+                    <div class="text-muted small">Auto-generate performance reports every Monday</div>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" checked>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="clock" class="me-2"></i> Scheduled Tasks</h5>
+            </div>
+            <div class="section-body">
+              <div class="task-item">
+                <strong>Weekly Strategy Review</strong>
+                <div class="text-muted small">Every Friday at 9:00 AM</div>
+              </div>
+              <div class="task-item">
+                <strong>Daily Performance Check</strong>
+                <div class="text-muted small">Every day at 8:00 AM</div>
+              </div>
+              <div class="task-item">
+                <strong>Monthly Budget Analysis</strong>
+                <div class="text-muted small">1st of each month</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="bell" class="me-2"></i> Alert Rules</h5>
+            </div>
+            <div class="section-body">
+              <div class="text-muted small mb-2">Active alerts:</div>
+              <ul class="list-unstyled mb-0">
+                <li class="mb-2"><i data-feather="check" style="width: 14px; color: #10b981;"></i> ROAS drops below 2x</li>
+                <li class="mb-2"><i data-feather="check" style="width: 14px; color: #10b981;"></i> Daily spend > $500</li>
+                <li class="mb-2"><i data-feather="check" style="width: 14px; color: #10b981;"></i> CTR drops 20%</li>
+                <li><i data-feather="check" style="width: 14px; color: #10b981;"></i> Campaign ends</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="reports">
+      <div class="row">
+        <div class="col-lg-8">
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="file-text" class="me-2" style="color: #3b82f6;"></i> Generated Reports</h5>
+              <button class="btn btn-sm btn-primary">+ Generate Report</button>
+            </div>
+            <div class="section-body">
+              <div class="report-item">
+                <div>
+                  <strong>Weekly Performance Report</strong>
+                  <div class="text-muted small">Dec 16-22, 2024</div>
+                </div>
+                <div>
+                  <button class="btn btn-sm btn-outline-primary me-2">View</button>
+                  <button class="btn btn-sm btn-outline-secondary">Download</button>
+                </div>
+              </div>
+              
+              <div class="report-item">
+                <div>
+                  <strong>Monthly Campaign Analysis</strong>
+                  <div class="text-muted small">November 2024</div>
+                </div>
+                <div>
+                  <button class="btn btn-sm btn-outline-primary me-2">View</button>
+                  <button class="btn btn-sm btn-outline-secondary">Download</button>
+                </div>
+              </div>
+              
+              <div class="report-item">
+                <div>
+                  <strong>Q4 Advertising Summary</strong>
+                  <div class="text-muted small">Oct-Dec 2024</div>
+                </div>
+                <div>
+                  <button class="btn btn-sm btn-outline-primary me-2">View</button>
+                  <button class="btn btn-sm btn-outline-secondary">Download</button>
+                </div>
+              </div>
+              
+              <div class="report-item">
+                <div>
+                  <strong>A/B Test Results</strong>
+                  <div class="text-muted small">Black Friday Campaign</div>
+                </div>
+                <div>
+                  <button class="btn btn-sm btn-outline-primary me-2">View</button>
+                  <button class="btn btn-sm btn-outline-secondary">Download</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="bar-chart-2" class="me-2" style="color: #10b981;"></i> Analytics Metrics</h5>
+            </div>
+            <div class="section-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <div class="metric-card">
+                    <div class="metric-value">2.7%</div>
+                    <div class="metric-label">Avg CTR</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="metric-card">
+                    <div class="metric-value">$12.45</div>
+                    <div class="metric-label">Cost Per Conversion</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="metric-card">
+                    <div class="metric-value">847</div>
+                    <div class="metric-label">Conversions (30d)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="calendar" class="me-2"></i> Report Schedule</h5>
+            </div>
+            <div class="section-body">
+              <div class="task-item">
+                <div class="d-flex justify-content-between">
+                  <span>Weekly Summary</span>
+                  <span class="badge bg-success">Active</span>
+                </div>
+                <small class="text-muted">Every Monday 9 AM</small>
+              </div>
+              <div class="task-item">
+                <div class="d-flex justify-content-between">
+                  <span>Monthly Report</span>
+                  <span class="badge bg-success">Active</span>
+                </div>
+                <small class="text-muted">1st of month</small>
+              </div>
+              <div class="task-item">
+                <div class="d-flex justify-content-between">
+                  <span>Quarterly Analysis</span>
+                  <span class="badge bg-success">Active</span>
+                </div>
+                <small class="text-muted">End of quarter</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="pie-chart" class="me-2"></i> Top Insights</h5>
+            </div>
+            <div class="section-body">
+              <ul class="list-unstyled mb-0">
+                <li class="mb-3">
+                  <i data-feather="trending-up" style="width: 16px; color: #10b981;"></i>
+                  <span class="ms-2">Shopping ads up 23% this week</span>
+                </li>
+                <li class="mb-3">
+                  <i data-feather="award" style="width: 16px; color: #f59e0b;"></i>
+                  <span class="ms-2">Best performer: Black Friday</span>
+                </li>
+                <li class="mb-3">
+                  <i data-feather="target" style="width: 16px; color: #3b82f6;"></i>
+                  <span class="ms-2">18-34 audience converts 2x</span>
+                </li>
+                <li>
+                  <i data-feather="smartphone" style="width: 16px; color: #8b5cf6;"></i>
+                  <span class="ms-2">Mobile: 67% of traffic</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="roadmap">
+      <div class="row">
+        <div class="col-lg-6">
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="check-circle" class="me-2" style="color: #10b981;"></i> What's Implemented</h5>
+            </div>
+            <div class="section-body">
+              <div class="implementation-item">
+                <i data-feather="check-circle" class="check-icon"></i>
+                <div>
+                  <strong>Google Ads Integration</strong>
+                  <div class="text-muted small">Full campaign management and reporting</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="check-circle" class="check-icon"></i>
+                <div>
+                  <strong>AI Campaign Generator</strong>
+                  <div class="text-muted small">GPT-4 powered ad copy and targeting</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="check-circle" class="check-icon"></i>
+                <div>
+                  <strong>Display, Search & Shopping Ads</strong>
+                  <div class="text-muted small">Multi-format campaign creation</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="check-circle" class="check-icon"></i>
+                <div>
+                  <strong>Performance Tracking</strong>
+                  <div class="text-muted small">Impressions, clicks, ROAS metrics</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="check-circle" class="check-icon"></i>
+                <div>
+                  <strong>Automation Rules</strong>
+                  <div class="text-muted small">Auto-pause, budget reallocation</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="check-circle" class="check-icon"></i>
+                <div>
+                  <strong>Weekly Strategy Reviews</strong>
+                  <div class="text-muted small">Scheduled agent analysis</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="check-circle" class="check-icon"></i>
+                <div>
+                  <strong>Press Release Distribution</strong>
+                  <div class="text-muted small">PR Wire integration</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="clock" class="me-2" style="color: #8b5cf6;"></i> Coming Next</h5>
+            </div>
+            <div class="section-body">
+              <div class="implementation-item">
+                <i data-feather="circle" class="coming-icon"></i>
+                <div>
+                  <strong>Facebook/Meta Ads</strong>
+                  <div class="text-muted small">Full integration with Meta Business Suite</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="circle" class="coming-icon"></i>
+                <div>
+                  <strong>TikTok Ads Manager</strong>
+                  <div class="text-muted small">Video ad campaigns for TikTok</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="circle" class="coming-icon"></i>
+                <div>
+                  <strong>LinkedIn Advertising</strong>
+                  <div class="text-muted small">B2B targeting and sponsored content</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="circle" class="coming-icon"></i>
+                <div>
+                  <strong>Multi-Channel Attribution</strong>
+                  <div class="text-muted small">Cross-platform conversion tracking</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="circle" class="coming-icon"></i>
+                <div>
+                  <strong>Dynamic Creative Optimization</strong>
+                  <div class="text-muted small">AI-powered ad variant testing</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="circle" class="coming-icon"></i>
+                <div>
+                  <strong>Competitor Ad Intelligence</strong>
+                  <div class="text-muted small">Monitor competitor ad strategies</div>
+                </div>
+              </div>
+              <div class="implementation-item">
+                <i data-feather="circle" class="coming-icon"></i>
+                <div>
+                  <strong>Automated A/B Testing</strong>
+                  <div class="text-muted small">Statistical significance tracking</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-header">
+              <h5 class="mb-0"><i data-feather="lightbulb" class="me-2" style="color: #f59e0b;"></i> Improvement Ideas</h5>
+            </div>
+            <div class="section-body">
+              <div class="suggestion-item">
+                <strong>Voice-Activated Campaign Creation</strong>
+                <p class="mb-0 text-muted small">Create campaigns using natural language commands</p>
+              </div>
+              <div class="suggestion-item">
+                <strong>Predictive Budget Allocation</strong>
+                <p class="mb-0 text-muted small">ML-based spend optimization across channels</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
 <script>
   feather.replace();
+  
+  function chatWithAgent() {
+    window.location.href = '/agents?agent=advertising';
+  }
+  
+  function refreshSuggestions() {
+    const container = document.getElementById('suggestionsContainer');
+    container.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-warning" role="status"></div><div class="mt-2 text-muted">Getting AI suggestions...</div></div>';
+    
+    fetch('/api/agents/advertising/suggestions', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({context: 'ads_performance'})
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.suggestions) {
+        container.innerHTML = data.suggestions.map(s => `
+          <div class="suggestion-item">
+            <div class="d-flex align-items-start">
+              <i data-feather="lightbulb" class="me-3" style="color: #f59e0b;"></i>
+              <div>
+                <strong>${s.title || 'Suggestion'}</strong>
+                <p class="mb-0 text-muted small">${s.description || s}</p>
+              </div>
+            </div>
+          </div>
+        `).join('');
+        feather.replace();
+      }
+    })
+    .catch(() => {
+      container.innerHTML = '<div class="text-muted">Unable to load suggestions</div>';
+    });
+  }
 </script>
 {% endblock %}

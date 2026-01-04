@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Edit SMS Campaign - LUX Marketing{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1><i data-feather="edit"></i> Edit SMS Campaign</h1>
+        <a href="{{ url_for('main.sms_dashboard') }}" class="btn btn-outline-secondary">
+            <i data-feather="arrow-left"></i> Back to Campaigns
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Campaign Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="smsForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Campaign Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                               value="{{ campaign.name }}" placeholder="e.g., Summer Sale Alert">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="message" class="form-label">
+                            SMS Message * 
+                            <span id="charCount" class="badge bg-secondary">{{ campaign.message|length }}/160</span>
+                        </label>
+                        <textarea class="form-control" id="message" name="message" rows="4" required
+                                  placeholder="Keep it short and sweet...">{{ campaign.message }}</textarea>
+                        <small class="text-muted">
+                            SMS messages are limited to 160 characters. Include "Reply STOP to unsubscribe" for compliance.
+                        </small>
+                    </div>
+                    
+                    {% if campaign.status == 'draft' %}
+                    <div class="mb-3">
+                        <label class="form-label">Schedule (Optional)</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="scheduled_date" class="form-label">Date</label>
+                                <input type="date" class="form-control" id="scheduled_date" name="scheduled_date"
+                                       value="{{ campaign.scheduled_at.strftime('%Y-%m-%d') if campaign.scheduled_at else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="scheduled_time" class="form-label">Time</label>
+                                <input type="time" class="form-control" id="scheduled_time" name="scheduled_time"
+                                       value="{{ campaign.scheduled_at.strftime('%H:%M') if campaign.scheduled_at else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i data-feather="save"></i> Save Changes
+                        </button>
+                        <a href="{{ url_for('main.sms_dashboard') }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Campaign Info</h6>
+            </div>
+            <div class="card-body">
+                <p><strong>Status:</strong> 
+                    <span class="badge bg-{{ 'success' if campaign.status == 'sent' else ('warning' if campaign.status == 'sending' else 'secondary') }}">
+                        {{ campaign.status }}
+                    </span>
+                </p>
+                <p><strong>Recipients:</strong> {{ campaign.recipients.count() }}</p>
+                <p><strong>Created:</strong> {{ campaign.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% if campaign.sent_at %}
+                <p><strong>Sent:</strong> {{ campaign.sent_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('message').addEventListener('input', function() {
+    const count = this.value.length;
+    const badge = document.getElementById('charCount');
+    badge.textContent = count + '/160';
+    badge.className = count > 160 ? 'badge bg-danger' : (count > 140 ? 'badge bg-warning' : 'badge bg-secondary');
+});
+</script>
+{% endblock %}

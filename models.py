@@ -504,10 +504,23 @@ class Contact(db.Model):
     tags = db.Column(db.String(255))  # Comma-separated tags
     segment = db.Column(db.String(100), default='lead')  # lead, customer, newsletter, vip, etc.
     custom_fields = db.Column(JSON)  # Additional custom data
+    notes = db.Column(db.Text)  # Free-form notes about the customer
+    address = db.Column(db.String(255))  # Customer address
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(50))
+    zip_code = db.Column(db.String(20))
+    country = db.Column(db.String(100))
+    website = db.Column(db.String(255))  # Customer's website
+    social_profiles = db.Column(JSON)  # Social media links
+    lead_score = db.Column(db.Integer, default=0)  # Lead scoring 0-100
     engagement_score = db.Column(db.Float, default=0.0)
     last_activity = db.Column(db.DateTime)
     source = db.Column(db.String(50))  # web_form, manual, import, api, forminator
     is_active = db.Column(db.Boolean, default=True)
+    is_subscribed = db.Column(db.Boolean, default=False)  # Newsletter subscription status
+    subscribed_at = db.Column(db.DateTime)  # When they subscribed
+    unsubscribed_at = db.Column(db.DateTime)  # When they unsubscribed (if applicable)
+    subscription_source = db.Column(db.String(50))  # How they subscribed: form, import, manual, sync
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -670,6 +683,7 @@ class LandingPage(db.Model):
     html_content = db.Column(Text)
     css_styles = db.Column(Text)
     meta_description = db.Column(db.String(160))
+    builder_schema = db.Column(Text)  # JSON schema for drag-drop builder
     form_id = db.Column(db.Integer, db.ForeignKey('web_form.id'))
     is_published = db.Column(db.Boolean, default=False)
     page_views = db.Column(db.Integer, default=0)
@@ -987,12 +1001,41 @@ class CalendarEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(Text)
-    event_type = db.Column(db.String(20))  # campaign, social_post, event, task
+    event_type = db.Column(db.String(30))  # campaign, social_post, email, sms, deadline, note, task
     start_date = db.Column(db.DateTime, nullable=False)
     end_date = db.Column(db.DateTime)
+    all_day = db.Column(db.Boolean, default=False)
     campaign_id = db.Column(db.Integer, db.ForeignKey('campaign.id'))
     social_post_id = db.Column(db.Integer, db.ForeignKey('social_post.id'))
+    content_type = db.Column(db.String(50))  # social_post, sms_campaign, email_campaign, custom
+    content_id = db.Column(db.Integer)  # Polymorphic reference to linked content
+    deadline_at = db.Column(db.DateTime)  # For deadline events
+    notes = db.Column(Text)  # Free-form notes
+    color = db.Column(db.String(20), default='primary')  # Bootstrap color class
+    is_completed = db.Column(db.Boolean, default=False)  # For deadlines/tasks
+    reminder_at = db.Column(db.DateTime)  # Optional reminder
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'))
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'event_type': self.event_type,
+            'start': self.start_date.isoformat() if self.start_date else None,
+            'end': self.end_date.isoformat() if self.end_date else None,
+            'allDay': self.all_day,
+            'content_type': self.content_type,
+            'content_id': self.content_id,
+            'deadline_at': self.deadline_at.isoformat() if self.deadline_at else None,
+            'notes': self.notes,
+            'color': self.color,
+            'is_completed': self.is_completed,
+            'className': f'event-{self.event_type}' if self.event_type else 'event-default'
+        }
     
     def __repr__(self):
         return f'<CalendarEvent {self.title}>'
@@ -1059,6 +1102,140 @@ class AgentSchedule(db.Model):
     
     def __repr__(self):
         return f'<AgentSchedule {self.agent_name}>'
+
+
+class AgentDeliverable(db.Model):
+    """Stores actual deliverables/outputs produced by AI agents"""
+    __tablename__ = 'agent_deliverable'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    agent_type = db.Column(db.String(50), nullable=False, index=True)
+    agent_name = db.Column(db.String(100), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
+    
+    deliverable_type = db.Column(db.String(50), nullable=False)  # report, content, image, analysis, campaign
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(Text)
+    content = db.Column(Text)  # Main content (HTML, markdown, JSON)
+    content_format = db.Column(db.String(20), default='text')  # text, html, markdown, json
+    file_path = db.Column(db.String(500))  # For generated files/images
+    
+    extra_data = db.Column(JSON)  # Additional metadata
+    prompt_used = db.Column(Text)  # AI prompt that generated this
+    
+    status = db.Column(db.String(20), default='completed')  # draft, completed, archived
+    is_starred = db.Column(db.Boolean, default=False)
+    view_count = db.Column(db.Integer, default=0)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AgentDeliverable {self.agent_type}:{self.title}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'agent_type': self.agent_type,
+            'agent_name': self.agent_name,
+            'deliverable_type': self.deliverable_type,
+            'title': self.title,
+            'description': self.description,
+            'content_format': self.content_format,
+            'status': self.status,
+            'is_starred': self.is_starred,
+            'view_count': self.view_count,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class AgentMemory(db.Model):
+    """Learning and memory system for AI agents - stores insights and patterns"""
+    __tablename__ = 'agent_memory'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    agent_type = db.Column(db.String(50), nullable=False, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
+    
+    memory_type = db.Column(db.String(50), nullable=False)  # insight, pattern, preference, lesson, context
+    category = db.Column(db.String(50))  # marketing, content, audience, performance, etc.
+    key = db.Column(db.String(255), nullable=False)  # Unique identifier for this memory
+    value = db.Column(Text, nullable=False)  # The actual insight/pattern
+    
+    confidence = db.Column(db.Float, default=0.5)  # 0-1 confidence score
+    usage_count = db.Column(db.Integer, default=0)  # How often this memory is used
+    success_rate = db.Column(db.Float, default=0.0)  # Success rate when applied
+    
+    source = db.Column(db.String(100))  # Where this insight came from
+    expires_at = db.Column(db.DateTime)  # Optional expiration for time-sensitive insights
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        db.Index('ix_agent_memory_type_key', 'agent_type', 'key'),
+    )
+    
+    def __repr__(self):
+        return f'<AgentMemory {self.agent_type}:{self.key}>'
+
+
+class AgentPerformance(db.Model):
+    """Tracks agent performance for self-improvement"""
+    __tablename__ = 'agent_performance'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    agent_type = db.Column(db.String(50), nullable=False, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
+    
+    period_start = db.Column(db.DateTime, nullable=False)
+    period_end = db.Column(db.DateTime, nullable=False)
+    period_type = db.Column(db.String(20), default='weekly')  # daily, weekly, monthly
+    
+    tasks_completed = db.Column(db.Integer, default=0)
+    tasks_failed = db.Column(db.Integer, default=0)
+    deliverables_produced = db.Column(db.Integer, default=0)
+    
+    avg_quality_score = db.Column(db.Float, default=0.0)  # 0-100
+    avg_response_time = db.Column(db.Float, default=0.0)  # seconds
+    user_satisfaction = db.Column(db.Float, default=0.0)  # 0-5 rating
+    
+    top_strengths = db.Column(JSON)  # List of things agent does well
+    improvement_areas = db.Column(JSON)  # Areas needing improvement
+    recommendations = db.Column(Text)  # AI-generated self-improvement recommendations
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AgentPerformance {self.agent_type}:{self.period_type}>'
+
+
+class AgentAutomation(db.Model):
+    """Editable automated tasks for AI agents"""
+    __tablename__ = 'agent_automation'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    agent_type = db.Column(db.String(50), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(Text)
+    schedule = db.Column(db.String(20), default='daily')  # hourly, daily, weekly, monthly, quarterly
+    enabled = db.Column(db.Boolean, default=True)
+    last_run = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AgentAutomation {self.agent_type}:{self.name}>'
+    
+    def to_dict(self):
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'description': self.description or '',
+            'schedule': self.schedule,
+            'enabled': self.enabled,
+            'last_run': self.last_run.strftime('%Y-%m-%d %H:%M') if self.last_run else None
+        }
 
 # SEO & Analytics Module (Phase 2)
 class SEOKeyword(db.Model):
@@ -1778,6 +1955,7 @@ class Deal(db.Model):
     closed_at = db.Column(db.DateTime)
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     company = db.relationship('Company', backref='deals')
     contact = db.relationship('Contact', backref='deals')
@@ -1818,7 +1996,7 @@ class LeadScore(db.Model):
     fit_score = db.Column(db.Float)  # Company fit based on ICP
     last_calculated = db.Column(db.DateTime, default=datetime.utcnow)
     
-    contact = db.relationship('Contact', backref='lead_score')
+    contact = db.relationship('Contact', backref='lead_scores')
 
 class NurtureCampaign(db.Model):
     """Automated lead nurturing campaigns"""
@@ -1836,16 +2014,72 @@ class NurtureCampaign(db.Model):
 
 # ============= COMPETITOR ANALYSIS =============
 class CompetitorProfile(db.Model):
-    """Track competitor information"""
+    """Comprehensive competitor tracking and intelligence"""
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     competitor_name = db.Column(db.String(255), nullable=False)
     website_url = db.Column(db.String(255))
+    logo_url = db.Column(db.Text)  # Allow base64 or long URLs
+    
+    # 1. Positioning & Brand Strategy
+    core_promise = db.Column(db.Text)  # 1-sentence value proposition
+    target_persona = db.Column(db.Text)  # Who they're really talking to
+    price_positioning = db.Column(db.String(50))  # premium, mid, discount
+    emotional_tone = db.Column(db.String(100))  # luxury, edgy, safe, educational, etc.
+    brand_notes = db.Column(db.Text)  # Additional brand strategy notes
+    
+    # 2. Acquisition Channels
+    primary_channels = db.Column(JSON)  # Array: paid_search, social, seo, affiliates, etc.
+    paid_channels = db.Column(JSON)  # Google, Meta, TikTok, etc.
+    organic_channels = db.Column(JSON)  # SEO, YouTube, blogs
+    influencer_usage = db.Column(db.Boolean, default=False)
+    referral_program = db.Column(db.Boolean, default=False)
+    geographic_focus = db.Column(db.String(100))  # local, regional, global
+    
+    # 3. Messaging & Offers
+    lead_magnet = db.Column(db.Text)  # What they offer to capture leads
+    entry_offer = db.Column(db.Text)  # First purchase offer
+    key_headlines = db.Column(JSON)  # Array of headlines/hooks they use
+    cta_style = db.Column(db.String(50))  # soft, aggressive, educational
+    risk_reversal = db.Column(db.Text)  # Guarantees, trials, etc.
+    
+    # 4. Funnel & Conversion
+    funnel_type = db.Column(db.String(100))  # direct, tripwire, webinar, free trial, etc.
+    signup_friction = db.Column(db.String(50))  # low, medium, high
+    checkout_notes = db.Column(db.Text)
+    subscription_model = db.Column(db.Boolean, default=False)
+    cart_recovery = db.Column(db.Boolean, default=False)
+    
+    # 5. Retention & Lifecycle
+    retention_hooks = db.Column(JSON)  # Array of retention tactics
+    email_frequency = db.Column(db.String(50))  # daily, weekly, monthly
+    sms_usage = db.Column(db.Boolean, default=False)
+    loyalty_program = db.Column(db.Boolean, default=False)
+    community_access = db.Column(db.Text)  # Discord, forums, etc.
+    
+    # 6. Content & Authority
+    content_ratio = db.Column(db.String(50))  # educational vs promotional
+    long_form_content = db.Column(db.Boolean, default=False)
+    social_proof_usage = db.Column(db.Text)  # Reviews, UGC, testimonials
+    transparency_level = db.Column(db.String(50))  # high, medium, low
+    
+    # 7. Technology & Stack
+    email_provider = db.Column(db.String(100))
+    sms_provider = db.Column(db.String(100))
+    tech_weaknesses = db.Column(JSON)  # Array of observed weaknesses
+    
+    # Original fields
     strengths = db.Column(JSON)  # Array of strengths
     weaknesses = db.Column(JSON)  # Array of weaknesses
+    opportunities = db.Column(JSON)  # Array of opportunities for us
     pricing_model = db.Column(db.Text)
     market_share = db.Column(db.Float)  # Percentage
+    
+    # Metadata
+    is_active = db.Column(db.Boolean, default=True)
     last_analyzed = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.Text)  # General notes
     
     company = db.relationship('Company', backref='competitor_profiles')
 
@@ -2007,4 +2241,259 @@ class AnalyticsData(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     company = db.relationship('Company', backref='analytics_data')
+
+
+# ============= APPROVAL QUEUE SYSTEM =============
+class ApprovalQueue(db.Model):
+    """Unified approval queue for ALL marketing content (manual + automated)"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    
+    # Content identification
+    content_type = db.Column(db.String(50), nullable=False)  # social_post, email_campaign, sms_campaign, blog_post, ad_campaign
+    content_id = db.Column(db.Integer)  # Reference to the actual content record
+    
+    # Creation mode tracking
+    creation_mode = db.Column(db.String(20), nullable=False)  # manual, automated
+    created_by_agent = db.Column(db.String(100))  # Agent type if automated
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # User if manual
+    
+    # Content preview (for quick review)
+    title = db.Column(db.String(500))
+    content_preview = db.Column(db.Text)  # First 500 chars or summary
+    content_full = db.Column(JSON)  # Full content payload for editing
+    
+    # AI rationale and confidence
+    ai_rationale = db.Column(db.Text)  # Why AI generated this
+    confidence_score = db.Column(db.Float)  # 0.0 - 1.0 confidence level
+    risk_level = db.Column(db.String(20), default='low')  # low, medium, high, critical
+    compliance_flags = db.Column(JSON)  # Any compliance warnings
+    
+    # Approval workflow
+    status = db.Column(db.String(30), default='pending_review')  # pending_review, approved, rejected, scheduled, published, cancelled
+    reviewed_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    reviewed_at = db.Column(db.DateTime)
+    review_notes = db.Column(db.Text)
+    
+    # Scheduling
+    scheduled_publish_at = db.Column(db.DateTime)
+    published_at = db.Column(db.DateTime)
+    
+    # Target platform
+    target_platform = db.Column(db.String(50))  # instagram, facebook, tiktok, email, sms, blog
+    target_audience = db.Column(db.String(255))
+    
+    # Audit trail
+    version = db.Column(db.Integer, default=1)
+    previous_version_id = db.Column(db.Integer, db.ForeignKey('approval_queue.id'))
+    edit_history = db.Column(JSON)  # Array of edits made during review
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='approval_queue_items')
+    created_by_user = db.relationship('User', foreign_keys=[created_by_user_id], backref='created_approvals')
+    reviewed_by_user = db.relationship('User', foreign_keys=[reviewed_by_user_id], backref='reviewed_approvals')
+    previous_version = db.relationship('ApprovalQueue', remote_side=[id], backref='newer_versions')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'content_type': self.content_type,
+            'content_id': self.content_id,
+            'creation_mode': self.creation_mode,
+            'created_by_agent': self.created_by_agent,
+            'title': self.title,
+            'content_preview': self.content_preview,
+            'content_full': self.content_full,
+            'ai_rationale': self.ai_rationale,
+            'confidence_score': self.confidence_score,
+            'risk_level': self.risk_level,
+            'compliance_flags': self.compliance_flags,
+            'status': self.status,
+            'review_notes': self.review_notes,
+            'scheduled_publish_at': self.scheduled_publish_at.isoformat() if self.scheduled_publish_at else None,
+            'published_at': self.published_at.isoformat() if self.published_at else None,
+            'target_platform': self.target_platform,
+            'target_audience': self.target_audience,
+            'version': self.version,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'created_by': self.created_by_user.email if self.created_by_user else None,
+            'reviewed_by': self.reviewed_by_user.email if self.reviewed_by_user else None
+        }
+
+
+class FeatureToggle(db.Model):
+    """Centralized feature toggles for AI automation and marketing features"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    
+    # Feature identification
+    feature_key = db.Column(db.String(100), nullable=False)  # e.g., 'ai_social_posting', 'email_automation'
+    feature_name = db.Column(db.String(255))
+    feature_category = db.Column(db.String(50))  # ai_agents, automation, channels, safety
+    description = db.Column(db.Text)
+    
+    # Toggle state - SAFE DEFAULTS ARE OFF
+    is_enabled = db.Column(db.Boolean, default=False)
+    
+    # Agent-specific settings
+    agent_type = db.Column(db.String(100))  # Which agent this toggle controls
+    
+    # Automation settings
+    allow_automated_creation = db.Column(db.Boolean, default=False)
+    require_approval = db.Column(db.Boolean, default=True)  # Always require approval by default
+    
+    # Thresholds and limits
+    confidence_threshold = db.Column(db.Float, default=0.8)  # Min confidence for auto-generation
+    daily_limit = db.Column(db.Integer)  # Max items per day
+    budget_ceiling = db.Column(db.Float)  # Max spend for ad campaigns
+    risk_tolerance = db.Column(db.String(20), default='low')  # low, medium, high
+    
+    # Content settings
+    content_aggressiveness = db.Column(db.String(20), default='conservative')  # conservative, moderate, aggressive
+    brand_strictness = db.Column(db.String(20), default='strict')  # strict, moderate, flexible
+    
+    # Platform-specific rules
+    platform_rules = db.Column(JSON)  # Platform-specific configuration
+    
+    # Scheduling settings
+    schedule_frequency = db.Column(db.String(50))  # hourly, daily, weekly, monthly
+    active_hours_start = db.Column(db.Integer)  # 0-23, when automation can run
+    active_hours_end = db.Column(db.Integer)
+    
+    # Kill switch
+    emergency_stop = db.Column(db.Boolean, default=False)  # Global stop for this feature
+    
+    # Audit
+    last_modified_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='feature_toggles')
+    modified_by = db.relationship('User', backref='feature_toggle_changes')
+    
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'feature_key', name='unique_company_feature'),
+    )
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'feature_key': self.feature_key,
+            'feature_name': self.feature_name,
+            'feature_category': self.feature_category,
+            'description': self.description,
+            'is_enabled': self.is_enabled,
+            'agent_type': self.agent_type,
+            'allow_automated_creation': self.allow_automated_creation,
+            'require_approval': self.require_approval,
+            'confidence_threshold': self.confidence_threshold,
+            'daily_limit': self.daily_limit,
+            'budget_ceiling': self.budget_ceiling,
+            'risk_tolerance': self.risk_tolerance,
+            'content_aggressiveness': self.content_aggressiveness,
+            'brand_strictness': self.brand_strictness,
+            'schedule_frequency': self.schedule_frequency,
+            'emergency_stop': self.emergency_stop,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class ApprovalAuditLog(db.Model):
+    """Immutable audit trail for all approval actions"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    approval_queue_id = db.Column(db.Integer, db.ForeignKey('approval_queue.id'), nullable=False)
+    
+    # Action tracking
+    action = db.Column(db.String(50), nullable=False)  # created, reviewed, edited, approved, rejected, scheduled, published, cancelled
+    action_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    action_by_agent = db.Column(db.String(100))  # If action was by AI agent
+    
+    # Change details
+    previous_status = db.Column(db.String(30))
+    new_status = db.Column(db.String(30))
+    changes_made = db.Column(JSON)  # Detailed diff of changes
+    notes = db.Column(db.Text)
+    
+    # Metadata
+    ip_address = db.Column(db.String(50))
+    user_agent = db.Column(db.String(500))
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='approval_audit_logs')
+    approval_item = db.relationship('ApprovalQueue', backref='audit_logs')
+    action_by_user = db.relationship('User', backref='approval_actions')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'action': self.action,
+            'action_by': self.action_by_user.email if self.action_by_user else self.action_by_agent,
+            'previous_status': self.previous_status,
+            'new_status': self.new_status,
+            'changes_made': self.changes_made,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+# ============= DEFAULT FEATURE TOGGLES =============
+DEFAULT_FEATURE_TOGGLES = [
+    # AI Agent Toggles (ALL OFF by default)
+    {'feature_key': 'agent_brand_strategy', 'feature_name': 'Brand Strategy Agent', 'feature_category': 'ai_agents', 'agent_type': 'brand_strategy', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'agent_content_seo', 'feature_name': 'Content & SEO Agent', 'feature_category': 'ai_agents', 'agent_type': 'content_seo', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'agent_analytics', 'feature_name': 'Analytics Agent', 'feature_category': 'ai_agents', 'agent_type': 'analytics', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'agent_creative_design', 'feature_name': 'Creative & Design Agent', 'feature_category': 'ai_agents', 'agent_type': 'creative_design', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'agent_advertising', 'feature_name': 'Advertising Agent', 'feature_category': 'ai_agents', 'agent_type': 'advertising', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'agent_social_media', 'feature_name': 'Social Media Agent', 'feature_category': 'ai_agents', 'agent_type': 'social_media', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'agent_email_crm', 'feature_name': 'Email & CRM Agent', 'feature_category': 'ai_agents', 'agent_type': 'email_crm', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'agent_sales_enablement', 'feature_name': 'Sales Enablement Agent', 'feature_category': 'ai_agents', 'agent_type': 'sales_enablement', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'agent_retention', 'feature_name': 'Retention Agent', 'feature_category': 'ai_agents', 'agent_type': 'retention', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'agent_operations', 'feature_name': 'Operations Agent', 'feature_category': 'ai_agents', 'agent_type': 'operations', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'agent_app_intelligence', 'feature_name': 'APP Agent', 'feature_category': 'ai_agents', 'agent_type': 'app_intelligence', 'is_enabled': False, 'require_approval': True},
+    
+    # Channel Toggles (ALL OFF by default)
+    {'feature_key': 'channel_instagram', 'feature_name': 'Instagram Publishing', 'feature_category': 'channels', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'channel_facebook', 'feature_name': 'Facebook Publishing', 'feature_category': 'channels', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'channel_tiktok', 'feature_name': 'TikTok Publishing', 'feature_category': 'channels', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'channel_twitter', 'feature_name': 'X/Twitter Publishing', 'feature_category': 'channels', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'channel_linkedin', 'feature_name': 'LinkedIn Publishing', 'feature_category': 'channels', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'channel_email', 'feature_name': 'Email Campaigns', 'feature_category': 'channels', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'channel_sms', 'feature_name': 'SMS Campaigns', 'feature_category': 'channels', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'channel_blog', 'feature_name': 'Blog Publishing', 'feature_category': 'channels', 'is_enabled': False, 'require_approval': True},
+    
+    # Automation Toggles (ALL OFF by default)
+    {'feature_key': 'automation_scheduled_posts', 'feature_name': 'Scheduled Post Publishing', 'feature_category': 'automation', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'automation_ai_content', 'feature_name': 'AI Content Generation', 'feature_category': 'automation', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'automation_workflow_triggers', 'feature_name': 'Automation Workflows', 'feature_category': 'automation', 'is_enabled': False, 'require_approval': True},
+    {'feature_key': 'automation_ad_optimization', 'feature_name': 'Ad Campaign Optimization', 'feature_category': 'automation', 'is_enabled': False, 'require_approval': True},
+    
+    # Safety Toggles (ALL ON by default - these are safety features)
+    {'feature_key': 'safety_content_review', 'feature_name': 'Content Review Required', 'feature_category': 'safety', 'is_enabled': True, 'require_approval': True},
+    {'feature_key': 'safety_brand_check', 'feature_name': 'Brand Safety Check', 'feature_category': 'safety', 'is_enabled': True, 'require_approval': True},
+    {'feature_key': 'safety_compliance_scan', 'feature_name': 'Compliance Scanning', 'feature_category': 'safety', 'is_enabled': True, 'require_approval': True},
+    {'feature_key': 'safety_budget_limits', 'feature_name': 'Budget Limit Enforcement', 'feature_category': 'safety', 'is_enabled': True, 'require_approval': True},
+]
+
+
+def seed_feature_toggles(company_id):
+    """Seed default feature toggles for a company with safe defaults (OFF)"""
+    for toggle_data in DEFAULT_FEATURE_TOGGLES:
+        existing = FeatureToggle.query.filter_by(
+            company_id=company_id,
+            feature_key=toggle_data['feature_key']
+        ).first()
+        
+        if not existing:
+            toggle = FeatureToggle(
+                company_id=company_id,
+                **toggle_data
+            )
+            db.session.add(toggle)
+    
+    db.session.commit()
 

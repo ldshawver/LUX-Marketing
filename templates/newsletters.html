@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Newsletters - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i data-feather="mail"></i> Newsletter Management</h1>
+    <div>
+        <a href="{{ url_for('main.newsletter_archive') }}" class="btn btn-outline-secondary me-2">
+            <i data-feather="archive"></i> Public Archive
+        </a>
+        <a href="{{ url_for('main.create_newsletter') }}" class="btn btn-primary">
+            <i data-feather="plus"></i> Create Newsletter
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="mail" class="text-primary" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ newsletters|length }}</h5>
+                        <p class="card-text text-muted">Total Newsletters</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="check-circle" class="text-success" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ newsletters|selectattr('is_public')|list|length }}</h5>
+                        <p class="card-text text-muted">Published</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="eye" class="text-info" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ newsletters|sum(attribute='view_count') }}</h5>
+                        <p class="card-text text-muted">Total Views</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i data-feather="users" class="text-warning" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-0">{{ subscriber_count }}</h5>
+                        <p class="card-text text-muted">Subscribers</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">All Newsletters</h5>
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary active" onclick="filterNewsletters('all')">All</button>
+            <button class="btn btn-outline-primary" onclick="filterNewsletters('published')">Published</button>
+            <button class="btn btn-outline-primary" onclick="filterNewsletters('draft')">Drafts</button>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if newsletters %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Published</th>
+                        <th>Views</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for newsletter in newsletters %}
+                    <tr class="newsletter-row" data-status="{{ 'published' if newsletter.is_public else 'draft' }}">
+                        <td>
+                            <strong>{{ newsletter.title }}</strong>
+                            <br><small class="text-muted">/newsletter/{{ newsletter.slug }}</small>
+                        </td>
+                        <td>
+                            {% if newsletter.is_public %}
+                            <span class="badge bg-success">Published</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Draft</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ newsletter.published_at.strftime('%b %d, %Y') if newsletter.published_at else '-' }}</td>
+                        <td>{{ newsletter.view_count }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('main.view_newsletter', slug=newsletter.slug) }}" class="btn btn-outline-info" title="View" target="_blank">
+                                    <i data-feather="eye"></i>
+                                </a>
+                                <a href="{{ url_for('main.edit_newsletter', newsletter_id=newsletter.id) }}" class="btn btn-outline-warning" title="Edit">
+                                    <i data-feather="edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('main.toggle_newsletter_public', newsletter_id=newsletter.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-outline-{{ 'secondary' if newsletter.is_public else 'success' }}" title="{{ 'Unpublish' if newsletter.is_public else 'Publish' }}">
+                                        <i data-feather="{{ 'eye-off' if newsletter.is_public else 'globe' }}"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('main.delete_newsletter', newsletter_id=newsletter.id) }}" class="d-inline" onsubmit="return confirm('Delete this newsletter?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i data-feather="mail" class="text-muted mb-3" style="width: 4rem; height: 4rem;"></i>
+            <h4>No Newsletters Yet</h4>
+            <p class="text-muted">Create your first newsletter to get started.</p>
+            <a href="{{ url_for('main.create_newsletter') }}" class="btn btn-primary">
+                <i data-feather="plus"></i> Create Newsletter
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function filterNewsletters(status) {
+    const rows = document.querySelectorAll('.newsletter-row');
+    const buttons = document.querySelectorAll('.btn-group-sm .btn');
+    
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    rows.forEach(row => {
+        if (status === 'all') {
+            row.style.display = '';
+        } else {
+            row.style.display = row.dataset.status === status ? '' : 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

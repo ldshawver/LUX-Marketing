@@ -8,9 +8,29 @@
 .crm-nav button:hover { background: rgba(188,0,237,0.2); }
 .crm-section { display: none; }
 .crm-section.active { display: block; }
-.stat-card { background: rgba(188,0,237,0.1); border: 1px solid rgba(188,0,237,0.3); border-radius: 8px; padding: 1.5rem; text-align: center; }
+.stat-card { background: rgba(188,0,237,0.1); border: 1px solid rgba(188,0,237,0.3); border-radius: 8px; padding: 1.5rem; text-align: center; transition: transform 0.2s, box-shadow 0.2s; }
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(188,0,237,0.3); }
 .stat-value { font-size: 2rem; font-weight: bold; color: #00ffb4; }
 .stat-label { color: #999; font-size: 0.9rem; margin-top: 0.5rem; }
+.action-card { background: linear-gradient(135deg, rgba(188,0,237,0.15), rgba(0,255,180,0.05)); border: 1px solid rgba(188,0,237,0.4); border-radius: 12px; }
+.action-item { padding: 1rem; border-bottom: 1px solid rgba(188,0,237,0.2); display: flex; align-items: center; gap: 1rem; transition: background 0.2s; cursor: pointer; }
+.action-item:last-child { border-bottom: none; }
+.action-item:hover { background: rgba(188,0,237,0.1); }
+.action-item.warning { border-left: 4px solid #ffc107; }
+.action-item.success { border-left: 4px solid #00ff88; }
+.action-item.info { border-left: 4px solid #00bfff; }
+.priority-high { color: #ff6b6b; }
+.priority-medium { color: #ffc107; }
+.stage-card { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 120px; height: 120px; }
+.stage-card .stage-progress { position: absolute; bottom: 0; left: 0; height: 4px; background: linear-gradient(90deg, #bc00ed, #00ffb4); transition: width 0.5s ease; }
+.stage-action { font-size: 0.7rem; color: #bc00ed; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+.stage-label { font-size: 0.9rem; font-weight: 600; margin: 0.3rem 0; white-space: nowrap; }
+.stage-count { font-size: 1.5rem; font-weight: bold; color: #00ffb4; }
+.zero-state { text-align: center; padding: 3rem; background: linear-gradient(135deg, rgba(188,0,237,0.1), rgba(0,255,180,0.05)); border-radius: 16px; border: 2px dashed rgba(188,0,237,0.4); }
+.zero-state h3 { color: #00ffb4; margin-bottom: 1rem; }
+.zero-state p { color: #aaa; max-width: 500px; margin: 0 auto 1.5rem; }
+.stale-badge { background: #ff6b6b; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; color: white; animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 </style>
 
 <div class="container-fluid p-4">
@@ -37,23 +57,116 @@
 
   <!-- DEALS & PIPELINE -->
   <div class="crm-section active" data-section="deals">
+    <!-- Activity Stats Row -->
     <div class="row mb-4">
-      {% set stages = ['prospecting', 'qualification', 'proposal', 'negotiation', 'won', 'lost'] %}
-      {% for stage in stages %}
-      <div class="col-lg-2 col-md-4 mb-3">
+      <div class="col-md-2 col-sm-4 mb-3">
         <div class="stat-card">
-          <div class="text-uppercase" style="font-size: 0.8rem; color: #999;">{{ stage }}</div>
-          <div class="stat-value">{% set stage_deals = deals|selectattr('stage', 'equalto', stage)|list %}{{ stage_deals|length }}</div>
-          <div class="stat-label">${{ stage_deals|map(attribute='value')|sum|int }}</div>
+          <div class="stat-value" style="color: #00bfff;">{{ activity_stats.new_leads_this_week|default(0) }}</div>
+          <div class="stat-label">New Leads This Week</div>
         </div>
       </div>
-      {% endfor %}
+      <div class="col-md-2 col-sm-4 mb-3">
+        <div class="stat-card">
+          <div class="stat-value">{{ activity_stats.active_deals|default(0) }}</div>
+          <div class="stat-label">Active Deals</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-sm-4 mb-3">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #ff6b6b;">{{ activity_stats.stale_deals|default(0) }}</div>
+          <div class="stat-label">Need Follow-up</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-sm-4 mb-3">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #00ff88;">{{ activity_stats.hot_leads|default(0) }}</div>
+          <div class="stat-label">Hot Leads</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-sm-4 mb-3">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #bc00ed;">{{ activity_stats.deals_won_this_month|default(0) }}</div>
+          <div class="stat-label">Deals Won</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-sm-4 mb-3">
+        <div class="stat-card">
+          <div class="stat-value">{{ activity_stats.total_contacts|default(0) }}</div>
+          <div class="stat-label">Total Contacts</div>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-header d-flex justify-content-between">
-        <h5 class="mb-0">Sales Pipeline</h5>
-        <small class="text-muted">Total Value: ${{ deals|map(attribute='value')|sum|int }}</small>
+    <div class="row">
+      <!-- Next Actions Panel -->
+      <div class="col-lg-4 mb-4">
+        <div class="card action-card h-100">
+          <div class="card-header" style="background: transparent; border-bottom: 1px solid rgba(188,0,237,0.3);">
+            <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="zap"></i> Next Actions</h5>
+          </div>
+          <div class="card-body p-0">
+            {% if next_actions %}
+              {% for action in next_actions %}
+              <div class="action-item {{ action.type }}">
+                <i data-feather="{{ action.icon }}" style="width: 20px; height: 20px; {% if action.type == 'warning' %}color: #ffc107;{% elif action.type == 'success' %}color: #00ff88;{% else %}color: #00bfff;{% endif %}"></i>
+                <div style="flex: 1;">
+                  <div style="color: #eee; font-size: 0.9rem;">{{ action.action }}</div>
+                  <span class="{% if action.priority == 'high' %}priority-high{% else %}priority-medium{% endif %}" style="font-size: 0.75rem; text-transform: uppercase;">{{ action.priority }} priority</span>
+                </div>
+                <button class="btn btn-sm btn-outline-light" style="padding: 4px 8px;"><i data-feather="arrow-right" style="width: 14px; height: 14px;"></i></button>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="text-center p-4" style="color: #888;">
+                <i data-feather="check-circle" style="width: 40px; height: 40px; color: #00ff88;"></i>
+                <p class="mt-2 mb-0">All caught up! No urgent actions.</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Pipeline Stages with Action Labels -->
+      <div class="col-lg-8 mb-4">
+        <div class="card" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(188,0,237,0.3);">
+          <div class="card-header d-flex justify-content-between" style="background: transparent; border-bottom: 1px solid rgba(188,0,237,0.3);">
+            <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="git-branch"></i> Sales Pipeline</h5>
+            <span style="color: #00ffb4;">{{ activity_stats.active_deals|default(0) }} active deals</span>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              {% set action_stages = [
+                {'key': 'prospecting', 'label': 'Make Contact', 'action': 'Reach out', 'color': '#00bfff'},
+                {'key': 'qualification', 'label': 'Qualify Need', 'action': 'Discover pain', 'color': '#bc00ed'},
+                {'key': 'proposal', 'label': 'Send Proposal', 'action': 'Present offer', 'color': '#ff6b6b'},
+                {'key': 'negotiation', 'label': 'Close Deal', 'action': 'Negotiate terms', 'color': '#ffc107'},
+                {'key': 'won', 'label': 'Won', 'action': 'Celebrate!', 'color': '#00ff88'},
+                {'key': 'lost', 'label': 'Lost', 'action': 'Learn & iterate', 'color': '#888'}
+              ] %}
+              {% for stage in action_stages %}
+              {% set stage_deals = deals|selectattr('stage', 'equalto', stage.key)|list %}
+              {% set total_deals = deals|length if deals else 1 %}
+              {% set progress = ((stage_deals|length / total_deals) * 100)|int if total_deals > 0 else 0 %}
+              <div class="col-lg-2 col-md-4 col-6 mb-3">
+                <div class="stat-card stage-card">
+                  <div class="stage-action">{{ stage.action }}</div>
+                  <div class="stage-label" style="color: {{ stage.color }};">{{ stage.label }}</div>
+                  <div class="stage-count">{{ stage_deals|length }}</div>
+                  <div class="stage-progress" style="width: {{ progress }}%;"></div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deals Table -->
+    <div class="card" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(188,0,237,0.3);">
+      <div class="card-header d-flex justify-content-between" style="background: transparent; border-bottom: 1px solid rgba(188,0,237,0.3);">
+        <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="list"></i> All Deals</h5>
+        <small style="color: #888;">Total Value: ${{ deals|map(attribute='value')|sum|int }}</small>
       </div>
       <div class="card-body">
         {% if deals %}
@@ -64,29 +177,55 @@
                 <th>Deal</th>
                 <th>Customer</th>
                 <th>Stage</th>
+                <th>Status</th>
                 <th>Value</th>
-                <th>Probability</th>
                 <th>Close Date</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {% for deal in deals %}
-              <tr>
-                <td><strong>{{ deal.title }}</strong></td>
+              {% set is_stale = deal in stale_deals %}
+              <tr style="{% if is_stale %}background: rgba(255,107,107,0.1);{% endif %}">
+                <td>
+                  <strong>{{ deal.title }}</strong>
+                  {% if is_stale %}<span class="stale-badge ms-2">NEEDS ATTENTION</span>{% endif %}
+                </td>
                 <td>{{ deal.contact.full_name if deal.contact else '-' }}</td>
-                <td><span class="badge bg-info">{{ deal.stage.title() }}</span></td>
-                <td>${{ deal.value|int if deal.value else 0 }}</td>
-                <td><span class="badge bg-success">{{ (deal.probability * 100)|int }}%</span></td>
-                <td>{{ deal.expected_close_date.strftime('%b %d, %Y') if deal.expected_close_date else '-' }}</td>
-                <td><button class="btn btn-sm btn-outline-primary">View</button></td>
+                <td>
+                  {% set stage_info = {'prospecting': 'Make Contact', 'qualification': 'Qualify Need', 'proposal': 'Send Proposal', 'negotiation': 'Close Deal', 'won': 'Won', 'lost': 'Lost'} %}
+                  <span class="badge" style="background: rgba(188,0,237,0.3);">{{ stage_info.get(deal.stage, deal.stage.title()) }}</span>
+                </td>
+                <td>
+                  <div class="progress" style="height: 8px; width: 60px; background: rgba(255,255,255,0.1);">
+                    <div class="progress-bar" style="width: {{ (deal.probability * 100)|int }}%; background: linear-gradient(90deg, #bc00ed, #00ffb4);"></div>
+                  </div>
+                  <small style="color: #888;">{{ (deal.probability * 100)|int }}%</small>
+                </td>
+                <td style="color: #00ffb4;">${{ deal.value|int if deal.value else 0 }}</td>
+                <td style="color: #888;">{{ deal.expected_close_date.strftime('%b %d') if deal.expected_close_date else '-' }}</td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary" onclick="viewDeal({{ deal.id }})">
+                    {% if is_stale %}Follow Up{% else %}View{% endif %}
+                  </button>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-        <p class="text-muted text-center py-4">No deals yet. Create your first deal!</p>
+        <div class="zero-state">
+          <i data-feather="target" style="width: 64px; height: 64px; color: #bc00ed; margin-bottom: 1rem;"></i>
+          <h3>Start Building Your Pipeline</h3>
+          <p>Your CRM is ready to help you close deals. Add your first deal to start tracking opportunities and get personalized coaching on your next steps.</p>
+          <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#newDealModal">
+            <i data-feather="plus"></i> Create Your First Deal
+          </button>
+          <div class="mt-3" style="color: #666; font-size: 0.9rem;">
+            <strong>Pro tip:</strong> Import contacts first, then create deals linked to them for full tracking.
+          </div>
+        </div>
         {% endif %}
       </div>
     </div>
@@ -95,35 +234,41 @@
   <!-- CUSTOMERS -->
   <div class="crm-section" data-section="customers">
     <div class="row mb-4">
-      <div class="col-md-3">
+      <div class="col-md-3 mb-3">
         <div class="stat-card">
           <div class="stat-value">{{ all_contacts|length }}</div>
           <div class="stat-label">Total Customers</div>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-3 mb-3">
         <div class="stat-card">
-          <div class="stat-value">0</div>
-          <div class="stat-label">Premium Members</div>
+          {% set hot_leads = all_contacts|selectattr('lead_score')|selectattr('lead_score', 'ge', 70)|list %}
+          <div class="stat-value" style="color: #ff6b6b;">{{ hot_leads|length }}</div>
+          <div class="stat-label">Hot Leads (70+)</div>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-3 mb-3">
         <div class="stat-card">
-          <div class="stat-value">$0</div>
-          <div class="stat-label">Total LTV</div>
+          {% set subscribed = all_contacts|selectattr('is_subscribed')|list %}
+          <div class="stat-value" style="color: #00ff88;">{{ subscribed|length }}</div>
+          <div class="stat-label">Subscribed</div>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-3 mb-3">
         <div class="stat-card">
-          <div class="stat-value">0</div>
-          <div class="stat-label">Verified Customers</div>
+          {% set with_notes = all_contacts|selectattr('notes')|list %}
+          <div class="stat-value" style="color: #bc00ed;">{{ with_notes|length }}</div>
+          <div class="stat-label">Have Notes</div>
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <h5 class="mb-0">Customer Directory</h5>
+    <div class="card" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(188,0,237,0.3);">
+      <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(188,0,237,0.3);">
+        <h5 class="mb-0" style="color: #00ffb4;"><i data-feather="users"></i> Customer Directory</h5>
+        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newCustomerModal">
+          <i data-feather="user-plus" style="width: 14px; height: 14px;"></i> Add Customer
+        </button>
       </div>
       <div class="card-body">
         <div class="table-responsive">
@@ -132,34 +277,58 @@
               <tr style="color: #00ffb4;">
                 <th>Name</th>
                 <th>Email</th>
-                <th>Engagement</th>
-                <th>Lifetime Value</th>
-                <th>Tags</th>
+                <th>Phone</th>
+                <th>Lead Score</th>
+                <th>Last Activity</th>
+                <th>Segment</th>
+                <th>Notes</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {% for contact in all_contacts %}
-              <tr>
-                <td><strong>{{ contact.full_name }}</strong></td>
-                <td>{{ contact.email }}</td>
+              <tr style="cursor: pointer;" onclick="window.location='/customers/{{ contact.id }}'">
                 <td>
-                  <div class="progress" style="height: 20px; width: 80px;">
-                    <div class="progress-bar bg-success" style="width: {{ (contact.engagement_score or 0) * 10 }}%"></div>
-                  </div>
+                  <strong>{{ contact.full_name }}</strong>
+                  {% if contact.is_subscribed %}<i data-feather="mail" style="width: 12px; height: 12px; color: #00ff88; margin-left: 5px;" title="Subscribed"></i>{% endif %}
                 </td>
-                <td>$0</td>
+                <td style="color: #888;">{{ contact.email }}</td>
+                <td style="color: #888;">{{ contact.phone or '-' }}</td>
                 <td>
-                  {% for tag in (contact.tags or '').split(',') %}
-                    {% if tag.strip() %}<span class="badge bg-secondary me-1">{{ tag.strip() }}</span>{% endif %}
-                  {% endfor %}
+                  {% set score = contact.lead_score or 0 %}
+                  {% if score >= 70 %}
+                  <span class="badge" style="background: rgba(255,107,107,0.2); color: #ff6b6b;">{{ score }} Hot</span>
+                  {% elif score >= 40 %}
+                  <span class="badge" style="background: rgba(255,193,7,0.2); color: #ffc107;">{{ score }} Warm</span>
+                  {% else %}
+                  <span class="badge" style="background: rgba(136,136,136,0.2); color: #888;">{{ score }}</span>
+                  {% endif %}
                 </td>
-                <td><button class="btn btn-sm btn-outline-primary" onclick="showCustomerProfile({{ contact.id }})">View Profile</button></td>
+                <td style="color: #666;">{{ contact.last_activity.strftime('%b %d') if contact.last_activity else 'Never' }}</td>
+                <td><span class="badge" style="background: rgba(188,0,237,0.3);">{{ contact.segment|title }}</span></td>
+                <td>
+                  {% if contact.notes %}
+                  <i data-feather="file-text" style="width: 14px; height: 14px; color: #bc00ed;" title="{{ contact.notes[:50] }}..."></i>
+                  {% else %}
+                  <span style="color: #444;">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="/customers/{{ contact.id }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
+                    <i data-feather="edit" style="width: 12px; height: 12px;"></i> Edit
+                  </a>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
+        {% if not all_contacts %}
+        <div class="text-center py-4" style="color: #666;">
+          <i data-feather="users" style="width: 48px; height: 48px; margin-bottom: 1rem;"></i>
+          <p>No customers yet. Add your first customer to get started!</p>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>

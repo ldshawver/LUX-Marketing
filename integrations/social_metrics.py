@@ -17,7 +17,9 @@ class SocialMediaMetrics:
     def get_instagram_metrics(access_token: str) -> Tuple[Dict, Optional[str]]:
         """Get Instagram account metrics (followers, engagement, etc.)"""
         try:
-            # Get Instagram Business Account ID
+            if not access_token or len(access_token) < 20:
+                return {}, "Invalid or missing access token"
+            
             me_response = requests.get(
                 'https://graph.instagram.com/v18.0/me',
                 params={'fields': 'id,username,name', 'access_token': access_token},
@@ -25,7 +27,13 @@ class SocialMediaMetrics:
             )
             
             if me_response.status_code != 200:
-                return {}, f"Instagram API error: {me_response.status_code}"
+                error_data = me_response.json() if me_response.text else {}
+                error_msg = error_data.get('error', {}).get('message', f'Status {me_response.status_code}')
+                error_type = error_data.get('error', {}).get('type', '')
+                
+                if 'OAuthException' in error_type or 'Invalid' in error_msg:
+                    return {}, f"Token expired or invalid. Please reconnect Instagram in Settings."
+                return {}, f"Instagram API error: {error_msg}"
             
             me_data = me_response.json()
             account_id = me_data.get('id')
@@ -33,11 +41,10 @@ class SocialMediaMetrics:
             if not account_id:
                 return {}, "Could not get Instagram account ID"
             
-            # Get account insights (followers, reach, impressions)
             insights_response = requests.get(
                 f'https://graph.instagram.com/v18.0/{account_id}',
                 params={
-                    'fields': 'followers_count,biography,profile_picture_url,website,media_count,ig_metadata_rights_users',
+                    'fields': 'followers_count,biography,profile_picture_url,website,media_count',
                     'access_token': access_token
                 },
                 timeout=10
@@ -56,7 +63,9 @@ class SocialMediaMetrics:
                     'website': data.get('website', ''),
                 }, None
             else:
-                return {}, f"Instagram insights error: {insights_response.status_code}"
+                error_data = insights_response.json() if insights_response.text else {}
+                error_msg = error_data.get('error', {}).get('message', f'Status {insights_response.status_code}')
+                return {}, f"Instagram insights error: {error_msg}"
                 
         except Exception as e:
             logger.error(f"Instagram metrics error: {e}")
@@ -97,32 +106,72 @@ class SocialMediaMetrics:
             return {}, str(e)
     
     @staticmethod
-    def get_facebook_metrics(access_token: str) -> Tuple[Dict, Optional[str]]:
+    def get_facebook_metrics(access_token: str, page_id: str = None) -> Tuple[Dict, Optional[str]]:
         """Get Facebook page metrics (likes, followers)"""
         try:
-            response = requests.get(
-                'https://graph.facebook.com/v18.0/me',
+            if page_id:
+                response = requests.get(
+                    f'https://graph.facebook.com/v18.0/{page_id}',
+                    params={
+                        'fields': 'id,name,fan_count,followers_count,description,picture,category,website',
+                        'access_token': access_token
+                    },
+                    timeout=10
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    followers = data.get('followers_count') or data.get('fan_count') or 0
+                    
+                    return {
+                        'platform': 'facebook',
+                        'followers': followers,
+                        'page_name': data.get('name', ''),
+                        'page_id': data.get('id', ''),
+                        'category': data.get('category', ''),
+                        'bio': data.get('description', ''),
+                        'profile_picture_url': data.get('picture', {}).get('data', {}).get('url', ''),
+                        'website': data.get('website', ''),
+                    }, None
+            
+            pages_response = requests.get(
+                'https://graph.facebook.com/v18.0/me/accounts',
                 params={
-                    'fields': 'id,name,fan_count,followers_count,description,picture,category,website,founded',
+                    'fields': 'id,name,fan_count,followers_count,picture,category,access_token',
                     'access_token': access_token
                 },
                 timeout=10
             )
             
-            if response.status_code == 200:
-                data = response.json()
+            if pages_response.status_code == 200:
+                pages_data = pages_response.json()
+                pages = pages_data.get('data', [])
                 
-                return {
-                    'platform': 'facebook',
-                    'followers': data.get('followers_count', 0) or data.get('fan_count', 0),
-                    'page_name': data.get('name', ''),
-                    'category': data.get('category', ''),
-                    'bio': data.get('description', ''),
-                    'profile_picture_url': data.get('picture', {}).get('data', {}).get('url', ''),
-                    'website': data.get('website', ''),
-                }, None
+                if pages:
+                    page = pages[0]
+                    followers = page.get('followers_count') or page.get('fan_count') or 0
+                    
+                    return {
+                        'platform': 'facebook',
+                        'followers': followers,
+                        'page_name': page.get('name', ''),
+                        'page_id': page.get('id', ''),
+                        'category': page.get('category', ''),
+                        'bio': '',
+                        'profile_picture_url': page.get('picture', {}).get('data', {}).get('url', ''),
+                        'website': '',
+                        'all_pages': [{
+                            'id': p.get('id'),
+                            'name': p.get('name'),
+                            'followers': p.get('followers_count') or p.get('fan_count') or 0
+                        } for p in pages]
+                    }, None
+                else:
+                    return {}, "No Facebook pages found for this account"
             else:
-                return {}, f"Facebook API error: {response.status_code}"
+                error_data = pages_response.json() if pages_response.text else {}
+                error_msg = error_data.get('error', {}).get('message', f'Status {pages_response.status_code}')
+                return {}, f"Facebook API error: {error_msg}"
                 
         except Exception as e:
             logger.error(f"Facebook metrics error: {e}")
@@ -173,11 +222,14 @@ class SocialMediaMetrics:
             for acc in facebook_accs:
                 try:
                     access_token = acc.get_access_token()
+                    page_id = getattr(acc, 'page_id', None)
                     if access_token:
-                        metrics, error = SocialMediaMetrics.get_facebook_metrics(access_token)
+                        metrics, error = SocialMediaMetrics.get_facebook_metrics(access_token, page_id)
                         if not error and metrics:
                             result['facebook'].append(metrics)
                             result['total_followers'] += metrics.get('followers', 0)
+                        elif error:
+                            logger.warning(f"Facebook metrics warning: {error}")
                 except Exception as e:
                     logger.error(f"Error getting Facebook metrics for account {acc.id}: {e}")
         

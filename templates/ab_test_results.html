@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}A/B Test Results - LUX Marketing{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>A/B Test Results</h1>
+        <p class="text-muted mb-0">{{ test.test_type|replace('_', ' ')|title }} Test</p>
+    </div>
+    <a href="{{ url_for('main.ab_tests') }}" class="btn btn-outline-secondary">
+        <i data-feather="arrow-left"></i> Back to A/B Tests
+    </a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">Status</h6>
+                <span class="badge bg-{{ 'success' if test.status == 'completed' else ('warning' if test.status == 'running' else 'secondary') }} fs-6">
+                    {{ test.status|title }}
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">Split Ratio</h6>
+                <h4>{{ (test.split_ratio * 100)|int }}% / {{ ((1 - test.split_ratio) * 100)|int }}%</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">Winner</h6>
+                {% if test.winner %}
+                <h4 class="text-success"><i data-feather="award"></i> Variant {{ test.winner }}</h4>
+                {% else %}
+                <h4 class="text-muted">Not determined yet</h4>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i data-feather="mail"></i> Variant A</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3"><strong>{{ test.variant_a }}</strong></p>
+                
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h3 class="mb-0">{{ results.variant_a.sent }}</h3>
+                        <small class="text-muted">Sent</small>
+                    </div>
+                    <div class="col-4">
+                        <h3 class="mb-0">{{ results.variant_a.opens }}</h3>
+                        <small class="text-muted">Opens</small>
+                    </div>
+                    <div class="col-4">
+                        <h3 class="mb-0">{{ results.variant_a.open_rate }}%</h3>
+                        <small class="text-muted">Open Rate</small>
+                    </div>
+                </div>
+                
+                <div class="progress mt-3" style="height: 25px;">
+                    <div class="progress-bar bg-primary" style="width: {{ results.variant_a.open_rate }}%">
+                        {{ results.variant_a.open_rate }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i data-feather="mail"></i> Variant B</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3"><strong>{{ test.variant_b }}</strong></p>
+                
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h3 class="mb-0">{{ results.variant_b.sent }}</h3>
+                        <small class="text-muted">Sent</small>
+                    </div>
+                    <div class="col-4">
+                        <h3 class="mb-0">{{ results.variant_b.opens }}</h3>
+                        <small class="text-muted">Opens</small>
+                    </div>
+                    <div class="col-4">
+                        <h3 class="mb-0">{{ results.variant_b.open_rate }}%</h3>
+                        <small class="text-muted">Open Rate</small>
+                    </div>
+                </div>
+                
+                <div class="progress mt-3" style="height: 25px;">
+                    <div class="progress-bar bg-success" style="width: {{ results.variant_b.open_rate }}%">
+                        {{ results.variant_b.open_rate }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if test.status == 'running' %}
+<div class="card mt-4">
+    <div class="card-body text-center">
+        <p class="mb-3">Ready to declare a winner?</p>
+        <form method="POST" action="{{ url_for('main.ab_tests') }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="button" class="btn btn-primary me-2" onclick="declareWinner('A')">
+                <i data-feather="award"></i> Declare Variant A Winner
+            </button>
+            <button type="button" class="btn btn-success" onclick="declareWinner('B')">
+                <i data-feather="award"></i> Declare Variant B Winner
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">Test Information</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-borderless">
+            <tr>
+                <th style="width: 200px;">Test Type</th>
+                <td>{{ test.test_type|replace('_', ' ')|title }}</td>
+            </tr>
+            <tr>
+                <th>Campaign</th>
+                <td>Campaign #{{ test.campaign_id }}</td>
+            </tr>
+            <tr>
+                <th>Created</th>
+                <td>{{ test.created_at.strftime('%Y-%m-%d %H:%M') if test.created_at else 'N/A' }}</td>
+            </tr>
+            {% if test.started_at %}
+            <tr>
+                <th>Started</th>
+                <td>{{ test.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% endif %}
+            {% if test.completed_at %}
+            <tr>
+                <th>Completed</th>
+                <td>{{ test.completed_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+<script>
+function declareWinner(variant) {
+    if (confirm('Are you sure you want to declare Variant ' + variant + ' as the winner?')) {
+        alert('Winner declared: Variant ' + variant);
+    }
+}
+</script>
+{% endblock %}

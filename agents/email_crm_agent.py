@@ -37,21 +37,41 @@ class EmailCRMAgent(BaseAgent):
             return self.design_drip_sequence(task_data)
         elif task_type == 'segmentation':
             return self.advanced_segmentation(task_data)
+        elif task_type == 'subscriber_sync':
+            return self.sync_subscribers(task_data)
         else:
             return {'success': False, 'error': f'Unknown task type: {task_type}'}
     
     def create_weekly_campaign(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Create weekly email campaign"""
+        """Create weekly email campaign - submits to approval queue"""
         try:
+            if not self.check_feature_enabled():
+                return {'success': False, 'reason': 'Email & CRM Agent is disabled'}
+            
             theme = params.get('theme', 'newsletter')
             
-            prompt = f"Create a compelling email campaign for a {theme}. Include subject line, preview text, and HTML content structure."
+            prompt = f"""Create a compelling email campaign for a {theme}. 
+            Return JSON with: {{"subject": "...", "preview_text": "...", "body": "...", "cta_text": "...", "cta_url": "..."}}"""
             
             result = self.generate_with_ai(prompt, response_format={"type": "json_object"}, temperature=0.7)
             
             if result:
-                self.log_activity('weekly_campaign_creation', {'theme': theme}, 'success')
-                return {'success': True, 'campaign': result, 'generated_at': datetime.now().isoformat()}
+                approval_result = self.submit_for_approval(
+                    content_type='email_campaign',
+                    title=result.get('subject', f'Weekly Campaign - {theme}'),
+                    content=result,
+                    target_platform='email',
+                    confidence_score=0.82,
+                    rationale=f"Weekly automated email campaign about {theme}"
+                )
+                
+                self.log_activity('weekly_campaign_creation', {'theme': theme, 'submitted': approval_result.get('success')}, 'success')
+                return {
+                    'success': True, 
+                    'message': 'Campaign submitted for admin approval',
+                    'approval_id': approval_result.get('approval_id'),
+                    'generated_at': datetime.now().isoformat()
+                }
             return {'success': False, 'error': 'Failed to create campaign'}
             
         except Exception as e:
@@ -90,4 +110,37 @@ class EmailCRMAgent(BaseAgent):
             return {'success': False, 'error': 'Failed to segment'}
             
         except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def sync_subscribers(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Sync contacts with newsletter subscribers"""
+        try:
+            from services.subscriber_sync_service import SubscriberSyncService
+            
+            result = SubscriberSyncService.full_sync()
+            
+            if result.get('success'):
+                contacts_synced = result.get('contacts_to_subscribers', 0)
+                tags_added = result.get('subscribers_to_contacts', 0)
+                
+                self.log_activity('subscriber_sync', {
+                    'contacts_synced': contacts_synced,
+                    'tags_added': tags_added
+                }, 'success')
+                
+                stats = SubscriberSyncService.get_subscriber_stats()
+                
+                return {
+                    'success': True,
+                    'message': f'Synced {contacts_synced} contacts to subscribers, added newsletter tag to {tags_added} contacts',
+                    'contacts_synced': contacts_synced,
+                    'tags_added': tags_added,
+                    'stats': stats.get('stats', {}),
+                    'synced_at': datetime.now().isoformat()
+                }
+            
+            return {'success': False, 'error': result.get('error', 'Sync failed')}
+            
+        except Exception as e:
+            logger.error(f"Subscriber sync error: {e}")
             return {'success': False, 'error': str(e)}

@@ -11,8 +11,11 @@
                 <button id="preview-btn" class="btn btn-outline-primary me-2">
                     <i data-feather="eye"></i> Preview
                 </button>
-                <button id="save-template-btn" class="btn btn-primary">
+                <button id="save-template-btn" class="btn btn-primary me-2">
                     <i data-feather="save"></i> Save Template
+                </button>
+                <button id="save-schedule-btn" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#scheduleModal">
+                    <i data-feather="clock"></i> Save & Schedule
                 </button>
             </div>
         </div>
@@ -107,10 +110,41 @@
                                     <span>Spacer</span>
                                 </div>
                             </div>
-                            <div class="draggable-component mb-2" data-type="columns">
+                            <div class="draggable-component mb-2" data-type="columns-2">
                                 <div class="component-preview">
                                     <i data-feather="columns"></i>
                                     <span>2 Columns</span>
+                                </div>
+                            </div>
+                            <div class="draggable-component mb-2" data-type="columns-3">
+                                <div class="component-preview">
+                                    <i data-feather="layout"></i>
+                                    <span>3 Columns</span>
+                                </div>
+                            </div>
+                            <div class="draggable-component mb-2" data-type="columns-4">
+                                <div class="component-preview">
+                                    <i data-feather="grid"></i>
+                                    <span>4 Columns</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Advanced Components -->
+                    <div class="component-category">
+                        <h6 class="p-3 mb-0 bg-secondary text-white">Advanced</h6>
+                        <div class="p-3">
+                            <div class="draggable-component mb-2" data-type="html">
+                                <div class="component-preview">
+                                    <i data-feather="code"></i>
+                                    <span>HTML Block</span>
+                                </div>
+                            </div>
+                            <div class="draggable-component mb-2" data-type="url-button">
+                                <div class="component-preview">
+                                    <i data-feather="link"></i>
+                                    <span>URL Button</span>
                                 </div>
                             </div>
                         </div>
@@ -310,6 +344,140 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" onclick="generateAIContent()">Generate Content</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Modal -->
+<div class="modal fade" id="scheduleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i data-feather="clock"></i> Schedule Campaign</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="schedule-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-3">
+                        <label for="schedule-name" class="form-label">Campaign Name</label>
+                        <input type="text" class="form-control" id="schedule-name" name="name" required placeholder="Enter campaign name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="schedule-subject" class="form-label">Subject Line</label>
+                        <input type="text" class="form-control" id="schedule-subject" name="subject" required placeholder="Email subject line">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="schedule-date" class="form-label">Send Date</label>
+                                <input type="date" class="form-control" id="schedule-date" name="send_date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="schedule-time" class="form-label">Send Time</label>
+                                <input type="time" class="form-control" id="schedule-time" name="send_time" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="schedule-segment" class="form-label">Send To</label>
+                        <select class="form-select" id="schedule-segment" name="segment_id">
+                            <option value="">All Contacts</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="saveAndSchedule()">
+                    <i data-feather="send"></i> Save & Schedule
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- WooCommerce Product Modal -->
+<div class="modal fade" id="wooProductModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i data-feather="shopping-cart"></i> Select WooCommerce Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="woo-search" placeholder="Search products...">
+                </div>
+                <div id="woo-products-list" class="row">
+                    <div class="col-12 text-center py-4">
+                        <i data-feather="loader" class="spin"></i>
+                        <p class="text-muted">Loading products...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Grid Modal -->
+<div class="modal fade" id="productGridModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i data-feather="grid"></i> Configure Product Grid</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Columns</label>
+                        <select class="form-select" id="grid-columns">
+                            <option value="2">2 Products</option>
+                            <option value="3" selected>3 Products</option>
+                            <option value="4">4 Products</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Product Category</label>
+                        <select class="form-select" id="grid-category">
+                            <option value="">All Categories</option>
+                            <option value="featured">Featured Products</option>
+                            <option value="sale">On Sale</option>
+                            <option value="new">New Arrivals</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="grid-preview" class="row">
+                    <div class="col-4 mb-3" id="grid-item-1">
+                        <div class="card h-100 text-center p-2">
+                            <div class="bg-light rounded" style="height: 80px;"></div>
+                            <small class="mt-2">Product 1</small>
+                            <small class="text-success">$29.99</small>
+                        </div>
+                    </div>
+                    <div class="col-4 mb-3" id="grid-item-2">
+                        <div class="card h-100 text-center p-2">
+                            <div class="bg-light rounded" style="height: 80px;"></div>
+                            <small class="mt-2">Product 2</small>
+                            <small class="text-success">$39.99</small>
+                        </div>
+                    </div>
+                    <div class="col-4 mb-3" id="grid-item-3">
+                        <div class="card h-100 text-center p-2">
+                            <div class="bg-light rounded" style="height: 80px;"></div>
+                            <small class="mt-2">Product 3</small>
+                            <small class="text-success">$49.99</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="insertProductGrid()">Insert Grid</button>
             </div>
         </div>
     </div>
@@ -728,6 +896,106 @@ function createEmailComponent(type, container) {
                                 </td>
                             </tr>
                         </table>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'columns-2':
+        case 'columns':
+            componentHTML = `
+                <div class="email-component" data-type="columns-2" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editComponent('${componentId}')"><i data-feather="edit"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')"><i data-feather="trash"></i></button>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 50%; padding: 10px; vertical-align: top; border: 1px dashed #ddd;">
+                                <div contenteditable="true" style="min-height: 50px;">Column 1 content</div>
+                            </td>
+                            <td style="width: 50%; padding: 10px; vertical-align: top; border: 1px dashed #ddd;">
+                                <div contenteditable="true" style="min-height: 50px;">Column 2 content</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            `;
+            break;
+        case 'columns-3':
+            componentHTML = `
+                <div class="email-component" data-type="columns-3" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editComponent('${componentId}')"><i data-feather="edit"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')"><i data-feather="trash"></i></button>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 33.33%; padding: 10px; vertical-align: top; border: 1px dashed #ddd;">
+                                <div contenteditable="true" style="min-height: 50px;">Column 1</div>
+                            </td>
+                            <td style="width: 33.33%; padding: 10px; vertical-align: top; border: 1px dashed #ddd;">
+                                <div contenteditable="true" style="min-height: 50px;">Column 2</div>
+                            </td>
+                            <td style="width: 33.33%; padding: 10px; vertical-align: top; border: 1px dashed #ddd;">
+                                <div contenteditable="true" style="min-height: 50px;">Column 3</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            `;
+            break;
+        case 'columns-4':
+            componentHTML = `
+                <div class="email-component" data-type="columns-4" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editComponent('${componentId}')"><i data-feather="edit"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')"><i data-feather="trash"></i></button>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 25%; padding: 8px; vertical-align: top; border: 1px dashed #ddd;">
+                                <div contenteditable="true" style="min-height: 50px;">Col 1</div>
+                            </td>
+                            <td style="width: 25%; padding: 8px; vertical-align: top; border: 1px dashed #ddd;">
+                                <div contenteditable="true" style="min-height: 50px;">Col 2</div>
+                            </td>
+                            <td style="width: 25%; padding: 8px; vertical-align: top; border: 1px dashed #ddd;">
+                                <div contenteditable="true" style="min-height: 50px;">Col 3</div>
+                            </td>
+                            <td style="width: 25%; padding: 8px; vertical-align: top; border: 1px dashed #ddd;">
+                                <div contenteditable="true" style="min-height: 50px;">Col 4</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            `;
+            break;
+        case 'html':
+            componentHTML = `
+                <div class="email-component" data-type="html" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editHTMLBlock('${componentId}')"><i data-feather="code"></i> Edit HTML</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')"><i data-feather="trash"></i></button>
+                    </div>
+                    <div class="html-content" style="padding: 15px; border: 1px dashed #ccc; background: #f9f9f9; min-height: 60px;">
+                        <code style="color: #666;">&lt;!-- Custom HTML Block --&gt;</code>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'url-button':
+            componentHTML = `
+                <div class="email-component" data-type="url-button" data-id="${componentId}">
+                    <div class="component-toolbar">
+                        <button class="btn btn-sm btn-light" onclick="editComponent('${componentId}')"><i data-feather="edit"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComponent('${componentId}')"><i data-feather="trash"></i></button>
+                    </div>
+                    <div style="text-align: center; padding: 10px;">
+                        <a href="#" class="url-button-link" contenteditable="true" style="display: inline-block; background: #301934; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Click Here</a>
+                    </div>
+                    <div class="mt-2 text-center">
+                        <small class="text-muted">URL:</small>
+                        <input type="url" class="form-control form-control-sm d-inline-block" style="width: 70%;" placeholder="https://example.com" onchange="updateButtonURL('${componentId}', this.value)">
                     </div>
                 </div>
             `;
@@ -1220,6 +1488,177 @@ function applyProductGrid(componentId) {
     
     const modal = bootstrap.Modal.getInstance(document.getElementById('productGridConfigModal'));
     if (modal) modal.hide();
+}
+
+function saveAndSchedule() {
+    const name = document.getElementById('schedule-name').value;
+    const subject = document.getElementById('schedule-subject').value;
+    const sendDate = document.getElementById('schedule-date').value;
+    const sendTime = document.getElementById('schedule-time').value;
+    const segmentId = document.getElementById('schedule-segment').value;
+    
+    if (!name || !subject || !sendDate || !sendTime) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    const emailContent = getEmailHTML();
+    const scheduledAt = new Date(`${sendDate}T${sendTime}`).toISOString();
+    
+    fetch('/api/campaigns/schedule', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
+        },
+        body: JSON.stringify({
+            name: name,
+            subject: subject,
+            html_content: emailContent,
+            scheduled_at: scheduledAt,
+            segment_id: segmentId || null
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('scheduleModal'));
+            modal.hide();
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i data-feather="check-circle"></i> Campaign scheduled successfully!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.col-12').prepend(alertDiv);
+            feather.replace();
+            
+            setTimeout(() => { if (alertDiv) alertDiv.remove(); }, 3000);
+        } else {
+            alert('Error scheduling campaign: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error scheduling campaign');
+    });
+}
+
+function insertProductGrid() {
+    const columns = document.getElementById('grid-columns').value;
+    const category = document.getElementById('grid-category').value;
+    
+    const productGrid = createComponent('product-grid');
+    const dropZone = document.getElementById('main-drop-zone');
+    const placeholder = dropZone.querySelector('.drop-zone-placeholder');
+    if (placeholder) placeholder.remove();
+    dropZone.appendChild(productGrid);
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('productGridModal'));
+    modal.hide();
+    
+    configureProductGrid(productGrid.dataset.id);
+}
+
+function loadWooProducts() {
+    const productsList = document.getElementById('woo-products-list');
+    fetch('/api/woocommerce-products')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.products && data.products.length > 0) {
+                let html = '';
+                data.products.forEach(product => {
+                    html += `
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 product-select-card" onclick="selectProduct(${product.id}, '${product.name.replace(/'/g, "\\'")}', '${product.price}', '${product.image || ''}')">
+                                ${product.image ? `<img src="${product.image}" class="card-img-top" style="height: 100px; object-fit: cover;">` : '<div class="card-img-top bg-light" style="height: 100px;"></div>'}
+                                <div class="card-body p-2">
+                                    <small class="fw-bold">${product.name}</small>
+                                    <small class="d-block text-success">$${product.price}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                productsList.innerHTML = html;
+            } else {
+                productsList.innerHTML = '<div class="col-12 text-center py-4"><p class="text-muted">No products found. Configure WooCommerce in Settings.</p></div>';
+            }
+        })
+        .catch(error => {
+            productsList.innerHTML = '<div class="col-12 text-center py-4"><p class="text-danger">Error loading products</p></div>';
+        });
+}
+
+document.getElementById('wooProductModal').addEventListener('show.bs.modal', loadWooProducts);
+
+function editHTMLBlock(componentId) {
+    const component = document.querySelector(`[data-id="${componentId}"]`);
+    if (!component) return;
+    
+    const htmlContent = component.querySelector('.html-content');
+    const currentHTML = htmlContent.innerHTML;
+    
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div class="modal fade" id="htmlEditModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i data-feather="code"></i> Edit HTML</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <textarea id="htmlCodeEditor" class="form-control font-monospace" rows="15" style="font-size: 12px;">${currentHTML.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="applyHTMLEdit('${componentId}')">Apply HTML</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(document.getElementById('htmlEditModal'));
+    bsModal.show();
+    feather.replace();
+}
+
+function applyHTMLEdit(componentId) {
+    const component = document.querySelector(`[data-id="${componentId}"]`);
+    const htmlContent = component.querySelector('.html-content');
+    const newHTML = document.getElementById('htmlCodeEditor').value;
+    
+    htmlContent.innerHTML = newHTML.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('htmlEditModal'));
+    modal.hide();
+    document.getElementById('htmlEditModal').parentElement.remove();
+}
+
+function updateButtonURL(componentId, url) {
+    const component = document.querySelector(`[data-id="${componentId}"]`);
+    if (!component) return;
+    
+    const link = component.querySelector('.url-button-link');
+    if (link) {
+        link.href = url;
+    }
+}
+
+function getEmailHTML() {
+    const preview = document.getElementById('email-preview');
+    const clone = preview.cloneNode(true);
+    
+    clone.querySelectorAll('.component-toolbar').forEach(el => el.remove());
+    clone.querySelectorAll('.drop-zone-placeholder').forEach(el => el.remove());
+    clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+    clone.querySelectorAll('input[type="url"]').forEach(el => el.remove());
+    clone.querySelectorAll('.mt-2.text-center').forEach(el => el.remove());
+    
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">${clone.innerHTML}</body></html>`;
 }
 </script>
 

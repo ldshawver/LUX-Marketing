@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Edit A/B Test - LUX Marketing{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Edit A/B Test</h1>
+    <a href="{{ url_for('main.ab_tests') }}" class="btn btn-outline-secondary">
+        <i data-feather="arrow-left"></i> Back to A/B Tests
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('main.edit_ab_test', test_id=test.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            
+            <div class="mb-3">
+                <label class="form-label">Campaign</label>
+                <select name="campaign_id" class="form-select" required>
+                    <option value="">Select a campaign...</option>
+                    {% for campaign in draft_campaigns %}
+                    <option value="{{ campaign.id }}" {% if test.campaign_id == campaign.id %}selected{% endif %}>
+                        {{ campaign.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Test Type</label>
+                <select name="test_type" class="form-select" required>
+                    <option value="subject_line" {% if test.test_type == 'subject_line' %}selected{% endif %}>Subject Line</option>
+                    <option value="content" {% if test.test_type == 'content' %}selected{% endif %}>Email Content</option>
+                    <option value="send_time" {% if test.test_type == 'send_time' %}selected{% endif %}>Send Time</option>
+                </select>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Variant A</label>
+                        <input type="text" name="variant_a" class="form-control" required value="{{ test.variant_a }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Variant B</label>
+                        <input type="text" name="variant_b" class="form-control" required value="{{ test.variant_b }}">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Split Ratio (Variant A %)</label>
+                <input type="range" name="split_ratio" class="form-range" min="0.1" max="0.9" step="0.1" value="{{ test.split_ratio }}" id="splitRatioSlider">
+                <div class="d-flex justify-content-between">
+                    <small class="text-muted"><span id="variantAPercent">{{ (test.split_ratio * 100)|int }}</span>% Variant A</small>
+                    <small class="text-muted"><span id="variantBPercent">{{ ((1 - test.split_ratio) * 100)|int }}</span>% Variant B</small>
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i data-feather="save"></i> Save Changes
+                </button>
+                <a href="{{ url_for('main.ab_tests') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const slider = document.getElementById('splitRatioSlider');
+    const variantAPercent = document.getElementById('variantAPercent');
+    const variantBPercent = document.getElementById('variantBPercent');
+    
+    if (slider) {
+        slider.addEventListener('input', function() {
+            const valueA = Math.round(this.value * 100);
+            const valueB = 100 - valueA;
+            variantAPercent.textContent = valueA;
+            variantBPercent.textContent = valueB;
+        });
+    }
+});
+</script>
+{% endblock %}

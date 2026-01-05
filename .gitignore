@@ -21,3 +21,9 @@ attached_assets/
 attached_assets/
 .local/
 *.tar.gz
+*.save
+*.log
+*.broken
+services/dev_*.py
+templates/dev_*.html
+static/uploads/

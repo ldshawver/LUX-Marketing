@@ -75,3 +75,13 @@ def truncate_text(text, max_length=50):
     if len(text) <= max_length:
         return text
     return text[:max_length-3] + '...'
+
+
+def safe_count(query, fallback=0, context=""):
+    """Safely count query results without failing the caller."""
+    logger = logging.getLogger(__name__)
+    try:
+        return query.count()
+    except Exception as exc:
+        logger.warning("Dashboard metric query failed%s: %s", f" ({context})" if context else "", exc)
+        return fallback

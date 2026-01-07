@@ -19,7 +19,7 @@ from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTr
                     Deal, LeadScore, PersonalizationRule, KeywordResearch, Payee, Payment, TaxYear,
                     TaxFormW9, TaxForm1099NEC, TaxFormEvent)
 from email_service import EmailService
-from utils import validate_email
+from utils import validate_email, safe_count
 from tracking import decode_tracking_data, record_email_event
 import logging
 import json
@@ -44,6 +44,7 @@ def _safe_int(value, default):
         return int(value)
     except (TypeError, ValueError):
         return default
+
 
 main_bp = Blueprint('main', __name__)
 
@@ -240,9 +241,18 @@ def dashboard():
     total_failed = db.session.query(CampaignRecipient).filter_by(status='failed').count()
     
     # Version 4.1 & 4.2 Feature Metrics
-    ai_campaigns = Campaign.query.filter_by(ai_generated=True).count()
-    utm_campaigns = Campaign.query.filter(Campaign.utm_keyword.isnot(None)).count()
-    social_with_media = SocialPost.query.filter(SocialPost.media_urls.isnot(None)).count()
+    ai_campaigns = safe_count(
+        Campaign.query.filter_by(ai_generated=True),
+        context="ai_generated campaigns"
+    )
+    utm_campaigns = safe_count(
+        Campaign.query.filter(Campaign.utm_keyword.isnot(None)),
+        context="utm_keyword campaigns"
+    )
+    social_with_media = safe_count(
+        SocialPost.query.filter(SocialPost.media_urls.isnot(None)),
+        context="social media posts with media"
+    )
     total_social_posts = SocialPost.query.count()
     
     current_company = current_user.get_default_company()

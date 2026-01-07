@@ -3,9 +3,9 @@ import io
 import base64
 import os
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response, send_file
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response, send_file, current_app
 from flask_login import login_required, current_user
-from sqlalchemy import or_, case
+from sqlalchemy import or_, case, text
 from app import db, csrf
 from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTracking, 
                     BrandKit, EmailComponent, Poll, PollResponse, ABTest, Automation, 
@@ -33,10 +33,190 @@ from ai_action_executor import AIActionExecutor
 from services.config_status_service import ConfigStatusService
 from services.sms_service import SMSService
 from services.scheduling_service import SchedulingService
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
 main_bp = Blueprint('main', __name__)
+
+def get_app_version() -> str:
+    version_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "VERSION")
+    try:
+        with open(version_path, "r", encoding="utf-8") as version_file:
+            return version_file.read().strip()
+    except OSError as exc:
+        logger.warning("Unable to read app version from %s: %s", version_path, exc)
+        return "unknown"
+
+ROUTE_MANIFEST = [
+    {"name": "dashboard", "path": "/", "requires_auth": True, "aliases": ["/dashboard"]},
+    {"name": "login", "path": "/auth/login", "requires_auth": False, "aliases": ["/login"]},
+    {"name": "logout", "path": "/auth/logout", "requires_auth": True, "aliases": ["/logout"]},
+    {"name": "user_profile", "path": "/user/profile", "requires_auth": True, "aliases": ["/profile/<id>"]},
+    {"name": "analytics", "path": "/analytics-hub", "requires_auth": True, "aliases": ["/analytics"]},
+    {"name": "admin_approval_queue", "path": "/approval-queue", "requires_auth": True, "admin_only": True},
+    {"name": "blog", "path": "/blog", "requires_auth": True},
+    {"name": "lux_verified", "path": "/lux-verified", "requires_auth": True},
+    {"name": "facebook_connect", "path": "/auth/facebook", "requires_auth": True},
+    {"name": "instagram_connect", "path": "/auth/instagram", "requires_auth": True},
+    {"name": "tiktok_connect", "path": "/auth/tiktok", "requires_auth": True},
+]
+
+REPAIR_RUNS: dict[str, dict] = {}
+REPAIR_PROPOSALS: dict[str, dict] = {}
+
+def _ensure_admin_access():
+    if not current_user.is_authenticated or not current_user.is_admin_user:
+        return jsonify({'error': 'Admin access required'}), 403
+    return None
+
+def _scan_route_manifest() -> list[dict]:
+    results = []
+    with current_app.test_client() as client:
+        if current_user.is_authenticated:
+            with client.session_transaction() as session:
+                session['_user_id'] = str(current_user.id)
+                session['_fresh'] = True
+        for entry in ROUTE_MANIFEST:
+            path = entry["path"]
+            try:
+                response = client.get(path, follow_redirects=False)
+                body = response.get_data(as_text=True)
+                has_traceback = "Traceback" in body or "Internal Server Error" in body
+                results.append({
+                    "name": entry["name"],
+                    "path": path,
+                    "status_code": response.status_code,
+                    "has_traceback": has_traceback,
+                    "requires_auth": entry.get("requires_auth", False),
+                    "admin_only": entry.get("admin_only", False),
+                    "aliases": entry.get("aliases", [])
+                })
+            except Exception as exc:
+                results.append({
+                    "name": entry["name"],
+                    "path": path,
+                    "status_code": 0,
+                    "error": str(exc),
+                    "requires_auth": entry.get("requires_auth", False),
+                    "admin_only": entry.get("admin_only", False),
+                    "aliases": entry.get("aliases", [])
+                })
+    return results
+
+def _create_repair_run(mode: str) -> dict:
+    run_id = str(uuid4())
+    run = {
+        "id": run_id,
+        "mode": mode,
+        "status": "running",
+        "started_at": datetime.utcnow().isoformat(),
+        "initiated_by_user_id": current_user.id if current_user.is_authenticated else None
+    }
+    REPAIR_RUNS[run_id] = run
+    return run
+
+def _finalize_repair_run(run_id: str, summary: dict, status: str) -> dict:
+    run = REPAIR_RUNS.get(run_id, {})
+    run.update({
+        "status": status,
+        "finished_at": datetime.utcnow().isoformat(),
+        "summary": summary
+    })
+    REPAIR_RUNS[run_id] = run
+    return run
+
+@main_bp.route('/admin/fix/scan', methods=['POST'])
+def admin_fix_scan():
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+    run = _create_repair_run(mode="scan_only")
+    route_results = _scan_route_manifest()
+    issues = [
+        result for result in route_results
+        if (result.get("status_code") and result.get("status_code") >= 400) or result.get("has_traceback")
+    ]
+    summary = {
+        "issues": issues,
+        "routes_checked": len(route_results),
+        "route_results": route_results
+    }
+    run = _finalize_repair_run(run["id"], summary=summary, status="completed")
+    return jsonify(run)
+
+@main_bp.route('/admin/fix/apply', methods=['POST'])
+def admin_fix_apply():
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+    run = _create_repair_run(mode="fix_now")
+    route_results = _scan_route_manifest()
+    issues = [
+        result for result in route_results
+        if (result.get("status_code") and result.get("status_code") >= 400) or result.get("has_traceback")
+    ]
+    repair_results = None
+    if issues:
+        try:
+            repair_results = AutoRepairService.execute_auto_repair()
+        except Exception as exc:
+            repair_results = {"success": False, "error": str(exc)}
+    summary = {
+        "issues": issues,
+        "routes_checked": len(route_results),
+        "route_results": route_results,
+        "auto_repair": repair_results
+    }
+    run = _finalize_repair_run(run["id"], summary=summary, status="completed")
+    return jsonify(run)
+
+@main_bp.route('/admin/fix/now', methods=['POST'])
+def admin_fix_now():
+    return admin_fix_apply()
+
+@main_bp.route('/admin/fix/propose', methods=['POST'])
+def admin_fix_propose():
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+    run = _create_repair_run(mode="propose_only")
+    route_results = _scan_route_manifest()
+    proposals = []
+    for result in route_results:
+        if result.get("status_code") == 404 or result.get("has_traceback"):
+            proposal_id = str(uuid4())
+            proposal = {
+                "id": proposal_id,
+                "created_at": datetime.utcnow().isoformat(),
+                "risk_level": "APPROVAL_REQUIRED",
+                "status": "pending",
+                "summary": f"Investigate {result['path']} (status {result.get('status_code')})",
+                "route": result["path"],
+                "issue": result
+            }
+            REPAIR_PROPOSALS[proposal_id] = proposal
+            proposals.append(proposal)
+    summary = {
+        "routes_checked": len(route_results),
+        "proposals": proposals
+    }
+    run = _finalize_repair_run(run["id"], summary=summary, status="completed")
+    return jsonify(run)
+
+@main_bp.route('/admin/fix/approve/<proposal_id>', methods=['POST'])
+def admin_fix_approve(proposal_id):
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+    proposal = REPAIR_PROPOSALS.get(proposal_id)
+    if not proposal:
+        return jsonify({"error": "Proposal not found"}), 404
+    proposal["status"] = "approved"
+    proposal["approved_by_user_id"] = current_user.id
+    proposal["approved_at"] = datetime.utcnow().isoformat()
+    REPAIR_PROPOSALS[proposal_id] = proposal
+    return jsonify(proposal)
 
 @main_bp.route('/')
 @login_required
@@ -61,6 +241,8 @@ def dashboard():
     
     config_alerts = ConfigStatusService.get_dashboard_alerts(current_company) if current_company else []
     
+    app_version = get_app_version()
+
     return render_template('dashboard.html',
                          total_contacts=total_contacts,
                          total_campaigns=total_campaigns,
@@ -73,7 +255,8 @@ def dashboard():
                          social_with_media=social_with_media,
                          total_social_posts=total_social_posts,
                          current_company=current_company,
-                         config_alerts=config_alerts)
+                         config_alerts=config_alerts,
+                         app_version=app_version)
 
 @main_bp.route('/email-hub')
 @login_required
@@ -3648,7 +3831,7 @@ def agent_detail(agent_type):
         'sales_enablement': {'name': 'Sales Enablement', 'icon': '💼', 'purpose': 'Lead scoring, sales materials, prospect insights, and pipeline optimization.'},
         'retention': {'name': 'Customer Retention & Loyalty', 'icon': '❤️', 'purpose': 'Churn prevention, loyalty programs, win-back campaigns, and customer success.'},
         'operations': {'name': 'Operations & Integration', 'icon': '⚙️', 'purpose': 'System health, integration checks, workflow automation, and infrastructure.'},
-        'app_intelligence': {'name': 'APP Agent', 'icon': '🧠', 'purpose': 'Platform monitoring, usage analysis, self-diagnosis, and improvement suggestions.'}
+        'app_intelligence': {'name': 'APP Agent', 'icon': '🧠', 'purpose': 'Autonomous error detection, self-repair workflows, deep codebase context, and feature implementation support.'}
     }
     
     if agent_type not in agent_info:
@@ -3688,7 +3871,7 @@ def agent_chat(agent_type):
         'sales_enablement': {'name': 'Sales Enablement', 'icon': '💼', 'capabilities': ['Lead scoring', 'Sales materials', 'Prospect insights', 'Pitch decks']},
         'retention': {'name': 'Customer Retention & Loyalty', 'icon': '❤️', 'capabilities': ['Win-back campaigns', 'Loyalty programs', 'Churn prevention', 'Customer success']},
         'operations': {'name': 'Operations & Integration', 'icon': '⚙️', 'capabilities': ['System health', 'Integration checks', 'Workflow optimization', 'Error diagnosis']},
-        'app_intelligence': {'name': 'APP Agent', 'icon': '🧠', 'capabilities': ['Platform monitoring', 'Usage analysis', 'Self-diagnosis', 'Improvement suggestions']}
+        'app_intelligence': {'name': 'APP Agent', 'icon': '🧠', 'capabilities': ['Error detection', 'Auto-repair workflows', 'Codebase context mapping', 'Feature implementation support']}
     }
     
     if agent_type not in agent_info:
@@ -6014,32 +6197,54 @@ def system_init():
 @main_bp.route('/health')
 def health_check():
     """Health check endpoint for monitoring"""
+    db_ok = True
+    db_error = None
     try:
-        # Check database connection
-        db.session.execute(db.text('SELECT 1'))
-        
-        # Check critical tables exist
-        from models import Contact, Campaign, SEOKeyword, EventTicket, SocialMediaAccount
-        
-        Contact.query.limit(1).all()
-        Campaign.query.limit(1).all()
-        SEOKeyword.query.limit(1).all()
-        EventTicket.query.limit(1).all()
-        SocialMediaAccount.query.limit(1).all()
-        
-        return jsonify({
-            'status': 'healthy',
-            'database': 'connected',
-            'timestamp': datetime.utcnow().isoformat(),
-            'version': 'Phase 2-6 Release'
-        }), 200
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return jsonify({
-            'status': 'unhealthy',
-            'error': str(e),
-            'timestamp': datetime.utcnow().isoformat()
-        }), 500
+        db.session.execute(text("SELECT 1"))
+    except Exception as exc:
+        db_ok = False
+        db_error = str(exc)
+        logger.error(f"Health check failed: {exc}")
+    payload = {
+        "status": "ok" if db_ok else "degraded",
+        "version": get_app_version(),
+        "db_ok": db_ok,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    if db_error:
+        payload["db_error"] = db_error[:200]
+    return jsonify(payload), 200 if db_ok else 500
+
+@main_bp.route('/health/deep')
+def health_check_deep():
+    """Deep health check (admin only)"""
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+    db_ok = True
+    db_error = None
+    try:
+        db.session.execute(text("SELECT 1"))
+    except Exception as exc:
+        db_ok = False
+        db_error = str(exc)
+        logger.error(f"Deep health check failed: {exc}")
+    integrations = {
+        "openai_configured": bool(os.environ.get("OPENAI_API_KEY")),
+        "facebook_configured": bool(os.environ.get("FACEBOOK_APP_ID")) or bool(os.environ.get("FACEBOOK_CLIENT_ID")),
+        "instagram_configured": bool(os.environ.get("INSTAGRAM_CLIENT_ID")),
+        "tiktok_configured": bool(os.environ.get("TIKTOK_CLIENT_KEY"))
+    }
+    payload = {
+        "status": "ok" if db_ok else "degraded",
+        "version": get_app_version(),
+        "db_ok": db_ok,
+        "integrations": integrations,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    if db_error:
+        payload["db_error"] = db_error[:200]
+    return jsonify(payload), 200 if db_ok else 500
 
 @main_bp.route('/system/status')
 @login_required
@@ -6548,36 +6753,70 @@ To use this, when appropriate, include "ACTION: REPAIR_ERRORS" in your response.
         
         # Make API call with explicit error handling
         try:
-            system_prompt = f"""You are LUX, an AI marketing assistant and platform debugger for the LUX Marketing platform. 
+            system_prompt = f"""You are LUX Self-Heal Orchestrator, a senior SRE + full-stack engineer for a Flask web app.
 
-Your capabilities:
-1. MARKETING: Help with campaign generation, marketing strategy, content creation, audience segmentation
-2. ERROR DETECTION: Identify, explain, and help fix platform errors, bugs, and configuration issues
-3. DEBUGGING: Analyze error messages, logs, and system behavior to diagnose problems
-4. TROUBLESHOOTING: Provide step-by-step solutions for platform issues
-5. PLATFORM GUIDANCE: Explain features, workflows, and best practices
-6. AUTO-REPAIR: Suggest code fixes, configuration changes, and implementation steps
-7. LOG ANALYSIS: Read and analyze server logs (Nginx, Gunicorn, systemd, app logs) to diagnose issues
+Mission:
+Detect, diagnose, patch, and verify issues so the app has zero broken pages, zero 500s, and strong mobile responsiveness.
 
-When analyzing errors:
-1. Identify the root cause
-2. Explain the issue in simple terms
-3. Provide step-by-step solutions
-4. Suggest preventive measures
-5. Confirm fixes resolve the issue
+Operating rules (non-negotiable):
+1) Always follow the repair pipeline: Detect → Diagnose → Patch → Verify → Log → (Rollback if needed).
+2) You must not expose secrets or tokens. Never print access tokens, API keys, DB passwords, or full connection strings.
+3) You may auto-apply fixes ONLY in the SAFE categories:
+   - UI/CSS responsive fixes
+   - Non-auth backend crash guards, missing imports, safe validations
+   - Logging and error handling
+4) Any changes involving auth/permissions, database schema/data changes, OAuth scopes/redirect URIs, billing, or production deployment require explicit admin approval.
+5) Every fix must include:
+   - Files changed
+   - Reason
+   - Before/after behavior
+   - Verification steps and results
+6) Verification is mandatory:
+   - Reproduce the error before the fix
+   - Re-run the same route/test after the fix
+   - Ensure no new errors were introduced
+7) If verification fails, rollback to the last checkpoint and report the failure clearly.
+
+Capability levels (think in capabilities, not roles):
+Level 0 — READ_ONLY: read code/logs/routes/schema and run GET health checks only.
+Level 1 — FIX_UI_SAFE: CSS/template/accessibility fixes (no auth/security changes).
+Level 2 — FIX_BACKEND_SAFE: non-auth crash guards, safe validation, missing imports, logging.
+Level 3 — FIX_DATA_SAFE (approval required): migrations, backfills, columns/tables.
+Level 4 — INTEGRATIONS_SENSITIVE (approval required): OAuth scopes/redirects/token logic/webhooks.
+Level 5 — DEPLOY_PROD (approval required): systemd/nginx changes, deploys, restarts.
+
+Auto-fix ruleset:
+A) Mobile responsiveness: responsive grids, tap targets ≥ 44px, prevent overflow, mobile-first fixes.
+B) Broken links / 404s (safe only): fix template links or add safe redirects.
+C) Crash guards (non-auth only): missing imports, safe validation, optional integrations fallbacks, clean 500 handler.
+D) Security safe fixes: block open redirects, avoid shell=True for internal commands.
+E) Observability: request ID logging, route/user_id/error_class/stack trace server-side.
+
+Output structure (required):
+A) Detected issues list (with severity)
+B) Root cause analysis
+C) Proposed patch set (diff summary)
+D) Safe to auto-apply? (yes/no)
+E) Verification plan and results
+F) Log entry text for audit
 
 Current System Context:
 {diagnostics_context}
 {server_logs_context}
 {auto_repair_context}
 
-Be helpful, professional, concise, and proactive. Always look for ways to improve system health.
+When asked to Fix App Now:
+- Run full health checks
+- Crawl key routes
+- Run mobile viewport checks for critical pages
+- Apply safe fixes automatically
+- Queue sensitive fixes for approval with clear one-click decisions
 
 When users ask you to fix errors, resolve issues, or test the system:
-1. Analyze what the user is asking
-2. If appropriate, suggest running automatic repairs
-3. You can't directly run repairs, but your response can trigger them by including "ACTION: REPAIR_ERRORS"
-4. The system will see this action and execute auto-repair automatically"""
+1) Analyze what the user is asking
+2) If appropriate, suggest running automatic repairs
+3) You can't directly run repairs, but your response can trigger them by including "ACTION: REPAIR_ERRORS"
+4) The system will see this action and execute auto-repair automatically"""
             
             response = client.chat.completions.create(
                 model="gpt-4o",

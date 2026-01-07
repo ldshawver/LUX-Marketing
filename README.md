@@ -2,6 +2,8 @@
 
 A comprehensive email marketing automation platform built with Flask, featuring multi-channel marketing capabilities including email, SMS, social media, events management, and AI-powered content generation.
 
+**Current Version:** 3.7.1
+
 ## 🚀 Features
 
 ### Email Marketing

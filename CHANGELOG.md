@@ -1,5 +1,27 @@
 # CHANGELOG - LUX Marketing Platform
 
+## [3.7.1] - 2026-01-07
+
+### ✨ Highlights
+- Added self-heal admin endpoints for scans, safe auto-fixes, and approval-required proposals.
+- Added a “Fix App Now” action in the admin approval queue UI with results panel.
+- Improved dashboard tile grid responsiveness and tap-target sizing for mobile.
+- Surfaced the running app version on the dashboard and health checks.
+- Updated the chatbot orchestrator system prompt with the repair pipeline and capability model.
+
+---
+
+## [3.6.1] - 2026-01-07
+
+### ✨ Highlights
+- Added self-heal admin endpoints for scans, safe auto-fixes, and approval-required proposals.
+- Added a “Fix App Now” action in the admin approval queue UI with results panel.
+- Improved dashboard tile grid responsiveness and tap-target sizing for mobile.
+- Surfaced the running app version on the dashboard and health checks.
+- Updated the chatbot orchestrator system prompt with the repair pipeline and capability model.
+
+---
+
 ## [Phase 2-6 Release] - 2025-10-30
 
 ### 🎯 Overview

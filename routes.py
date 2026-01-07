@@ -3,7 +3,7 @@ import io
 import base64
 import os
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response, send_file, current_app
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response, send_file, current_app, g
 from flask_login import login_required, current_user
 from sqlalchemy import or_, case, text
 from app import db, csrf
@@ -16,7 +16,8 @@ from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTr
                     SEOKeyword, SEOBacklink, SEOCompetitor, SEOAudit, SEOPage,
                     TicketPurchase, EventCheckIn, SocialMediaAccount, SocialMediaSchedule,
                     AutomationTest, AutomationTriggerLibrary, AutomationABTest, Company, user_company,
-                    Deal, LeadScore, PersonalizationRule, KeywordResearch)
+                    Deal, LeadScore, PersonalizationRule, KeywordResearch, Payee, Payment, TaxYear,
+                    TaxFormW9, TaxForm1099NEC, TaxFormEvent)
 from email_service import EmailService
 from utils import validate_email
 from tracking import decode_tracking_data, record_email_event
@@ -36,6 +37,13 @@ from services.scheduling_service import SchedulingService
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_int(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 main_bp = Blueprint('main', __name__)
 
@@ -395,7 +403,7 @@ def analytics_hub():
     from integrations.woocommerce_client import get_woocommerce_client
     
     # Get date range from query parameters
-    days = int(request.args.get('days', 30))
+    days = _safe_int(request.args.get('days', 30), 30)
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     compare = request.args.get('compare') == 'true'
@@ -569,7 +577,7 @@ def api_comprehensive_analytics():
     """API endpoint for comprehensive analytics data"""
     from services.comprehensive_analytics_service import ComprehensiveAnalyticsService
     
-    days = int(request.args.get('days', 30))
+    days = _safe_int(request.args.get('days', 30), 30)
     company = current_user.get_default_company()
     
     try:
@@ -601,7 +609,7 @@ def export_analytics():
     
     # Get parameters
     format_type = request.args.get('format', 'csv')
-    days = int(request.args.get('days', 30))
+    days = _safe_int(request.args.get('days', 30), 30)
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     
@@ -3646,16 +3654,64 @@ def analyze_social_content():
 @login_required
 def automation_dashboard():
     """Unified Automations & AI Agents dashboard"""
-    from agent_scheduler import get_agent_scheduler
     from models import AgentDeliverable, AgentReport
+    from services.tax_forms_service import get_payment_totals, get_eligible_payees
     
-    automations = Automation.query.all()
-    templates = AutomationTemplate.query.filter_by(is_predefined=True).all()
-    active_executions = AutomationExecution.query.filter_by(status='active').count()
+    try:
+        automations = Automation.query.all()
+    except Exception as exc:
+        logger.error(f"Automation query failed: {exc}")
+        automations = []
+    try:
+        templates = AutomationTemplate.query.filter_by(is_predefined=True).all()
+    except Exception as exc:
+        logger.error(f"Automation template query failed: {exc}")
+        templates = []
+    try:
+        active_executions = AutomationExecution.query.filter_by(status='active').count()
+    except Exception as exc:
+        logger.error(f"Automation execution query failed: {exc}")
+        active_executions = 0
     
     # Get AI agents info
-    scheduler = get_agent_scheduler()
-    agents = scheduler.agents if scheduler else {}
+    try:
+        from agent_scheduler import get_agent_scheduler
+        scheduler = get_agent_scheduler()
+        agents = scheduler.agents if scheduler else {}
+    except Exception as exc:
+        logger.error(f"Agent scheduler unavailable: {exc}")
+        agents = {}
+
+    tax_context = {
+        "company": None,
+        "selected_year": datetime.utcnow().year,
+        "tax_years": [],
+        "payees": [],
+        "eligible": [],
+        "payment_totals": {},
+        "w9_forms": {},
+        "form_1099": {}
+    }
+    company = current_user.get_default_company()
+    if company:
+        selected_year = _safe_int(request.args.get('tax_year', datetime.utcnow().year), datetime.utcnow().year)
+        tax_context["company"] = company
+        tax_context["selected_year"] = selected_year
+        tax_context["tax_years"] = TaxYear.query.filter_by(company_id=company.id).order_by(TaxYear.year.desc()).all()
+        if not tax_context["tax_years"]:
+            tax_year = TaxYear(company_id=company.id, year=selected_year)
+            db.session.add(tax_year)
+            db.session.commit()
+            tax_context["tax_years"] = [tax_year]
+        tax_context["payees"] = Payee.query.filter_by(company_id=company.id).order_by(Payee.legal_name).all()
+        tax_context["payment_totals"] = get_payment_totals(company.id, selected_year)
+        tax_context["eligible"] = get_eligible_payees(company.id, selected_year)
+        tax_context["w9_forms"] = {
+            form.payee_id: form for form in TaxFormW9.query.filter_by(company_id=company.id).all()
+        }
+        tax_context["form_1099"] = {
+            form.payee_id: form for form in TaxForm1099NEC.query.filter_by(company_id=company.id, year=selected_year).all()
+        }
     
     # Build detailed agent info for enhanced tiles
     agent_details = [
@@ -3765,7 +3821,8 @@ def automation_dashboard():
                          templates=templates,
                          active_executions=active_executions,
                          agents=agents,
-                         agent_details=agent_details)
+                         agent_details=agent_details,
+                         tax_context=tax_context)
 
 
 @main_bp.route('/agents/reports')
@@ -3811,6 +3868,214 @@ def agent_reports():
                          agent_names=agent_names,
                          current_agent=agent_type,
                          current_type=report_type)
+
+# ===== TAX FORMS (W-9 / 1099-NEC) =====
+@main_bp.route('/automations/tax-forms/w9/<int:payee_id>/generate', methods=['POST'])
+@login_required
+def generate_w9_form(payee_id):
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+    from services.tax_forms_service import generate_w9_pdf, record_tax_form_event
+
+    company = current_user.get_default_company()
+    if not company:
+        flash('Company not found for current user.', 'error')
+        return redirect(url_for('main.automation_dashboard'))
+
+    try:
+        form = generate_w9_pdf(company.id, payee_id)
+        record_tax_form_event(
+            company_id=company.id,
+            form_type='w9',
+            form_id=form.id,
+            event_type='w9.generated',
+            actor_user_id=current_user.id,
+            request_id=getattr(g, "request_id", None),
+            meta={"payee_id": payee_id}
+        )
+        flash('W-9 generated successfully.', 'success')
+    except Exception as exc:
+        logger.error("W-9 generation failed: %s", exc)
+        flash('Failed to generate W-9 form.', 'error')
+
+    return redirect(url_for('main.automation_dashboard'))
+
+
+@main_bp.route('/automations/tax-forms/w9/<int:payee_id>/download')
+@login_required
+def download_w9_form(payee_id):
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+    from services.tax_forms_service import record_tax_form_event
+
+    company = current_user.get_default_company()
+    if not company:
+        flash('Company not found for current user.', 'error')
+        return redirect(url_for('main.automation_dashboard'))
+
+    form = TaxFormW9.query.filter_by(company_id=company.id, payee_id=payee_id).first()
+    if not form or not form.pdf_path:
+        flash('W-9 form not found.', 'error')
+        return redirect(url_for('main.automation_dashboard'))
+
+    record_tax_form_event(
+        company_id=company.id,
+        form_type='w9',
+        form_id=form.id,
+        event_type='w9.downloaded',
+        actor_user_id=current_user.id,
+        request_id=getattr(g, "request_id", None),
+        meta={"payee_id": payee_id}
+    )
+    return send_file(form.pdf_path, as_attachment=True)
+
+
+@main_bp.route('/automations/tax-forms/1099nec/<int:year>/<int:payee_id>/generate', methods=['POST'])
+@login_required
+def generate_1099nec_form(year, payee_id):
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+    from services.tax_forms_service import generate_1099nec_pdf, get_payment_totals, record_tax_form_event
+
+    company = current_user.get_default_company()
+    if not company:
+        flash('Company not found for current user.', 'error')
+        return redirect(url_for('main.automation_dashboard'))
+
+    totals = get_payment_totals(company.id, year)
+    total_cents = totals.get(payee_id, 0)
+    if total_cents < 60000:
+        flash('Payee is not eligible for 1099-NEC.', 'warning')
+        return redirect(url_for('main.automation_dashboard', tax_year=year))
+
+    try:
+        form = generate_1099nec_pdf(company.id, year, payee_id, total_cents)
+        record_tax_form_event(
+            company_id=company.id,
+            form_type='1099nec',
+            form_id=form.id,
+            event_type='1099nec.generated_draft',
+            actor_user_id=current_user.id,
+            request_id=getattr(g, "request_id", None),
+            meta={"payee_id": payee_id, "year": year}
+        )
+        flash('1099-NEC draft generated.', 'success')
+    except Exception as exc:
+        logger.error("1099-NEC generation failed: %s", exc)
+        flash('Failed to generate 1099-NEC.', 'error')
+
+    return redirect(url_for('main.automation_dashboard', tax_year=year))
+
+
+@main_bp.route('/automations/tax-forms/1099nec/<int:year>/<int:payee_id>/finalize', methods=['POST'])
+@login_required
+def finalize_1099nec_form(year, payee_id):
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+    from services.tax_forms_service import record_tax_form_event
+
+    company = current_user.get_default_company()
+    if not company:
+        flash('Company not found for current user.', 'error')
+        return redirect(url_for('main.automation_dashboard'))
+
+    form = TaxForm1099NEC.query.filter_by(company_id=company.id, year=year, payee_id=payee_id).first()
+    if not form:
+        flash('1099-NEC form not found.', 'error')
+        return redirect(url_for('main.automation_dashboard', tax_year=year))
+
+    form.status = 'final'
+    db.session.commit()
+    record_tax_form_event(
+        company_id=company.id,
+        form_type='1099nec',
+        form_id=form.id,
+        event_type='1099nec.finalized',
+        actor_user_id=current_user.id,
+        request_id=getattr(g, "request_id", None),
+        meta={"payee_id": payee_id, "year": year}
+    )
+    flash('1099-NEC finalized.', 'success')
+    return redirect(url_for('main.automation_dashboard', tax_year=year))
+
+
+@main_bp.route('/automations/tax-forms/1099nec/<int:year>/<int:payee_id>/download')
+@login_required
+def download_1099nec_form(year, payee_id):
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+    from services.tax_forms_service import record_tax_form_event
+
+    company = current_user.get_default_company()
+    if not company:
+        flash('Company not found for current user.', 'error')
+        return redirect(url_for('main.automation_dashboard'))
+
+    form = TaxForm1099NEC.query.filter_by(company_id=company.id, year=year, payee_id=payee_id).first()
+    if not form or not form.pdf_path_copyb:
+        flash('1099-NEC form not found.', 'error')
+        return redirect(url_for('main.automation_dashboard', tax_year=year))
+
+    record_tax_form_event(
+        company_id=company.id,
+        form_type='1099nec',
+        form_id=form.id,
+        event_type='1099nec.downloaded',
+        actor_user_id=current_user.id,
+        request_id=getattr(g, "request_id", None),
+        meta={"payee_id": payee_id, "year": year}
+    )
+    return send_file(form.pdf_path_copyb, as_attachment=True)
+
+
+@main_bp.route('/automations/tax-forms/1099nec/<int:year>/bulk-download')
+@login_required
+def bulk_download_1099nec(year):
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+    import zipfile
+    import io
+    from services.tax_forms_service import record_tax_form_event
+
+    company = current_user.get_default_company()
+    if not company:
+        flash('Company not found for current user.', 'error')
+        return redirect(url_for('main.automation_dashboard'))
+
+    forms = TaxForm1099NEC.query.filter_by(company_id=company.id, year=year).all()
+    if not forms:
+        flash('No 1099-NEC forms available for bulk download.', 'warning')
+        return redirect(url_for('main.automation_dashboard', tax_year=year))
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for form in forms:
+            if form.pdf_path_copyb and os.path.exists(form.pdf_path_copyb):
+                filename = os.path.basename(form.pdf_path_copyb)
+                zip_file.write(form.pdf_path_copyb, arcname=filename)
+
+    zip_buffer.seek(0)
+    record_tax_form_event(
+        company_id=company.id,
+        form_type='1099nec',
+        form_id=0,
+        event_type='1099nec.bulk_downloaded',
+        actor_user_id=current_user.id,
+        request_id=getattr(g, "request_id", None),
+        meta={"year": year, "count": len(forms)}
+    )
+    return send_file(
+        zip_buffer,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=f'1099nec_copyb_{company.id}_{year}.zip'
+    )
 
 
 @main_bp.route('/agents/<agent_type>')
@@ -5277,6 +5542,122 @@ def view_agent_report(report_id):
     report = AgentReport.query.get_or_404(report_id)
     
     return render_template('view_agent_report.html', report=report)
+
+@main_bp.route('/market-intelligence')
+@login_required
+def market_intelligence_dashboard():
+    """Market intelligence dashboard"""
+    from models import Competitor, MarketSignal, StrategyRecommendation
+
+    company = current_user.get_default_company()
+    competitors = []
+    signals = []
+    recommendations = []
+
+    if company:
+        competitors = Competitor.query.filter_by(company_id=company.id).order_by(Competitor.name).all()
+        signals = MarketSignal.query.filter_by(company_id=company.id).order_by(
+            MarketSignal.signal_date.desc()
+        ).limit(10).all()
+        recommendations = StrategyRecommendation.query.filter_by(company_id=company.id).order_by(
+            StrategyRecommendation.created_at.desc()
+        ).limit(10).all()
+
+    return render_template(
+        'market_intelligence_dashboard.html',
+        company=company,
+        competitors=competitors,
+        signals=signals,
+        recommendations=recommendations
+    )
+
+@main_bp.route('/market-intelligence/reports')
+@login_required
+def market_intelligence_reports():
+    """Market intelligence reports list"""
+    from models import AgentReport
+
+    reports = AgentReport.query.filter_by(agent_type='market_intelligence').order_by(
+        AgentReport.created_at.desc()
+    ).limit(20).all()
+
+    return render_template('market_intelligence_reports.html', reports=reports)
+
+@main_bp.route('/admin/market-intelligence/refresh', methods=['POST'])
+def admin_market_intelligence_refresh():
+    """Admin-only manual refresh for market intelligence signals"""
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+
+    from models import MarketSignal
+    from services.market_intelligence_ingestion import MarketIntelligenceIngestionService
+
+    payload = request.get_json(silent=True) or {}
+    company_id = payload.get('company_id') or request.form.get('company_id')
+    if not company_id and current_user.is_authenticated:
+        default_company = current_user.get_default_company()
+        company_id = default_company.id if default_company else None
+
+    if not company_id:
+        return jsonify({'success': False, 'error': 'Company ID required'}), 400
+
+    signals_payloads = MarketIntelligenceIngestionService.ingest(int(company_id))
+    created = []
+    for signal_payload in signals_payloads:
+        signal = MarketSignal(
+            company_id=signal_payload.get('company_id', int(company_id)),
+            source=signal_payload.get('source', 'unknown'),
+            signal_type=signal_payload.get('signal_type', 'unknown'),
+            title=signal_payload.get('title', 'Market signal'),
+            summary=signal_payload.get('summary'),
+            severity=signal_payload.get('severity', 'medium'),
+            signal_date=signal_payload.get('signal_date', datetime.utcnow()),
+            raw_data=signal_payload.get('raw_data'),
+            is_actionable=signal_payload.get('is_actionable', True)
+        )
+        db.session.add(signal)
+        created.append(signal)
+
+    db.session.commit()
+
+    if request.is_json:
+        return jsonify({'success': True, 'created': len(created)})
+
+    flash(f'Refreshed market signals ({len(created)} added).', 'success')
+    return redirect(url_for('main.market_intelligence_dashboard'))
+
+@main_bp.route('/admin/market-intelligence/generate-report', methods=['POST'])
+def admin_market_intelligence_generate_report():
+    """Admin-only report generation for market intelligence"""
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+
+    from agents.market_intelligence_agent import MarketIntelligenceAgent
+
+    payload = request.get_json(silent=True) or {}
+    cadence = payload.get('cadence') or request.form.get('cadence') or 'weekly'
+    company_id = payload.get('company_id') or request.form.get('company_id')
+
+    if not company_id and current_user.is_authenticated:
+        default_company = current_user.get_default_company()
+        company_id = default_company.id if default_company else None
+
+    if not company_id:
+        return jsonify({'success': False, 'error': 'Company ID required'}), 400
+
+    agent = MarketIntelligenceAgent()
+    result = agent.generate_report(int(company_id), cadence=cadence)
+
+    if request.is_json:
+        return jsonify(result)
+
+    if result.get('success'):
+        flash('Market intelligence report generated.', 'success')
+    else:
+        flash(result.get('error', 'Unable to generate report.'), 'error')
+    return redirect(url_for('main.market_intelligence_reports'))
 
 # ===== PHASE 2: SEO & ANALYTICS MODULE =====
 @main_bp.route('/seo/dashboard')

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Market Intelligence Reports - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row align-items-center mb-3">
+        <div class="col-md-7">
+            <h2><i data-feather="file-text"></i> Market Intelligence Reports</h2>
+            <p class="text-muted mb-0">Generated daily, weekly, and monthly intelligence summaries.</p>
+        </div>
+        <div class="col-md-5 text-end">
+            <a class="btn btn-outline-secondary me-2" href="{{ url_for('main.market_intelligence_dashboard') }}">
+                <i data-feather="arrow-left"></i> Back to Dashboard
+            </a>
+            {% if current_user.is_admin_user %}
+            <form class="d-inline" method="POST" action="{{ url_for('main.admin_market_intelligence_generate_report') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="cadence" value="weekly">
+                <button class="btn btn-primary" type="submit">
+                    <i data-feather="zap"></i> Generate Weekly Report
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% if reports %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Report</th>
+                        <th>Cadence</th>
+                        <th>Period</th>
+                        <th>Created</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for report in reports %}
+                    <tr>
+                        <td><strong>{{ report.report_title }}</strong></td>
+                        <td>{{ report.report_type }}</td>
+                        <td>
+                            {{ report.period_start.strftime('%Y-%m-%d') if report.period_start else '-' }}
+                            →
+                            {{ report.period_end.strftime('%Y-%m-%d') if report.period_end else '-' }}
+                        </td>
+                        <td>{{ report.created_at.strftime('%Y-%m-%d') if report.created_at else '-' }}</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('main.view_agent_report', report_id=report.id) }}">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted mb-0">No reports generated yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

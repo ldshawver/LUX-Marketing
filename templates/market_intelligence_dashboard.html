@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Market Intelligence - LUX Marketing{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row align-items-center">
+        <div class="col-md-7">
+            <h2><i data-feather="trending-up"></i> Market Intelligence</h2>
+            <p class="text-muted mb-0">Competitive landscape, signals, and strategic recommendations.</p>
+        </div>
+        <div class="col-md-5 text-end">
+            <a class="btn btn-outline-secondary me-2" href="{{ url_for('main.market_intelligence_reports') }}">
+                <i data-feather="file-text"></i> View Reports
+            </a>
+            {% if current_user.is_admin_user %}
+            <form class="d-inline" method="POST" action="{{ url_for('main.admin_market_intelligence_refresh') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if company %}
+                <input type="hidden" name="company_id" value="{{ company.id }}">
+                {% endif %}
+                <button class="btn btn-outline-primary" type="submit">
+                    <i data-feather="refresh-cw"></i> Refresh Signals
+                </button>
+            </form>
+            <form class="d-inline ms-2" method="POST" action="{{ url_for('main.admin_market_intelligence_generate_report') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if company %}
+                <input type="hidden" name="company_id" value="{{ company.id }}">
+                {% endif %}
+                <input type="hidden" name="cadence" value="weekly">
+                <button class="btn btn-primary" type="submit">
+                    <i data-feather="zap"></i> Generate Report
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <strong>Competitors</strong>
+                </div>
+                <div class="card-body">
+                    {% if competitors %}
+                    <ul class="list-group list-group-flush">
+                        {% for competitor in competitors %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>{{ competitor.name }}</strong><br>
+                                    <small class="text-muted">{{ competitor.industry or 'Industry not set' }}</small>
+                                </div>
+                                <span class="badge bg-secondary">{{ competitor.status }}</span>
+                            </div>
+                            {% if competitor.website_url %}
+                            <small><a href="{{ competitor.website_url }}" target="_blank">Visit site</a></small>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No competitors tracked yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <strong>Market Signals</strong>
+                </div>
+                <div class="card-body">
+                    {% if signals %}
+                    <ul class="list-group list-group-flush">
+                        {% for signal in signals %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>{{ signal.title }}</strong><br>
+                                    <small class="text-muted">{{ signal.source }} • {{ signal.signal_type }}</small>
+                                </div>
+                                <span class="badge bg-{% if signal.severity == 'high' %}danger{% elif signal.severity == 'low' %}success{% else %}warning{% endif %}">
+                                    {{ signal.severity }}
+                                </span>
+                            </div>
+                            <small class="text-muted">{{ signal.signal_date.strftime('%Y-%m-%d') if signal.signal_date else 'n/a' }}</small>
+                            <p class="mb-0">{{ signal.summary or 'No summary yet.' }}</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No signals captured yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <strong>Strategy Recommendations</strong>
+                </div>
+                <div class="card-body">
+                    {% if recommendations %}
+                    <ul class="list-group list-group-flush">
+                        {% for recommendation in recommendations %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>{{ recommendation.title }}</strong><br>
+                                    <small class="text-muted">{{ recommendation.recommendation_type or 'General' }}</small>
+                                </div>
+                                <span class="badge bg-{% if recommendation.priority == 'high' %}danger{% elif recommendation.priority == 'low' %}success{% else %}warning{% endif %}">
+                                    {{ recommendation.priority }}
+                                </span>
+                            </div>
+                            <small class="text-muted">Status: {{ recommendation.status }}</small>
+                            <p class="mb-0">{{ recommendation.rationale or 'No rationale captured yet.' }}</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No recommendations yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

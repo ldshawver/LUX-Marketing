@@ -431,6 +431,15 @@ class Company(db.Model):
     logo_path = db.Column(db.String(255))
     icon_path = db.Column(db.String(255))
     website_url = db.Column(db.String(255))
+    legal_name = db.Column(db.String(255))
+    ein_encrypted = db.Column(db.Text)
+    phone = db.Column(db.String(30))
+    address_line1 = db.Column(db.String(255))
+    address_line2 = db.Column(db.String(255))
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(50))
+    postal_code = db.Column(db.String(20))
+    country = db.Column(db.String(100))
     
     # Brand Customization
     primary_color = db.Column(db.String(7), default='#bc00ed')  # Purple
@@ -470,6 +479,16 @@ class Company(db.Model):
             secret = CompanySecret(company_id=self.id, key=key, value=value)
             db.session.add(secret)
         db.session.commit()
+
+    def set_ein(self, ein: str):
+        """Encrypt and store EIN"""
+        from services.tax_encryption import encrypt_value
+        self.ein_encrypted = encrypt_value(ein)
+
+    def get_ein(self) -> str:
+        """Decrypt EIN"""
+        from services.tax_encryption import decrypt_value
+        return decrypt_value(self.ein_encrypted or "")
     
     @property
     def user_count(self):
@@ -493,6 +512,141 @@ class CompanySecret(db.Model):
     
     def __repr__(self):
         return f'<CompanySecret {self.key}>'
+
+
+class Payee(db.Model):
+    """Contractor/payee for tax forms"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'))
+    legal_name = db.Column(db.String(255), nullable=False)
+    business_name = db.Column(db.String(255))
+    address_line1 = db.Column(db.String(255))
+    address_line2 = db.Column(db.String(255))
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(50))
+    postal_code = db.Column(db.String(20))
+    country = db.Column(db.String(100))
+    email = db.Column(db.String(120))
+    tin_encrypted = db.Column(db.Text)
+    tin_last4 = db.Column(db.String(4))
+    entity_type = db.Column(db.String(50))
+    w9_status = db.Column(db.String(20), default='missing')  # missing, draft, final
+    consent_flags = db.Column(JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    company = db.relationship('Company', backref='payees')
+    contact = db.relationship('Contact', backref='payee_profile')
+
+    def set_tin(self, tin: str):
+        from services.tax_encryption import encrypt_value
+        digits = "".join([c for c in tin if c.isdigit()])
+        self.tin_last4 = digits[-4:] if len(digits) >= 4 else None
+        self.tin_encrypted = encrypt_value(digits)
+
+    def get_tin(self) -> str:
+        from services.tax_encryption import decrypt_value
+        return decrypt_value(self.tin_encrypted or "")
+
+    def __repr__(self):
+        return f'<Payee {self.legal_name}>'
+
+
+class Payment(db.Model):
+    """Payments made to payees for 1099 aggregation"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    payee_id = db.Column(db.Integer, db.ForeignKey('payee.id'), nullable=False)
+    amount_cents = db.Column(db.Integer, nullable=False)
+    currency = db.Column(db.String(3), default='USD')
+    paid_at = db.Column(db.DateTime, nullable=False)
+    category = db.Column(db.String(100))
+    source_ref = db.Column(db.String(255))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    company = db.relationship('Company', backref='payments')
+    payee = db.relationship('Payee', backref='payments')
+
+    def __repr__(self):
+        return f'<Payment payee={self.payee_id} amount={self.amount_cents}>'
+
+
+class TaxYear(db.Model):
+    """Tax year configuration per company"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), default='open')  # open, locked
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    company = db.relationship('Company', backref='tax_years')
+
+    __table_args__ = (db.UniqueConstraint('company_id', 'year', name='uq_tax_year_company'),)
+
+    def __repr__(self):
+        return f'<TaxYear {self.year}>'
+
+
+class TaxFormW9(db.Model):
+    """W-9 form tracking"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    payee_id = db.Column(db.Integer, db.ForeignKey('payee.id'), nullable=False)
+    status = db.Column(db.String(20), default='draft')  # draft, final
+    pdf_path = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    company = db.relationship('Company', backref='w9_forms')
+    payee = db.relationship('Payee', backref='w9_forms')
+
+    def __repr__(self):
+        return f'<TaxFormW9 payee={self.payee_id} status={self.status}>'
+
+
+class TaxForm1099NEC(db.Model):
+    """1099-NEC form tracking"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    payee_id = db.Column(db.Integer, db.ForeignKey('payee.id'), nullable=False)
+    box1_amount_cents = db.Column(db.Integer, default=0)
+    backup_withholding_cents = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(20), default='draft')  # draft, reviewed, final, delivered, filed
+    pdf_path_copyb = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    company = db.relationship('Company', backref='tax_1099nec_forms')
+    payee = db.relationship('Payee', backref='tax_1099nec_forms')
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'year', 'payee_id', name='uq_1099nec_company_year_payee'),
+    )
+
+    def __repr__(self):
+        return f'<TaxForm1099NEC payee={self.payee_id} year={self.year}>'
+
+
+class TaxFormEvent(db.Model):
+    """Audit log for tax form actions"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    form_type = db.Column(db.String(20), nullable=False)  # w9, 1099nec
+    form_id = db.Column(db.Integer, nullable=False)
+    event_type = db.Column(db.String(50), nullable=False)
+    actor_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    request_id = db.Column(db.String(64))
+    meta_json = db.Column(JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    company = db.relationship('Company', backref='tax_form_events')
+    actor = db.relationship('User', backref='tax_form_events')
+
+    def __repr__(self):
+        return f'<TaxFormEvent {self.form_type}:{self.event_type}>'
 
 class Contact(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -2013,6 +2167,82 @@ class NurtureCampaign(db.Model):
     company = db.relationship('Company', backref='nurture_campaigns')
 
 # ============= COMPETITOR ANALYSIS =============
+class Competitor(db.Model):
+    """Core competitor list for market intelligence"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    website_url = db.Column(db.String(255))
+    industry = db.Column(db.String(120))
+    status = db.Column(db.String(50), default='active')  # active, inactive, watchlist
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='competitors')
+    
+    def __repr__(self):
+        return f'<Competitor {self.name}>'
+
+class CompetitorContent(db.Model):
+    """Captured competitor content for intelligence tracking"""
+    id = db.Column(db.Integer, primary_key=True)
+    competitor_id = db.Column(db.Integer, db.ForeignKey('competitor.id'), nullable=False)
+    content_type = db.Column(db.String(100))  # ad, blog, press_release, social_post
+    title = db.Column(db.String(255))
+    url = db.Column(db.String(255))
+    summary = db.Column(db.Text)
+    source = db.Column(db.String(100))  # telegram, reddit, x, news, website
+    tags = db.Column(JSON)
+    published_at = db.Column(db.DateTime)
+    captured_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    competitor = db.relationship('Competitor', backref='content_items')
+    
+    def __repr__(self):
+        return f'<CompetitorContent {self.content_type}:{self.title}>'
+
+class MarketSignal(db.Model):
+    """External market signals detected from sources like trends or social chatter"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    source = db.Column(db.String(100), nullable=False)  # telegram, trends, reddit, x
+    signal_type = db.Column(db.String(100), nullable=False)  # launch, pricing, sentiment, demand
+    title = db.Column(db.String(255), nullable=False)
+    summary = db.Column(db.Text)
+    severity = db.Column(db.String(20), default='medium')  # low, medium, high
+    signal_date = db.Column(db.DateTime, default=datetime.utcnow)
+    raw_data = db.Column(JSON)
+    is_actionable = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='market_signals')
+    
+    def __repr__(self):
+        return f'<MarketSignal {self.source}:{self.title}>'
+
+class StrategyRecommendation(db.Model):
+    """Strategic recommendations generated from market intelligence"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    related_signal_id = db.Column(db.Integer, db.ForeignKey('market_signal.id'))
+    title = db.Column(db.String(255), nullable=False)
+    recommendation_type = db.Column(db.String(100))  # positioning, pricing, channel, messaging
+    priority = db.Column(db.String(20), default='medium')  # low, medium, high
+    status = db.Column(db.String(50), default='draft')  # draft, accepted, in_progress, completed
+    rationale = db.Column(Text)
+    action_steps = db.Column(JSON)
+    generated_by = db.Column(db.String(100), default='market_intelligence_agent')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='strategy_recommendations')
+    related_signal = db.relationship('MarketSignal', backref='recommendations')
+    
+    def __repr__(self):
+        return f'<StrategyRecommendation {self.title}>'
+
 class CompetitorProfile(db.Model):
     """Comprehensive competitor tracking and intelligence"""
     id = db.Column(db.Integer, primary_key=True)
@@ -2496,4 +2726,3 @@ def seed_feature_toggles(company_id):
             db.session.add(toggle)
     
     db.session.commit()
-

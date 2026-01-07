@@ -12,12 +12,29 @@
                     <p class="text-muted mb-0">Review and approve all marketing content before publishing</p>
                 </div>
                 <div class="d-flex gap-2">
+                    <button class="btn btn-outline-success" onclick="runFixNow()" id="fixAppNowBtn">
+                        <i class="fas fa-wrench me-2"></i>Fix App Now
+                    </button>
                     <button class="btn btn-outline-danger" onclick="emergencyStop()" id="emergencyStopBtn">
                         <i class="fas fa-stop-circle me-2"></i>EMERGENCY STOP
                     </button>
                     <a href="/settings" class="btn btn-outline-secondary">
                         <i class="fas fa-cog me-2"></i>Feature Settings
                     </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4 d-none" id="fixAppResults">
+        <div class="col-12">
+            <div class="card bg-dark border-success">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-white">Fix App Now Results</h5>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearFixResults()">Hide</button>
+                </div>
+                <div class="card-body">
+                    <pre class="text-success mb-0" id="fixAppOutput" style="white-space: pre-wrap;"></pre>
                 </div>
             </div>
         </div>
@@ -319,6 +336,32 @@
 </style>
 
 <script>
+    async function runFixNow() {
+        const button = document.getElementById('fixAppNowBtn');
+        const output = document.getElementById('fixAppOutput');
+        const results = document.getElementById('fixAppResults');
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Running...';
+        try {
+            const response = await fetch('/admin/fix/now', { method: 'POST' });
+            const data = await response.json();
+            output.textContent = JSON.stringify(data, null, 2);
+            results.classList.remove('d-none');
+        } catch (error) {
+            output.textContent = `Fix App Now failed: ${error}`;
+            results.classList.remove('d-none');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-wrench me-2"></i>Fix App Now';
+        }
+    }
+
+    function clearFixResults() {
+        const results = document.getElementById('fixAppResults');
+        const output = document.getElementById('fixAppOutput');
+        output.textContent = '';
+        results.classList.add('d-none');
+    }
 let currentViewItem = null;
 
 function applyFilters() {

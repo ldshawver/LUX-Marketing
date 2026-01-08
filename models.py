@@ -432,7 +432,6 @@ class Company(db.Model):
     icon_path = db.Column(db.String(255))
     website_url = db.Column(db.String(255))
     legal_name = db.Column(db.String(255))
-    ein_encrypted = db.Column(db.Text)
     phone = db.Column(db.String(30))
     address_line1 = db.Column(db.String(255))
     address_line2 = db.Column(db.String(255))
@@ -480,16 +479,6 @@ class Company(db.Model):
             db.session.add(secret)
         db.session.commit()
 
-    def set_ein(self, ein: str):
-        """Encrypt and store EIN"""
-        from services.tax_encryption import encrypt_value
-        self.ein_encrypted = encrypt_value(ein)
-
-    def get_ein(self) -> str:
-        """Decrypt EIN"""
-        from services.tax_encryption import decrypt_value
-        return decrypt_value(self.ein_encrypted or "")
-    
     @property
     def user_count(self):
         return db.session.execute(
@@ -513,140 +502,6 @@ class CompanySecret(db.Model):
     def __repr__(self):
         return f'<CompanySecret {self.key}>'
 
-
-class Payee(db.Model):
-    """Contractor/payee for tax forms"""
-    id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'))
-    legal_name = db.Column(db.String(255), nullable=False)
-    business_name = db.Column(db.String(255))
-    address_line1 = db.Column(db.String(255))
-    address_line2 = db.Column(db.String(255))
-    city = db.Column(db.String(100))
-    state = db.Column(db.String(50))
-    postal_code = db.Column(db.String(20))
-    country = db.Column(db.String(100))
-    email = db.Column(db.String(120))
-    tin_encrypted = db.Column(db.Text)
-    tin_last4 = db.Column(db.String(4))
-    entity_type = db.Column(db.String(50))
-    w9_status = db.Column(db.String(20), default='missing')  # missing, draft, final
-    consent_flags = db.Column(JSON)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    company = db.relationship('Company', backref='payees')
-    contact = db.relationship('Contact', backref='payee_profile')
-
-    def set_tin(self, tin: str):
-        from services.tax_encryption import encrypt_value
-        digits = "".join([c for c in tin if c.isdigit()])
-        self.tin_last4 = digits[-4:] if len(digits) >= 4 else None
-        self.tin_encrypted = encrypt_value(digits)
-
-    def get_tin(self) -> str:
-        from services.tax_encryption import decrypt_value
-        return decrypt_value(self.tin_encrypted or "")
-
-    def __repr__(self):
-        return f'<Payee {self.legal_name}>'
-
-
-class Payment(db.Model):
-    """Payments made to payees for 1099 aggregation"""
-    id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    payee_id = db.Column(db.Integer, db.ForeignKey('payee.id'), nullable=False)
-    amount_cents = db.Column(db.Integer, nullable=False)
-    currency = db.Column(db.String(3), default='USD')
-    paid_at = db.Column(db.DateTime, nullable=False)
-    category = db.Column(db.String(100))
-    source_ref = db.Column(db.String(255))
-    notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    company = db.relationship('Company', backref='payments')
-    payee = db.relationship('Payee', backref='payments')
-
-    def __repr__(self):
-        return f'<Payment payee={self.payee_id} amount={self.amount_cents}>'
-
-
-class TaxYear(db.Model):
-    """Tax year configuration per company"""
-    id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    year = db.Column(db.Integer, nullable=False)
-    status = db.Column(db.String(20), default='open')  # open, locked
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    company = db.relationship('Company', backref='tax_years')
-
-    __table_args__ = (db.UniqueConstraint('company_id', 'year', name='uq_tax_year_company'),)
-
-    def __repr__(self):
-        return f'<TaxYear {self.year}>'
-
-
-class TaxFormW9(db.Model):
-    """W-9 form tracking"""
-    id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    payee_id = db.Column(db.Integer, db.ForeignKey('payee.id'), nullable=False)
-    status = db.Column(db.String(20), default='draft')  # draft, final
-    pdf_path = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    company = db.relationship('Company', backref='w9_forms')
-    payee = db.relationship('Payee', backref='w9_forms')
-
-    def __repr__(self):
-        return f'<TaxFormW9 payee={self.payee_id} status={self.status}>'
-
-
-class TaxForm1099NEC(db.Model):
-    """1099-NEC form tracking"""
-    id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    year = db.Column(db.Integer, nullable=False)
-    payee_id = db.Column(db.Integer, db.ForeignKey('payee.id'), nullable=False)
-    box1_amount_cents = db.Column(db.Integer, default=0)
-    backup_withholding_cents = db.Column(db.Integer, default=0)
-    status = db.Column(db.String(20), default='draft')  # draft, reviewed, final, delivered, filed
-    pdf_path_copyb = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    company = db.relationship('Company', backref='tax_1099nec_forms')
-    payee = db.relationship('Payee', backref='tax_1099nec_forms')
-
-    __table_args__ = (
-        db.UniqueConstraint('company_id', 'year', 'payee_id', name='uq_1099nec_company_year_payee'),
-    )
-
-    def __repr__(self):
-        return f'<TaxForm1099NEC payee={self.payee_id} year={self.year}>'
-
-
-class TaxFormEvent(db.Model):
-    """Audit log for tax form actions"""
-    id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    form_type = db.Column(db.String(20), nullable=False)  # w9, 1099nec
-    form_id = db.Column(db.Integer, nullable=False)
-    event_type = db.Column(db.String(50), nullable=False)
-    actor_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    request_id = db.Column(db.String(64))
-    meta_json = db.Column(JSON)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    company = db.relationship('Company', backref='tax_form_events')
-    actor = db.relationship('User', backref='tax_form_events')
-
-    def __repr__(self):
-        return f'<TaxFormEvent {self.form_type}:{self.event_type}>'
 
 class Contact(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1877,33 +1732,10 @@ class Influencer(db.Model):
     def __repr__(self):
         return f'<Influencer {self.name}>'
 
-class InfluencerContract(db.Model):
-    """Influencer contracts and agreements"""
-    id = db.Column(db.Integer, primary_key=True)
-    influencer_id = db.Column(db.Integer, db.ForeignKey('influencer.id'), nullable=False)
-    campaign_name = db.Column(db.String(200))
-    deliverables = db.Column(JSON)  # List of required content pieces
-    compensation_type = db.Column(db.String(20))  # fixed, commission, product, hybrid
-    compensation_amount = db.Column(db.Float, default=0.0)
-    start_date = db.Column(db.DateTime)
-    end_date = db.Column(db.DateTime)
-    content_guidelines = db.Column(db.Text)
-    exclusivity_clause = db.Column(db.Boolean, default=False)
-    status = db.Column(db.String(20), default='draft')  # draft, active, completed, cancelled
-    signed_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    influencer = db.relationship('Influencer', backref='contracts')
-    
-    def __repr__(self):
-        return f'<InfluencerContract {self.campaign_name}>'
-
 class InfluencerContent(db.Model):
     """Track influencer content performance"""
     id = db.Column(db.Integer, primary_key=True)
     influencer_id = db.Column(db.Integer, db.ForeignKey('influencer.id'), nullable=False)
-    contract_id = db.Column(db.Integer, db.ForeignKey('influencer_contract.id'))
     platform = db.Column(db.String(50))  # instagram, tiktok, youtube, twitter
     content_type = db.Column(db.String(50))  # post, story, reel, video, tweet
     content_url = db.Column(db.String(500))

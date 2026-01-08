@@ -16,8 +16,7 @@ from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTr
                     SEOKeyword, SEOBacklink, SEOCompetitor, SEOAudit, SEOPage,
                     TicketPurchase, EventCheckIn, SocialMediaAccount, SocialMediaSchedule,
                     AutomationTest, AutomationTriggerLibrary, AutomationABTest, Company, user_company,
-                    Deal, LeadScore, PersonalizationRule, KeywordResearch, Payee, Payment, TaxYear,
-                    TaxFormW9, TaxForm1099NEC, TaxFormEvent)
+                    Deal, LeadScore, PersonalizationRule, KeywordResearch)
 from email_service import EmailService
 from utils import validate_email, safe_count
 from tracking import decode_tracking_data, record_email_event
@@ -65,7 +64,6 @@ ROUTE_MANIFEST = [
     {"name": "analytics", "path": "/analytics-hub", "requires_auth": True, "aliases": ["/analytics"]},
     {"name": "admin_approval_queue", "path": "/approval-queue", "requires_auth": True, "admin_only": True},
     {"name": "blog", "path": "/blog", "requires_auth": True},
-    {"name": "lux_verified", "path": "/lux-verified", "requires_auth": True},
     {"name": "facebook_connect", "path": "/auth/facebook", "requires_auth": True},
     {"name": "instagram_connect", "path": "/auth/instagram", "requires_auth": True},
     {"name": "tiktok_connect", "path": "/auth/tiktok", "requires_auth": True},
@@ -3665,7 +3663,6 @@ def analyze_social_content():
 def automation_dashboard():
     """Unified Automations & AI Agents dashboard"""
     from models import AgentDeliverable, AgentReport
-    from services.tax_forms_service import get_payment_totals, get_eligible_payees
     
     try:
         automations = Automation.query.all()
@@ -3692,37 +3689,6 @@ def automation_dashboard():
         logger.error(f"Agent scheduler unavailable: {exc}")
         agents = {}
 
-    tax_context = {
-        "company": None,
-        "selected_year": datetime.utcnow().year,
-        "tax_years": [],
-        "payees": [],
-        "eligible": [],
-        "payment_totals": {},
-        "w9_forms": {},
-        "form_1099": {}
-    }
-    company = current_user.get_default_company()
-    if company:
-        selected_year = _safe_int(request.args.get('tax_year', datetime.utcnow().year), datetime.utcnow().year)
-        tax_context["company"] = company
-        tax_context["selected_year"] = selected_year
-        tax_context["tax_years"] = TaxYear.query.filter_by(company_id=company.id).order_by(TaxYear.year.desc()).all()
-        if not tax_context["tax_years"]:
-            tax_year = TaxYear(company_id=company.id, year=selected_year)
-            db.session.add(tax_year)
-            db.session.commit()
-            tax_context["tax_years"] = [tax_year]
-        tax_context["payees"] = Payee.query.filter_by(company_id=company.id).order_by(Payee.legal_name).all()
-        tax_context["payment_totals"] = get_payment_totals(company.id, selected_year)
-        tax_context["eligible"] = get_eligible_payees(company.id, selected_year)
-        tax_context["w9_forms"] = {
-            form.payee_id: form for form in TaxFormW9.query.filter_by(company_id=company.id).all()
-        }
-        tax_context["form_1099"] = {
-            form.payee_id: form for form in TaxForm1099NEC.query.filter_by(company_id=company.id, year=selected_year).all()
-        }
-    
     # Build detailed agent info for enhanced tiles
     agent_details = [
         {
@@ -3831,8 +3797,7 @@ def automation_dashboard():
                          templates=templates,
                          active_executions=active_executions,
                          agents=agents,
-                         agent_details=agent_details,
-                         tax_context=tax_context)
+                         agent_details=agent_details)
 
 
 @main_bp.route('/agents/reports')
@@ -3879,213 +3844,6 @@ def agent_reports():
                          current_agent=agent_type,
                          current_type=report_type)
 
-# ===== TAX FORMS (W-9 / 1099-NEC) =====
-@main_bp.route('/automations/tax-forms/w9/<int:payee_id>/generate', methods=['POST'])
-@login_required
-def generate_w9_form(payee_id):
-    admin_guard = _ensure_admin_access()
-    if admin_guard:
-        return admin_guard
-    from services.tax_forms_service import generate_w9_pdf, record_tax_form_event
-
-    company = current_user.get_default_company()
-    if not company:
-        flash('Company not found for current user.', 'error')
-        return redirect(url_for('main.automation_dashboard'))
-
-    try:
-        form = generate_w9_pdf(company.id, payee_id)
-        record_tax_form_event(
-            company_id=company.id,
-            form_type='w9',
-            form_id=form.id,
-            event_type='w9.generated',
-            actor_user_id=current_user.id,
-            request_id=getattr(g, "request_id", None),
-            meta={"payee_id": payee_id}
-        )
-        flash('W-9 generated successfully.', 'success')
-    except Exception as exc:
-        logger.error("W-9 generation failed: %s", exc)
-        flash('Failed to generate W-9 form.', 'error')
-
-    return redirect(url_for('main.automation_dashboard'))
-
-
-@main_bp.route('/automations/tax-forms/w9/<int:payee_id>/download')
-@login_required
-def download_w9_form(payee_id):
-    admin_guard = _ensure_admin_access()
-    if admin_guard:
-        return admin_guard
-    from services.tax_forms_service import record_tax_form_event
-
-    company = current_user.get_default_company()
-    if not company:
-        flash('Company not found for current user.', 'error')
-        return redirect(url_for('main.automation_dashboard'))
-
-    form = TaxFormW9.query.filter_by(company_id=company.id, payee_id=payee_id).first()
-    if not form or not form.pdf_path:
-        flash('W-9 form not found.', 'error')
-        return redirect(url_for('main.automation_dashboard'))
-
-    record_tax_form_event(
-        company_id=company.id,
-        form_type='w9',
-        form_id=form.id,
-        event_type='w9.downloaded',
-        actor_user_id=current_user.id,
-        request_id=getattr(g, "request_id", None),
-        meta={"payee_id": payee_id}
-    )
-    return send_file(form.pdf_path, as_attachment=True)
-
-
-@main_bp.route('/automations/tax-forms/1099nec/<int:year>/<int:payee_id>/generate', methods=['POST'])
-@login_required
-def generate_1099nec_form(year, payee_id):
-    admin_guard = _ensure_admin_access()
-    if admin_guard:
-        return admin_guard
-    from services.tax_forms_service import generate_1099nec_pdf, get_payment_totals, record_tax_form_event
-
-    company = current_user.get_default_company()
-    if not company:
-        flash('Company not found for current user.', 'error')
-        return redirect(url_for('main.automation_dashboard'))
-
-    totals = get_payment_totals(company.id, year)
-    total_cents = totals.get(payee_id, 0)
-    if total_cents < 60000:
-        flash('Payee is not eligible for 1099-NEC.', 'warning')
-        return redirect(url_for('main.automation_dashboard', tax_year=year))
-
-    try:
-        form = generate_1099nec_pdf(company.id, year, payee_id, total_cents)
-        record_tax_form_event(
-            company_id=company.id,
-            form_type='1099nec',
-            form_id=form.id,
-            event_type='1099nec.generated_draft',
-            actor_user_id=current_user.id,
-            request_id=getattr(g, "request_id", None),
-            meta={"payee_id": payee_id, "year": year}
-        )
-        flash('1099-NEC draft generated.', 'success')
-    except Exception as exc:
-        logger.error("1099-NEC generation failed: %s", exc)
-        flash('Failed to generate 1099-NEC.', 'error')
-
-    return redirect(url_for('main.automation_dashboard', tax_year=year))
-
-
-@main_bp.route('/automations/tax-forms/1099nec/<int:year>/<int:payee_id>/finalize', methods=['POST'])
-@login_required
-def finalize_1099nec_form(year, payee_id):
-    admin_guard = _ensure_admin_access()
-    if admin_guard:
-        return admin_guard
-    from services.tax_forms_service import record_tax_form_event
-
-    company = current_user.get_default_company()
-    if not company:
-        flash('Company not found for current user.', 'error')
-        return redirect(url_for('main.automation_dashboard'))
-
-    form = TaxForm1099NEC.query.filter_by(company_id=company.id, year=year, payee_id=payee_id).first()
-    if not form:
-        flash('1099-NEC form not found.', 'error')
-        return redirect(url_for('main.automation_dashboard', tax_year=year))
-
-    form.status = 'final'
-    db.session.commit()
-    record_tax_form_event(
-        company_id=company.id,
-        form_type='1099nec',
-        form_id=form.id,
-        event_type='1099nec.finalized',
-        actor_user_id=current_user.id,
-        request_id=getattr(g, "request_id", None),
-        meta={"payee_id": payee_id, "year": year}
-    )
-    flash('1099-NEC finalized.', 'success')
-    return redirect(url_for('main.automation_dashboard', tax_year=year))
-
-
-@main_bp.route('/automations/tax-forms/1099nec/<int:year>/<int:payee_id>/download')
-@login_required
-def download_1099nec_form(year, payee_id):
-    admin_guard = _ensure_admin_access()
-    if admin_guard:
-        return admin_guard
-    from services.tax_forms_service import record_tax_form_event
-
-    company = current_user.get_default_company()
-    if not company:
-        flash('Company not found for current user.', 'error')
-        return redirect(url_for('main.automation_dashboard'))
-
-    form = TaxForm1099NEC.query.filter_by(company_id=company.id, year=year, payee_id=payee_id).first()
-    if not form or not form.pdf_path_copyb:
-        flash('1099-NEC form not found.', 'error')
-        return redirect(url_for('main.automation_dashboard', tax_year=year))
-
-    record_tax_form_event(
-        company_id=company.id,
-        form_type='1099nec',
-        form_id=form.id,
-        event_type='1099nec.downloaded',
-        actor_user_id=current_user.id,
-        request_id=getattr(g, "request_id", None),
-        meta={"payee_id": payee_id, "year": year}
-    )
-    return send_file(form.pdf_path_copyb, as_attachment=True)
-
-
-@main_bp.route('/automations/tax-forms/1099nec/<int:year>/bulk-download')
-@login_required
-def bulk_download_1099nec(year):
-    admin_guard = _ensure_admin_access()
-    if admin_guard:
-        return admin_guard
-    import zipfile
-    import io
-    from services.tax_forms_service import record_tax_form_event
-
-    company = current_user.get_default_company()
-    if not company:
-        flash('Company not found for current user.', 'error')
-        return redirect(url_for('main.automation_dashboard'))
-
-    forms = TaxForm1099NEC.query.filter_by(company_id=company.id, year=year).all()
-    if not forms:
-        flash('No 1099-NEC forms available for bulk download.', 'warning')
-        return redirect(url_for('main.automation_dashboard', tax_year=year))
-
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        for form in forms:
-            if form.pdf_path_copyb and os.path.exists(form.pdf_path_copyb):
-                filename = os.path.basename(form.pdf_path_copyb)
-                zip_file.write(form.pdf_path_copyb, arcname=filename)
-
-    zip_buffer.seek(0)
-    record_tax_form_event(
-        company_id=company.id,
-        form_type='1099nec',
-        form_id=0,
-        event_type='1099nec.bulk_downloaded',
-        actor_user_id=current_user.id,
-        request_id=getattr(g, "request_id", None),
-        meta={"year": year, "count": len(forms)}
-    )
-    return send_file(
-        zip_buffer,
-        mimetype='application/zip',
-        as_attachment=True,
-        download_name=f'1099nec_copyb_{company.id}_{year}.zip'
-    )
 
 
 @main_bp.route('/agents/<agent_type>')

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Facebook Pages - LUX Marketing{% endblock %}
+
+{% block page_header %}
+<span style="color: #c0c0c0;">Facebook Pages</span>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i data-feather="facebook"></i> Social Accounts</h1>
+        <p class="text-muted mb-0">Manage the Facebook Pages your team can publish to.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('facebook_auth.connect') }}" class="btn btn-primary">
+            <i data-feather="log-in"></i> Connect Facebook
+        </a>
+        <button class="btn btn-outline-secondary" onclick="loadPages()">
+            <i data-feather="refresh-cw"></i> Refresh Pages
+        </button>
+    </div>
+</div>
+
+{% if active_page %}
+<div class="card mb-4">
+    <div class="card-body d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+            {% if active_page.picture %}
+            <img src="{{ active_page.picture }}" alt="{{ active_page.name }}" class="rounded" style="width: 48px; height: 48px;">
+            {% else %}
+            <div class="rounded bg-secondary d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                <i data-feather="flag"></i>
+            </div>
+            {% endif %}
+            <div>
+                <h5 class="mb-1">Active Page</h5>
+                <div class="text-muted">{{ active_page.name }}</div>
+            </div>
+        </div>
+        <span class="badge bg-success">Selected for publishing</span>
+    </div>
+</div>
+{% endif %}
+
+<div id="connectionStatus" class="alert alert-info {% if facebook_connected %}d-none{% endif %}">
+    <strong>Connect Facebook to load pages.</strong> Authorize pages_show_list to see Page options.
+</div>
+
+<div class="row" id="pagesGrid">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Loading pages...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="pageMessage" class="mt-3"></div>
+
+<script>
+const csrfToken = '{{ csrf_token() }}';
+
+function setMessage(type, text) {
+    const message = document.getElementById('pageMessage');
+    message.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">${text}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+}
+
+function renderPages(pages) {
+    const grid = document.getElementById('pagesGrid');
+
+    if (!pages.length) {
+        grid.innerHTML = `
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i data-feather="alert-circle"></i>
+                        <p class="text-muted mt-2">No Facebook Pages were found for this account.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        feather.replace();
+        return;
+    }
+
+    grid.innerHTML = pages.map(page => `
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        ${page.picture ? `<img src="${page.picture}" alt="${page.name}" class="rounded" style="width: 48px; height: 48px;">` : '<div class="rounded bg-secondary d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;"><i data-feather="flag"></i></div>'}
+                        <div>
+                            <h5 class="mb-1">${page.name}</h5>
+                            <small class="text-muted">${page.category || 'Page'}</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-primary w-100" onclick="selectPage('${page.id}')">
+                        <i data-feather="check-circle"></i> Select Page
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    feather.replace();
+}
+
+function loadPages() {
+    fetch('/auth/facebook/pages')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('connectionStatus').classList.add('d-none');
+                renderPages(data.pages || []);
+            } else {
+                setMessage('warning', data.error || 'Unable to load pages. Connect Facebook first.');
+            }
+        })
+        .catch(() => setMessage('danger', 'Failed to load pages. Please try again.'));
+}
+
+function selectPage(pageId) {
+    fetch('/auth/facebook/pages/select', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ page_id: pageId })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                setMessage('success', `Active Page set to <strong>${data.page.name}</strong>.`);
+            } else {
+                setMessage('danger', data.error || 'Unable to set active page.');
+            }
+        })
+        .catch(() => setMessage('danger', 'Failed to select page.'));
+}
+
+if ({{ 'true' if facebook_connected else 'false' }}) {
+    loadPages();
+}
+
+feather.replace();
+</script>
+{% endblock %}

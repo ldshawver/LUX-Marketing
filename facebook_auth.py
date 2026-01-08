@@ -28,8 +28,8 @@ class FacebookService:
         'pages_show_list',
         'pages_read_engagement',
         'pages_manage_posts',
-        'pages_manage_metadata',
-        'business_management'
+        'pages_manage_engagement',
+        'publish_video'
     ]
     
     @staticmethod
@@ -225,6 +225,190 @@ class FacebookService:
             logger.error(f"Facebook post error: {e}")
             return None, str(e)
 
+    @staticmethod
+    def post_photo_to_page(page_id, page_access_token, message, image_file):
+        """Post an image to a Facebook page"""
+        import requests
+
+        try:
+            files = {
+                'source': (image_file.filename, image_file.stream, image_file.mimetype)
+            }
+            data = {
+                'caption': message or '',
+                'access_token': page_access_token
+            }
+            response = requests.post(
+                f"{FacebookService.GRAPH_API_URL}/{page_id}/photos",
+                data=data,
+                files=files,
+                timeout=60
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Image post failed: {error_msg}"
+
+            return response.json(), None
+        except Exception as e:
+            logger.error(f"Facebook image post error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def post_video_to_page(page_id, page_access_token, message, video_file):
+        """Post a video to a Facebook page"""
+        import requests
+
+        try:
+            files = {
+                'source': (video_file.filename, video_file.stream, video_file.mimetype)
+            }
+            data = {
+                'description': message or '',
+                'access_token': page_access_token
+            }
+            response = requests.post(
+                f"{FacebookService.GRAPH_API_URL}/{page_id}/videos",
+                data=data,
+                files=files,
+                timeout=300
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Video post failed: {error_msg}"
+
+            return response.json(), None
+        except Exception as e:
+            logger.error(f"Facebook video post error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def get_page_posts(page_id, page_access_token):
+        """Get recent posts and engagement stats for a page"""
+        import requests
+
+        try:
+            response = requests.get(
+                f"{FacebookService.GRAPH_API_URL}/{page_id}/posts",
+                params={
+                    'access_token': page_access_token,
+                    'fields': 'id,message,created_time,full_picture,permalink_url,'
+                              'attachments{media,type},'
+                              'likes.summary(true),comments.summary(true)'
+                },
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Failed to load posts: {error_msg}"
+
+            return response.json().get('data', []), None
+        except Exception as e:
+            logger.error(f"Facebook posts error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def get_post_comments(post_id, page_access_token):
+        """Get comments for a post"""
+        import requests
+
+        try:
+            response = requests.get(
+                f"{FacebookService.GRAPH_API_URL}/{post_id}/comments",
+                params={
+                    'access_token': page_access_token,
+                    'fields': 'id,message,from,created_time,like_count,comment_count,is_hidden'
+                },
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Failed to load comments: {error_msg}"
+
+            return response.json().get('data', []), None
+        except Exception as e:
+            logger.error(f"Facebook comments error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def reply_to_comment(comment_id, page_access_token, message):
+        """Reply to a comment as the page"""
+        import requests
+
+        try:
+            response = requests.post(
+                f"{FacebookService.GRAPH_API_URL}/{comment_id}/comments",
+                data={
+                    'access_token': page_access_token,
+                    'message': message
+                },
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Reply failed: {error_msg}"
+
+            return response.json(), None
+        except Exception as e:
+            logger.error(f"Facebook reply error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def like_comment(comment_id, page_access_token):
+        """Like a comment as the page"""
+        import requests
+
+        try:
+            response = requests.post(
+                f"{FacebookService.GRAPH_API_URL}/{comment_id}/likes",
+                data={'access_token': page_access_token},
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Like failed: {error_msg}"
+
+            return response.json(), None
+        except Exception as e:
+            logger.error(f"Facebook like error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def hide_comment(comment_id, page_access_token, is_hidden=True):
+        """Hide or unhide a comment"""
+        import requests
+
+        try:
+            response = requests.post(
+                f"{FacebookService.GRAPH_API_URL}/{comment_id}",
+                data={
+                    'access_token': page_access_token,
+                    'is_hidden': 'true' if is_hidden else 'false'
+                },
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Hide failed: {error_msg}"
+
+            return response.json(), None
+        except Exception as e:
+            logger.error(f"Facebook hide error: {e}")
+            return None, str(e)
+
 
 @facebook_auth_bp.route('/connect')
 @login_required
@@ -415,7 +599,91 @@ def get_pages():
     if error:
         return jsonify({'success': False, 'error': error}), 500
     
-    return jsonify({'success': True, 'pages': pages})
+    sanitized_pages = []
+    for page in pages:
+        picture = page.get('picture', {}).get('data', {}).get('url')
+        sanitized_pages.append({
+            'id': page.get('id'),
+            'name': page.get('name'),
+            'category': page.get('category'),
+            'picture': picture
+        })
+
+    return jsonify({'success': True, 'pages': sanitized_pages})
+
+
+@facebook_auth_bp.route('/pages/select', methods=['POST'])
+@login_required
+def select_page():
+    """Select an active Facebook page"""
+    company = current_user.get_default_company()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company selected'}), 400
+
+    oauth_record = FacebookOAuth.query.filter_by(
+        user_id=current_user.id,
+        company_id=company.id
+    ).first()
+
+    if not oauth_record:
+        return jsonify({'success': False, 'error': 'Facebook not connected'}), 401
+
+    data = request.get_json()
+    page_id = data.get('page_id') if data else None
+
+    if not page_id:
+        return jsonify({'success': False, 'error': 'Missing page ID'}), 400
+
+    access_token = oauth_record.get_access_token()
+    pages, error = FacebookService.get_pages(access_token)
+    if error:
+        return jsonify({'success': False, 'error': error}), 500
+
+    selected = next((page for page in pages if page.get('id') == page_id), None)
+    if not selected:
+        return jsonify({'success': False, 'error': 'Selected page not found'}), 404
+
+    oauth_record.page_id = selected.get('id')
+    oauth_record.page_name = selected.get('name')
+    oauth_record.page_avatar_url = selected.get('picture', {}).get('data', {}).get('url')
+    oauth_record.set_page_access_token(selected.get('access_token'))
+    oauth_record.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'page': {
+            'id': oauth_record.page_id,
+            'name': oauth_record.page_name,
+            'picture': oauth_record.page_avatar_url
+        }
+    })
+
+
+@facebook_auth_bp.route('/active-page')
+@login_required
+def active_page():
+    """Get active Facebook page details"""
+    company = current_user.get_default_company()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company selected'}), 400
+
+    oauth_record = FacebookOAuth.query.filter_by(
+        user_id=current_user.id,
+        company_id=company.id
+    ).first()
+
+    if not oauth_record or not oauth_record.page_id:
+        return jsonify({'success': False, 'error': 'No active page selected'}), 404
+
+    return jsonify({
+        'success': True,
+        'page': {
+            'id': oauth_record.page_id,
+            'name': oauth_record.page_name,
+            'picture': oauth_record.page_avatar_url
+        }
+    })
 
 
 @facebook_auth_bp.route('/post', methods=['POST'])
@@ -434,21 +702,261 @@ def post_to_page():
     if not oauth_record:
         return jsonify({'success': False, 'error': 'Facebook not connected'}), 401
     
+    if not oauth_record.page_id:
+        return jsonify({'success': False, 'error': 'No active page selected'}), 400
+
     data = request.get_json()
-    page_id = data.get('page_id')
-    page_access_token = data.get('page_access_token')
-    message = data.get('message')
-    link = data.get('link')
-    
-    if not page_id or not page_access_token or not message:
-        return jsonify({'success': False, 'error': 'Missing required fields'}), 400
-    
-    result, error = FacebookService.post_to_page(page_id, page_access_token, message, link)
+    message = data.get('message') if data else None
+    link = data.get('link') if data else None
+
+    if not message:
+        return jsonify({'success': False, 'error': 'Message is required'}), 400
+
+    page_access_token = oauth_record.get_page_access_token()
+    if not page_access_token:
+        return jsonify({'success': False, 'error': 'Missing Page access token. Re-select the Page.'}), 400
+
+    result, error = FacebookService.post_to_page(oauth_record.page_id, page_access_token, message, link)
     
     if error:
         return jsonify({'success': False, 'error': error}), 500
     
     return jsonify({'success': True, 'post_id': result.get('id')})
+
+
+@facebook_auth_bp.route('/post/image', methods=['POST'])
+@login_required
+def post_image_to_page():
+    """Post an image to the active Facebook page"""
+    company = current_user.get_default_company()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company selected'}), 400
+
+    oauth_record = FacebookOAuth.query.filter_by(
+        user_id=current_user.id,
+        company_id=company.id
+    ).first()
+
+    if not oauth_record:
+        return jsonify({'success': False, 'error': 'Facebook not connected'}), 401
+
+    if not oauth_record.page_id:
+        return jsonify({'success': False, 'error': 'No active page selected'}), 400
+
+    image_file = request.files.get('image')
+    message = request.form.get('message')
+    if not image_file:
+        return jsonify({'success': False, 'error': 'Image file is required'}), 400
+
+    page_access_token = oauth_record.get_page_access_token()
+    if not page_access_token:
+        return jsonify({'success': False, 'error': 'Missing Page access token. Re-select the Page.'}), 400
+    result, error = FacebookService.post_photo_to_page(
+        oauth_record.page_id,
+        page_access_token,
+        message,
+        image_file
+    )
+
+    if error:
+        return jsonify({'success': False, 'error': error}), 500
+
+    return jsonify({'success': True, 'post_id': result.get('id')})
+
+
+@facebook_auth_bp.route('/post/video', methods=['POST'])
+@login_required
+def post_video_to_page():
+    """Post a video to the active Facebook page"""
+    company = current_user.get_default_company()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company selected'}), 400
+
+    oauth_record = FacebookOAuth.query.filter_by(
+        user_id=current_user.id,
+        company_id=company.id
+    ).first()
+
+    if not oauth_record:
+        return jsonify({'success': False, 'error': 'Facebook not connected'}), 401
+
+    if not oauth_record.page_id:
+        return jsonify({'success': False, 'error': 'No active page selected'}), 400
+
+    video_file = request.files.get('video')
+    message = request.form.get('message')
+    if not video_file:
+        return jsonify({'success': False, 'error': 'Video file is required'}), 400
+
+    page_access_token = oauth_record.get_page_access_token()
+    if not page_access_token:
+        return jsonify({'success': False, 'error': 'Missing Page access token. Re-select the Page.'}), 400
+    result, error = FacebookService.post_video_to_page(
+        oauth_record.page_id,
+        page_access_token,
+        message,
+        video_file
+    )
+
+    if error:
+        return jsonify({'success': False, 'error': error}), 500
+
+    return jsonify({'success': True, 'video_id': result.get('id')})
+
+
+@facebook_auth_bp.route('/page/posts')
+@login_required
+def page_posts():
+    """Get recent posts for the active page"""
+    company = current_user.get_default_company()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company selected'}), 400
+
+    oauth_record = FacebookOAuth.query.filter_by(
+        user_id=current_user.id,
+        company_id=company.id
+    ).first()
+
+    if not oauth_record:
+        return jsonify({'success': False, 'error': 'Facebook not connected'}), 401
+
+    if not oauth_record.page_id:
+        return jsonify({'success': False, 'error': 'No active page selected'}), 400
+
+    page_access_token = oauth_record.get_page_access_token()
+    if not page_access_token:
+        return jsonify({'success': False, 'error': 'Missing Page access token. Re-select the Page.'}), 400
+    posts, error = FacebookService.get_page_posts(oauth_record.page_id, page_access_token)
+
+    if error:
+        return jsonify({'success': False, 'error': error}), 500
+
+    return jsonify({'success': True, 'posts': posts})
+
+
+@facebook_auth_bp.route('/post/<post_id>/comments')
+@login_required
+def post_comments(post_id):
+    """Get comments for a post"""
+    company = current_user.get_default_company()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company selected'}), 400
+
+    oauth_record = FacebookOAuth.query.filter_by(
+        user_id=current_user.id,
+        company_id=company.id
+    ).first()
+
+    if not oauth_record:
+        return jsonify({'success': False, 'error': 'Facebook not connected'}), 401
+
+    if not oauth_record.page_id:
+        return jsonify({'success': False, 'error': 'No active page selected'}), 400
+
+    page_access_token = oauth_record.get_page_access_token()
+    if not page_access_token:
+        return jsonify({'success': False, 'error': 'Missing Page access token. Re-select the Page.'}), 400
+    comments, error = FacebookService.get_post_comments(post_id, page_access_token)
+
+    if error:
+        return jsonify({'success': False, 'error': error}), 500
+
+    return jsonify({'success': True, 'comments': comments})
+
+
+@facebook_auth_bp.route('/comment/<comment_id>/reply', methods=['POST'])
+@login_required
+def reply_to_comment(comment_id):
+    """Reply to a comment as the page"""
+    company = current_user.get_default_company()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company selected'}), 400
+
+    oauth_record = FacebookOAuth.query.filter_by(
+        user_id=current_user.id,
+        company_id=company.id
+    ).first()
+
+    if not oauth_record:
+        return jsonify({'success': False, 'error': 'Facebook not connected'}), 401
+
+    if not oauth_record.page_id:
+        return jsonify({'success': False, 'error': 'No active page selected'}), 400
+
+    data = request.get_json()
+    message = data.get('message') if data else None
+    if not message:
+        return jsonify({'success': False, 'error': 'Reply message is required'}), 400
+
+    page_access_token = oauth_record.get_page_access_token()
+    if not page_access_token:
+        return jsonify({'success': False, 'error': 'Missing Page access token. Re-select the Page.'}), 400
+    result, error = FacebookService.reply_to_comment(comment_id, page_access_token, message)
+
+    if error:
+        return jsonify({'success': False, 'error': error}), 500
+
+    return jsonify({'success': True, 'reply_id': result.get('id')})
+
+
+@facebook_auth_bp.route('/comment/<comment_id>/like', methods=['POST'])
+@login_required
+def like_comment(comment_id):
+    """Like a comment as the page"""
+    company = current_user.get_default_company()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company selected'}), 400
+
+    oauth_record = FacebookOAuth.query.filter_by(
+        user_id=current_user.id,
+        company_id=company.id
+    ).first()
+
+    if not oauth_record:
+        return jsonify({'success': False, 'error': 'Facebook not connected'}), 401
+
+    if not oauth_record.page_id:
+        return jsonify({'success': False, 'error': 'No active page selected'}), 400
+
+    page_access_token = oauth_record.get_page_access_token()
+    if not page_access_token:
+        return jsonify({'success': False, 'error': 'Missing Page access token. Re-select the Page.'}), 400
+    result, error = FacebookService.like_comment(comment_id, page_access_token)
+
+    if error:
+        return jsonify({'success': False, 'error': error}), 500
+
+    return jsonify({'success': True, 'liked': result.get('success', True)})
+
+
+@facebook_auth_bp.route('/comment/<comment_id>/hide', methods=['POST'])
+@login_required
+def hide_comment(comment_id):
+    """Hide a comment as the page"""
+    company = current_user.get_default_company()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company selected'}), 400
+
+    oauth_record = FacebookOAuth.query.filter_by(
+        user_id=current_user.id,
+        company_id=company.id
+    ).first()
+
+    if not oauth_record:
+        return jsonify({'success': False, 'error': 'Facebook not connected'}), 401
+
+    if not oauth_record.page_id:
+        return jsonify({'success': False, 'error': 'No active page selected'}), 400
+
+    page_access_token = oauth_record.get_page_access_token()
+    if not page_access_token:
+        return jsonify({'success': False, 'error': 'Missing Page access token. Re-select the Page.'}), 400
+    result, error = FacebookService.hide_comment(comment_id, page_access_token, is_hidden=True)
+
+    if error:
+        return jsonify({'success': False, 'error': error}), 500
+
+    return jsonify({'success': True, 'hidden': result.get('success', True)})
 
 
 @facebook_auth_bp.route('/sdk-login', methods=['POST'])
@@ -478,10 +986,10 @@ def sdk_login():
         ).first()
         
         if oauth_record:
-            oauth_record.access_token = access_token
+            oauth_record.set_access_token(access_token)
             oauth_record.facebook_user_id = user_id
-            oauth_record.facebook_name = user_info.get('name')
-            oauth_record.facebook_email = user_info.get('email')
+            oauth_record.display_name = user_info.get('name')
+            oauth_record.email = user_info.get('email')
             oauth_record.avatar_url = user_info.get('picture', {}).get('data', {}).get('url')
             oauth_record.expires_at = datetime.utcnow() + timedelta(seconds=int(expires_in))
             oauth_record.updated_at = datetime.utcnow()
@@ -489,13 +997,13 @@ def sdk_login():
             oauth_record = FacebookOAuth(
                 user_id=current_user.id,
                 company_id=company.id,
-                access_token=access_token,
                 facebook_user_id=user_id,
-                facebook_name=user_info.get('name'),
-                facebook_email=user_info.get('email'),
+                display_name=user_info.get('name'),
+                email=user_info.get('email'),
                 avatar_url=user_info.get('picture', {}).get('data', {}).get('url'),
                 expires_at=datetime.utcnow() + timedelta(seconds=int(expires_in))
             )
+            oauth_record.set_access_token(access_token)
             db.session.add(oauth_record)
         
         db.session.commit()

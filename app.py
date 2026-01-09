@@ -3,8 +3,8 @@ import logging
 import json
 import re
 import importlib.util
-import secrets
 from uuid import uuid4
+
 from flask import Flask, redirect, url_for, request, g, has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -12,10 +12,13 @@ from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-# Configure logging
+
+# ============================================================
+# Logging configuration
+# ============================================================
+
 class RequestIdFilter(logging.Filter):
     """Inject request IDs into log records when available."""
-
     def filter(self, record: logging.LogRecord) -> bool:
         if has_request_context():
             record.request_id = getattr(g, "request_id", "-")
@@ -24,10 +27,15 @@ class RequestIdFilter(logging.Filter):
         return True
 
 
-log_format = "%(asctime)s %(levelname)s [%(name)s] [request_id=%(request_id)s] %(message)s"
+log_format = (
+    "%(asctime)s %(levelname)s [%(name)s] "
+    "[request_id=%(request_id)s] %(message)s"
+)
 logging.basicConfig(level=logging.DEBUG, format=log_format)
+
 root_logger = logging.getLogger()
 root_logger.addFilter(RequestIdFilter())
+
 _old_factory = logging.getLogRecordFactory()
 
 
@@ -43,7 +51,6 @@ logging.setLogRecordFactory(_record_factory)
 
 class RedactionFilter(logging.Filter):
     """Redact sensitive tax identifiers from logs."""
-
     _nine_digit = re.compile(r"\b\d{9}\b")
     _keys = re.compile(r"\b(tin|ssn|ein)\b", re.IGNORECASE)
 
@@ -57,174 +64,236 @@ class RedactionFilter(logging.Filter):
 
 root_logger.addFilter(RedactionFilter())
 
+
+# ============================================================
+# Database base
+# ============================================================
+
 class Base(DeclarativeBase):
     pass
 
+
 db = SQLAlchemy(model_class=Base)
 
-# Create the app
+
+# ============================================================
+# Create Flask app
+# ============================================================
+
 app = Flask(__name__)
-session_secret = os.environ.get("SESSION_SECRET") or os.environ.get("SECRET_KEY")
+
+# ------------------------------------------------------------
+# Session / secret key handling (deterministic & review-safe)
+# ------------------------------------------------------------
+
+session_secret = (
+    os.environ.get("SESSION_SECRET")
+    or os.environ.get("SECRET_KEY")
+)
+
 if not session_secret:
     if os.environ.get("CODEX_ENV") == "dev":
         session_secret = "dev-session-secret"
-        logging.getLogger(__name__).warning("SESSION_SECRET not set; using dev fallback.")
+        logging.getLogger(__name__).warning(
+            "SESSION_SECRET not set; using dev fallback."
+        )
     else:
-        raise RuntimeError("SESSION_SECRET or SECRET_KEY must be set in production.")
+        raise RuntimeError(
+            "SESSION_SECRET or SECRET_KEY must be set in production."
+        )
+
 app.secret_key = session_secret
+
+# Trust reverse proxy headers (required on VPS / load balancers)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# Configure the database
+
+# ============================================================
+# Database configuration
+# ============================================================
+
 db_url = os.environ.get("DATABASE_URL", "sqlite:///email_marketing.db")
+
 if db_url.startswith("mysql") and importlib.util.find_spec("MySQLdb") is None:
     if "pymysql" not in db_url and importlib.util.find_spec("pymysql") is not None:
         db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
-        logging.getLogger(__name__).warning("MySQLdb missing; falling back to PyMySQL driver.")
+        logging.getLogger(__name__).warning(
+            "MySQLdb missing; falling back to PyMySQL driver."
+        )
     elif os.environ.get("CODEX_ENV") == "dev":
         db_url = "sqlite:///email_marketing.db"
-        logging.getLogger(__name__).warning("MySQLdb missing in dev; falling back to sqlite.")
+        logging.getLogger(__name__).warning(
+            "MySQLdb missing in dev; falling back to sqlite."
+        )
+
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
 
-# File upload configuration
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
+# File uploads
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB
 app.config["UPLOAD_FOLDER"] = "static/company_logos"
 
-# Microsoft Graph API configuration
+# Microsoft Graph API config
 app.config["MS_CLIENT_ID"] = os.environ.get("MS_CLIENT_ID", "")
 app.config["MS_CLIENT_SECRET"] = os.environ.get("MS_CLIENT_SECRET", "")
 app.config["MS_TENANT_ID"] = os.environ.get("MS_TENANT_ID", "")
 
-# Initialize extensions
 db.init_app(app)
 
-# Setup CSRF Protection  
-app.config['WTF_CSRF_ENABLED'] = True
-app.config['WTF_CSRF_CHECK_DEFAULT'] = True
-app.config['WTF_CSRF_METHODS'] = ['POST', 'PUT', 'PATCH', 'DELETE']
-app.config['WTF_CSRF_FIELD_NAME'] = 'csrf_token'
-app.config['WTF_CSRF_TIME_LIMIT'] = None  # No time limit for CSRF tokens
-app.config['WTF_CSRF_SSL_STRICT'] = False  # Allow non-HTTPS in development
+
+# ============================================================
+# CSRF configuration
+# ============================================================
+
+app.config["WTF_CSRF_ENABLED"] = True
+app.config["WTF_CSRF_CHECK_DEFAULT"] = True
+app.config["WTF_CSRF_METHODS"] = ["POST", "PUT", "PATCH", "DELETE"]
+app.config["WTF_CSRF_FIELD_NAME"] = "csrf_token"
+app.config["WTF_CSRF_TIME_LIMIT"] = None
+app.config["WTF_CSRF_SSL_STRICT"] = False
+
 csrf = CSRFProtect(app)
 
-# Configure session cookie for iframe compatibility
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-app.config['SESSION_COOKIE_SECURE'] = True  # Required when SameSite=None
+# Session cookies (iframe + OAuth safe)
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
+app.config["SESSION_COOKIE_SECURE"] = True
 
-# Setup Flask-Login
+
+# ============================================================
+# Flask-Login setup
+# ============================================================
+
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'auth.login'  # type: ignore
-login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_view = "auth.login"
+login_manager.login_message = "Please log in to access this page."
+
 
 @login_manager.user_loader
 def load_user(user_id):
     from models import User
     return User.query.get(int(user_id))
 
+
+# ============================================================
+# Context processors / template helpers
+# ============================================================
+
 @app.context_processor
 def inject_tracking_pixels():
-    """Inject Facebook App ID and TikTok Pixel into all templates"""
     from flask_login import current_user
     facebook_app_id = None
     tiktok_pixel_id = None
+
     try:
         if current_user and current_user.is_authenticated:
             company = current_user.get_default_company()
             if company:
                 from models import CompanySecret
+
                 fb_secret = CompanySecret.query.filter_by(
                     company_id=company.id,
-                    key='facebook_app_id'
+                    key="facebook_app_id",
                 ).first()
                 if fb_secret:
                     facebook_app_id = fb_secret.value
-                tiktok_secret = CompanySecret.query.filter_by(
+
+                tt_secret = CompanySecret.query.filter_by(
                     company_id=company.id,
-                    key='tiktok_pixel_id'
+                    key="tiktok_pixel_id",
                 ).first()
-                if tiktok_secret:
-                    tiktok_pixel_id = tiktok_secret.value
+                if tt_secret:
+                    tiktok_pixel_id = tt_secret.value
     except Exception:
         pass
-    return {'facebook_app_id': facebook_app_id, 'tiktok_pixel_id': tiktok_pixel_id}
 
-@app.template_filter('campaign_status_color')
-def campaign_status_color(status):
-    """Return Bootstrap color class for campaign status"""
-    colors = {
-        'draft': 'secondary',
-        'scheduled': 'info',
-        'sending': 'warning',
-        'sent': 'success',
-        'partial': 'warning',
-        'failed': 'danger',
-        'paused': 'secondary',
-        'completed': 'success',
-        'active': 'primary'
+    return {
+        "facebook_app_id": facebook_app_id,
+        "tiktok_pixel_id": tiktok_pixel_id,
     }
-    return colors.get(status, 'secondary')
 
-# Register blueprints
+
+@app.template_filter("campaign_status_color")
+def campaign_status_color(status):
+    colors = {
+        "draft": "secondary",
+        "scheduled": "info",
+        "sending": "warning",
+        "sent": "success",
+        "partial": "warning",
+        "failed": "danger",
+        "paused": "secondary",
+        "completed": "success",
+        "active": "primary",
+    }
+    return colors.get(status, "secondary")
+
+
+# ============================================================
+# Blueprints
+# ============================================================
+
 from routes import main_bp
 from auth import auth_bp
 from user_management import user_bp
 from advanced_config import advanced_config_bp
 
 app.register_blueprint(main_bp)
-app.register_blueprint(auth_bp, url_prefix='/auth')
-app.register_blueprint(user_bp, url_prefix='/user')
+app.register_blueprint(auth_bp, url_prefix="/auth")
+app.register_blueprint(user_bp, url_prefix="/user")
 app.register_blueprint(advanced_config_bp)
 
-# Register Replit Auth blueprint if available
+
+# Optional / external integrations
+
 try:
     from replit_auth import make_replit_blueprint, is_replit_auth_enabled
     if is_replit_auth_enabled():
-        replit_bp = make_replit_blueprint()
-        if replit_bp:
-            app.register_blueprint(replit_bp, url_prefix="/replit-auth")
-            logging.info("Replit Auth blueprint registered successfully")
+        bp = make_replit_blueprint()
+        if bp:
+            app.register_blueprint(bp, url_prefix="/replit-auth")
+            logging.info("Replit Auth blueprint registered")
 except Exception as e:
     logging.warning(f"Replit Auth not available: {e}")
 
-# Register TikTok OAuth blueprint
 try:
     from tiktok_auth import tiktok_bp, tiktok_api_bp
     app.register_blueprint(tiktok_bp)
     app.register_blueprint(tiktok_api_bp)
-    logging.info("TikTok OAuth blueprint registered successfully")
+    logging.info("TikTok OAuth blueprint registered")
 except Exception as e:
     logging.warning(f"TikTok OAuth not available: {e}")
 
-# Register Facebook OAuth blueprint
 try:
     from facebook_auth import facebook_auth_bp
     app.register_blueprint(facebook_auth_bp)
-    logging.info("Facebook OAuth blueprint registered successfully")
+    logging.info("Facebook OAuth blueprint registered")
 except Exception as e:
     logging.warning(f"Facebook OAuth not available: {e}")
 
-# Register Instagram OAuth blueprint
 try:
     from instagram_auth import instagram_auth_bp
     app.register_blueprint(instagram_auth_bp)
-    logging.info("Instagram OAuth blueprint registered successfully")
+    logging.info("Instagram OAuth blueprint registered")
 except Exception as e:
     logging.warning(f"Instagram OAuth not available: {e}")
 
-# Register Facebook Webhook Blueprint with CSRF exemption
 try:
     from fb_webhook import fb_webhook
     app.register_blueprint(fb_webhook)
     csrf.exempt(fb_webhook)
-    logging.info("Facebook webhook blueprint registered successfully")
+    logging.info("Facebook webhook blueprint registered")
 except Exception as e:
     logging.warning(f"Facebook webhook not available: {e}")
 
-# Root route - redirects to login
+
+# ============================================================
+# Request lifecycle helpers
+# ============================================================
+
 @app.route("/")
 def index():
     return redirect(url_for("auth.login"))
@@ -232,14 +301,11 @@ def index():
 
 @app.before_request
 def assign_request_id():
-    """Assign a request ID for correlation across logs and responses."""
-    header_request_id = request.headers.get("X-Request-ID")
-    g.request_id = header_request_id or str(uuid4())
+    g.request_id = request.headers.get("X-Request-ID") or str(uuid4())
 
 
 @app.after_request
 def attach_request_id(response):
-    """Attach request ID to response headers."""
     request_id = getattr(g, "request_id", None)
     if request_id:
         response.headers["X-Request-ID"] = request_id
@@ -249,33 +315,41 @@ def attach_request_id(response):
             response.set_data(json.dumps(payload))
     return response
 
+
+# ============================================================
+# App initialization
+# ============================================================
+
 with app.app_context():
-    # Import models to ensure tables are created
     import models
     from error_logger import ErrorLog
+
     db.create_all()
-    
-    # Seed automation trigger library (idempotent)
+
     try:
         from services.automation_service import AutomationService
         AutomationService.seed_trigger_library()
-        logging.info("Automation trigger library seeded successfully")
+        logging.info("Automation trigger library seeded")
     except Exception as e:
         logging.error(f"Error seeding trigger library: {e}")
-    
-    # Initialize error logging
+
     try:
         from error_logger import setup_error_logging_handler
         setup_error_logging_handler()
-        logging.info("Error logging system initialized successfully")
+        logging.info("Error logging initialized")
     except Exception as e:
         logging.error(f"Error initializing error logging: {e}")
 
-    # Initialize agents - Register all 11 marketing AI agents
     try:
-        from agent_scheduler import initialize_agent_scheduler, get_agent_scheduler
+        from agent_scheduler import (
+            initialize_agent_scheduler,
+            get_agent_scheduler,
+        )
         initialize_agent_scheduler()
         app.agent_scheduler = get_agent_scheduler()
-        logging.info(f"AI Agent Scheduler initialized with {len(app.agent_scheduler.agents)} agents")
+        logging.info(
+            f"AI Agent Scheduler initialized with "
+            f"{len(app.agent_scheduler.agents)} agents"
+        )
     except Exception as e:
         logging.error(f"Error initializing AI Agent Scheduler: {e}")

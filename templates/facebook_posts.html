@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Facebook Posts - LUX Marketing{% endblock %}
+
+{% block page_header %}
+<span style="color: #c0c0c0;">Facebook Posts</span>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i data-feather="edit-3"></i> Posts</h1>
+        <p class="text-muted mb-0">Publish text, image, and video posts to your active Facebook Page.</p>
+    </div>
+    <a href="{{ url_for('main.facebook_accounts') }}" class="btn btn-outline-secondary">
+        <i data-feather="users"></i> Manage Pages
+    </a>
+</div>
+
+{% if active_page %}
+<div class="alert alert-success d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-2">
+        {% if active_page.picture %}
+        <img src="{{ active_page.picture }}" alt="{{ active_page.name }}" class="rounded" style="width: 32px; height: 32px;">
+        {% endif %}
+        <strong>Active Page:</strong> {{ active_page.name }}
+    </div>
+    <a href="{{ url_for('main.facebook_engagement') }}" class="btn btn-sm btn-outline-light">View Engagement</a>
+</div>
+{% else %}
+<div class="alert alert-warning">
+    Select a Facebook Page in <a href="{{ url_for('main.facebook_accounts') }}" class="alert-link">Social Accounts</a> to publish posts.
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="message-square"></i> Create Text Post</h5>
+            </div>
+            <div class="card-body">
+                <form id="textPostForm">
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <textarea class="form-control" name="message" rows="5" placeholder="What's new on your Page?" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Publish Text Post</button>
+                </form>
+                <div id="textPostStatus" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="image"></i> Post Image</h5>
+            </div>
+            <div class="card-body">
+                <form id="imagePostForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Caption</label>
+                        <textarea class="form-control" name="message" rows="4" placeholder="Add a caption (optional)"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Image File</label>
+                        <input type="file" class="form-control" name="image" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary w-100">Publish Image</button>
+                </form>
+                <div id="imagePostStatus" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i data-feather="video"></i> Publish Video</h5>
+    </div>
+    <div class="card-body">
+        <form id="videoPostForm" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea class="form-control" name="message" rows="3" placeholder="Describe your video (optional)"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Video File</label>
+                <input type="file" class="form-control" name="video" accept="video/*" required>
+            </div>
+            <div class="progress mb-3" style="height: 18px; display: none;" id="videoProgress">
+                <div class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
+            </div>
+            <button type="submit" class="btn btn-outline-primary w-100">Publish Video</button>
+        </form>
+        <div id="videoPostStatus" class="mt-3"></div>
+    </div>
+</div>
+
+<script>
+const csrfToken = '{{ csrf_token() }}';
+
+function setStatus(elementId, type, message) {
+    document.getElementById(elementId).innerHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+}
+
+function ensureActivePage() {
+    const activePageSelected = {{ 'true' if active_page else 'false' }};
+    if (!activePageSelected) {
+        setStatus('textPostStatus', 'warning', 'Select an active Page before publishing.');
+        setStatus('imagePostStatus', 'warning', 'Select an active Page before publishing.');
+        setStatus('videoPostStatus', 'warning', 'Select an active Page before publishing.');
+        return false;
+    }
+    return true;
+}
+
+const textPostForm = document.getElementById('textPostForm');
+textPostForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!ensureActivePage()) return;
+    const message = textPostForm.message.value.trim();
+    fetch('/auth/facebook/post', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ message })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                setStatus('textPostStatus', 'success', 'Post published successfully!');
+                textPostForm.reset();
+            } else {
+                setStatus('textPostStatus', 'danger', data.error || 'Failed to publish post.');
+            }
+        })
+        .catch(() => setStatus('textPostStatus', 'danger', 'Failed to publish post.'));
+});
+
+const imagePostForm = document.getElementById('imagePostForm');
+imagePostForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!ensureActivePage()) return;
+    const formData = new FormData(imagePostForm);
+    fetch('/auth/facebook/post/image', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        body: formData
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                setStatus('imagePostStatus', 'success', 'Image posted successfully!');
+                imagePostForm.reset();
+            } else {
+                setStatus('imagePostStatus', 'danger', data.error || 'Failed to post image.');
+            }
+        })
+        .catch(() => setStatus('imagePostStatus', 'danger', 'Failed to post image.'));
+});
+
+const videoPostForm = document.getElementById('videoPostForm');
+videoPostForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!ensureActivePage()) return;
+
+    const formData = new FormData(videoPostForm);
+    const progressContainer = document.getElementById('videoProgress');
+    const progressBar = progressContainer.querySelector('.progress-bar');
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressBar.textContent = '0%';
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/auth/facebook/post/video');
+    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+
+    xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            progressBar.style.width = `${percent}%`;
+            progressBar.textContent = `${percent}%`;
+        }
+    });
+
+    xhr.onload = () => {
+        try {
+            const response = JSON.parse(xhr.responseText);
+            if (response.success) {
+                setStatus('videoPostStatus', 'success', 'Video published successfully!');
+                videoPostForm.reset();
+            } else {
+                setStatus('videoPostStatus', 'danger', response.error || 'Failed to publish video.');
+            }
+        } catch (error) {
+            setStatus('videoPostStatus', 'danger', 'Failed to publish video.');
+        }
+    };
+
+    xhr.onerror = () => setStatus('videoPostStatus', 'danger', 'Failed to publish video.');
+    xhr.send(formData);
+});
+
+feather.replace();
+</script>
+{% endblock %}

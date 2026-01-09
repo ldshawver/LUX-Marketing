@@ -381,6 +381,10 @@ class FacebookOAuth(db.Model):
     display_name = db.Column(db.String(255), nullable=True)
     email = db.Column(db.String(255), nullable=True)
     avatar_url = db.Column(db.String(500), nullable=True)
+    page_id = db.Column(db.String(255), nullable=True)
+    page_name = db.Column(db.String(255), nullable=True)
+    page_access_token = db.Column(db.Text, nullable=True)
+    page_avatar_url = db.Column(db.String(500), nullable=True)
     
     status = db.Column(db.String(50), default='active')
     
@@ -416,6 +420,22 @@ class FacebookOAuth(db.Model):
             return vault.decrypt(self.access_token)
         except:
             return self.access_token
+
+    def set_page_access_token(self, token: str):
+        """Encrypt and store page access token"""
+        if token:
+            vault = self._get_vault()
+            self.page_access_token = vault.encrypt(token)
+
+    def get_page_access_token(self) -> str:
+        """Decrypt and return page access token"""
+        if not self.page_access_token:
+            return ""
+        try:
+            vault = self._get_vault()
+            return vault.decrypt(self.page_access_token)
+        except:
+            return self.page_access_token
     
     @property
     def is_expired(self):

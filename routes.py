@@ -229,14 +229,33 @@ def admin_fix_approve(proposal_id):
 @login_required
 def dashboard():
     """Dashboard with overview statistics"""
-    total_contacts = Contact.query.filter_by(is_active=True).count()
-    total_campaigns = Campaign.query.count()
-    active_campaigns = Campaign.query.filter_by(status='sending').count()
-    recent_campaigns = Campaign.query.order_by(Campaign.created_at.desc()).limit(5).all()
+    total_contacts = safe_count(
+        Contact.query.filter_by(is_active=True),
+        context="active contacts"
+    )
+    total_campaigns = safe_count(
+        Campaign.query,
+        context="campaigns"
+    )
+    active_campaigns = safe_count(
+        Campaign.query.filter_by(status='sending'),
+        context="active campaigns"
+    )
+    try:
+        recent_campaigns = Campaign.query.order_by(Campaign.created_at.desc()).limit(5).all()
+    except Exception as exc:
+        logger.warning("Dashboard recent campaigns query failed: %s", exc)
+        recent_campaigns = []
     
     # Email statistics
-    total_sent = db.session.query(CampaignRecipient).filter_by(status='sent').count()
-    total_failed = db.session.query(CampaignRecipient).filter_by(status='failed').count()
+    total_sent = safe_count(
+        db.session.query(CampaignRecipient).filter_by(status='sent'),
+        context="sent campaign recipients"
+    )
+    total_failed = safe_count(
+        db.session.query(CampaignRecipient).filter_by(status='failed'),
+        context="failed campaign recipients"
+    )
     
     # Version 4.1 & 4.2 Feature Metrics
     ai_campaigns = safe_count(
@@ -251,11 +270,25 @@ def dashboard():
         SocialPost.query.filter(SocialPost.media_urls.isnot(None)),
         context="social media posts with media"
     )
-    total_social_posts = SocialPost.query.count()
+    total_social_posts = safe_count(
+        SocialPost.query,
+        context="social posts"
+    )
     
-    current_company = current_user.get_default_company()
+    try:
+        current_company = current_user.get_default_company()
+    except Exception as exc:
+        logger.warning("Dashboard company lookup failed: %s", exc)
+        current_company = None
     
-    config_alerts = ConfigStatusService.get_dashboard_alerts(current_company) if current_company else []
+    if current_company:
+        try:
+            config_alerts = ConfigStatusService.get_dashboard_alerts(current_company)
+        except Exception as exc:
+            logger.warning("Dashboard config alerts failed: %s", exc)
+            config_alerts = []
+    else:
+        config_alerts = []
     
     app_version = get_app_version()
 

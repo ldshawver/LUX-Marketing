@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Facebook Engagement - LUX Marketing{% endblock %}
+
+{% block page_header %}
+<span style="color: #c0c0c0;">Facebook Engagement</span>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i data-feather="message-circle"></i> Engagement</h1>
+        <p class="text-muted mb-0">Review posts, comments, and engage as your Page.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('main.facebook_posts') }}" class="btn btn-outline-secondary">
+            <i data-feather="edit-3"></i> Create Posts
+        </a>
+        <button class="btn btn-primary" onclick="loadPosts()">
+            <i data-feather="refresh-cw"></i> Refresh Feed
+        </button>
+    </div>
+</div>
+
+{% if active_page %}
+<div class="alert alert-success d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-2">
+        {% if active_page.picture %}
+        <img src="{{ active_page.picture }}" alt="{{ active_page.name }}" class="rounded" style="width: 32px; height: 32px;">
+        {% endif %}
+        <strong>Active Page:</strong> {{ active_page.name }}
+    </div>
+    <a href="{{ url_for('main.facebook_accounts') }}" class="btn btn-sm btn-outline-light">Switch Page</a>
+</div>
+{% else %}
+<div class="alert alert-warning">
+    Select a Facebook Page in <a href="{{ url_for('main.facebook_accounts') }}" class="alert-link">Social Accounts</a> to view engagement.
+</div>
+{% endif %}
+
+<div id="engagementMessage"></div>
+<div id="postsContainer"></div>
+
+<script>
+const csrfToken = '{{ csrf_token() }}';
+const activePageSelected = {{ 'true' if active_page else 'false' }};
+
+function showMessage(type, text) {
+    const target = document.getElementById('engagementMessage');
+    target.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">${text}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+}
+
+function renderPosts(posts) {
+    const container = document.getElementById('postsContainer');
+
+    if (!posts.length) {
+        container.innerHTML = `
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-feather="inbox"></i>
+                    <p class="text-muted mt-2">No recent posts found.</p>
+                </div>
+            </div>
+        `;
+        feather.replace();
+        return;
+    }
+
+    container.innerHTML = posts.map(post => {
+        const likeCount = post.likes?.summary?.total_count || 0;
+        const commentCount = post.comments?.summary?.total_count || 0;
+        const message = post.message ? post.message : 'No text content';
+        return `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="mb-1">Post</h5>
+                            <small class="text-muted">${new Date(post.created_time).toLocaleString()}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary">👍 ${likeCount}</span>
+                            <span class="badge bg-secondary">💬 ${commentCount}</span>
+                        </div>
+                    </div>
+                    <p class="mt-3">${message}</p>
+                    ${post.full_picture ? `<img src="${post.full_picture}" class="img-fluid rounded mt-2" alt="Post media">` : ''}
+                    <div class="mt-3 d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadComments('${post.id}')">
+                            <i data-feather="message-square"></i> Load Comments
+                        </button>
+                        ${post.permalink_url ? `<a class="btn btn-sm btn-outline-secondary" href="${post.permalink_url}" target="_blank" rel="noopener">View on Facebook</a>` : ''}
+                    </div>
+                    <div class="mt-3" id="comments-${post.id}"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    feather.replace();
+}
+
+function loadPosts() {
+    if (!activePageSelected) {
+        showMessage('warning', 'Select an active Page to load posts.');
+        return;
+    }
+    fetch('/auth/facebook/page/posts')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderPosts(data.posts || []);
+            } else {
+                showMessage('danger', data.error || 'Failed to load posts.');
+            }
+        })
+        .catch(() => showMessage('danger', 'Failed to load posts.'));
+}
+
+function renderComments(containerId, comments) {
+    const container = document.getElementById(containerId);
+    if (!comments.length) {
+        container.innerHTML = '<div class="text-muted">No comments yet.</div>';
+        return;
+    }
+
+    container.innerHTML = comments.map(comment => {
+        return `
+            <div class="border rounded p-3 mb-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>${comment.from?.name || 'User'}</strong>
+                        <small class="text-muted d-block">${new Date(comment.created_time).toLocaleString()}</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary" onclick="likeComment('${comment.id}', '${containerId}')">Like</button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="hideComment('${comment.id}', '${containerId}')">Hide</button>
+                    </div>
+                </div>
+                <p class="mt-2 mb-2">${comment.message}</p>
+                <form class="reply-form" data-comment-id="${comment.id}">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="reply" placeholder="Reply as Page" required>
+                        <button class="btn btn-primary" type="submit">Reply</button>
+                    </div>
+                </form>
+                <div class="reply-status mt-2"></div>
+            </div>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.reply-form').forEach(form => {
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const replyInput = form.querySelector('input[name="reply"]');
+            const message = replyInput.value.trim();
+            if (!message) return;
+            postReply(form.dataset.commentId, message, form.nextElementSibling);
+        });
+    });
+}
+
+function loadComments(postId) {
+    const containerId = `comments-${postId}`;
+    const container = document.getElementById(containerId);
+    container.innerHTML = '<div class="text-muted">Loading comments...</div>';
+
+    fetch(`/auth/facebook/post/${postId}/comments`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderComments(containerId, data.comments || []);
+                feather.replace();
+            } else {
+                container.innerHTML = `<div class="text-danger">${data.error || 'Failed to load comments.'}</div>`;
+            }
+        })
+        .catch(() => {
+            container.innerHTML = '<div class="text-danger">Failed to load comments.</div>';
+        });
+}
+
+function postReply(commentId, message, statusElement) {
+    fetch(`/auth/facebook/comment/${commentId}/reply`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ message })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                statusElement.innerHTML = '<span class="text-success">Reply sent.</span>';
+            } else {
+                statusElement.innerHTML = `<span class="text-danger">${data.error || 'Reply failed.'}</span>`;
+            }
+        })
+        .catch(() => {
+            statusElement.innerHTML = '<span class="text-danger">Reply failed.</span>';
+        });
+}
+
+function likeComment(commentId, containerId) {
+    fetch(`/auth/facebook/comment/${commentId}/like`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('success', 'Comment liked.');
+            } else {
+                showMessage('danger', data.error || 'Failed to like comment.');
+            }
+        })
+        .catch(() => showMessage('danger', 'Failed to like comment.'));
+}
+
+function hideComment(commentId, containerId) {
+    fetch(`/auth/facebook/comment/${commentId}/hide`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('success', 'Comment hidden.');
+                const container = document.getElementById(containerId);
+                if (container) {
+                    loadPosts();
+                }
+            } else {
+                showMessage('danger', data.error || 'Failed to hide comment.');
+            }
+        })
+        .catch(() => showMessage('danger', 'Failed to hide comment.'));
+}
+
+if (activePageSelected) {
+    loadPosts();
+}
+
+feather.replace();
+</script>
+{% endblock %}

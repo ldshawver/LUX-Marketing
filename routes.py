@@ -3,7 +3,7 @@ import io
 import base64
 import os
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response, send_file, current_app
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, make_response, send_file, current_app, g
 from flask_login import login_required, current_user
 from sqlalchemy import or_, case, text
 from app import db, csrf
@@ -18,7 +18,7 @@ from models import (Contact, Campaign, EmailTemplate, CampaignRecipient, EmailTr
                     AutomationTest, AutomationTriggerLibrary, AutomationABTest, Company, user_company,
                     Deal, LeadScore, PersonalizationRule, KeywordResearch)
 from email_service import EmailService
-from utils import validate_email
+from utils import validate_email, safe_count
 from tracking import decode_tracking_data, record_email_event
 import logging
 import json
@@ -36,6 +36,14 @@ from services.scheduling_service import SchedulingService
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_int(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
 
 main_bp = Blueprint('main', __name__)
 
@@ -56,7 +64,6 @@ ROUTE_MANIFEST = [
     {"name": "analytics", "path": "/analytics-hub", "requires_auth": True, "aliases": ["/analytics"]},
     {"name": "admin_approval_queue", "path": "/approval-queue", "requires_auth": True, "admin_only": True},
     {"name": "blog", "path": "/blog", "requires_auth": True},
-    {"name": "lux_verified", "path": "/lux-verified", "requires_auth": True},
     {"name": "facebook_connect", "path": "/auth/facebook", "requires_auth": True},
     {"name": "instagram_connect", "path": "/auth/instagram", "requires_auth": True},
     {"name": "tiktok_connect", "path": "/auth/tiktok", "requires_auth": True},
@@ -232,9 +239,18 @@ def dashboard():
     total_failed = db.session.query(CampaignRecipient).filter_by(status='failed').count()
     
     # Version 4.1 & 4.2 Feature Metrics
-    ai_campaigns = Campaign.query.filter_by(ai_generated=True).count()
-    utm_campaigns = Campaign.query.filter(Campaign.utm_keyword.isnot(None)).count()
-    social_with_media = SocialPost.query.filter(SocialPost.media_urls.isnot(None)).count()
+    ai_campaigns = safe_count(
+        Campaign.query.filter_by(ai_generated=True),
+        context="ai_generated campaigns"
+    )
+    utm_campaigns = safe_count(
+        Campaign.query.filter(Campaign.utm_keyword.isnot(None)),
+        context="utm_keyword campaigns"
+    )
+    social_with_media = safe_count(
+        SocialPost.query.filter(SocialPost.media_urls.isnot(None)),
+        context="social media posts with media"
+    )
     total_social_posts = SocialPost.query.count()
     
     current_company = current_user.get_default_company()
@@ -395,7 +411,7 @@ def analytics_hub():
     from integrations.woocommerce_client import get_woocommerce_client
     
     # Get date range from query parameters
-    days = int(request.args.get('days', 30))
+    days = _safe_int(request.args.get('days', 30), 30)
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     compare = request.args.get('compare') == 'true'
@@ -569,7 +585,7 @@ def api_comprehensive_analytics():
     """API endpoint for comprehensive analytics data"""
     from services.comprehensive_analytics_service import ComprehensiveAnalyticsService
     
-    days = int(request.args.get('days', 30))
+    days = _safe_int(request.args.get('days', 30), 30)
     company = current_user.get_default_company()
     
     try:
@@ -601,7 +617,7 @@ def export_analytics():
     
     # Get parameters
     format_type = request.args.get('format', 'csv')
-    days = int(request.args.get('days', 30))
+    days = _safe_int(request.args.get('days', 30), 30)
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     
@@ -3646,17 +3662,33 @@ def analyze_social_content():
 @login_required
 def automation_dashboard():
     """Unified Automations & AI Agents dashboard"""
-    from agent_scheduler import get_agent_scheduler
     from models import AgentDeliverable, AgentReport
     
-    automations = Automation.query.all()
-    templates = AutomationTemplate.query.filter_by(is_predefined=True).all()
-    active_executions = AutomationExecution.query.filter_by(status='active').count()
+    try:
+        automations = Automation.query.all()
+    except Exception as exc:
+        logger.error(f"Automation query failed: {exc}")
+        automations = []
+    try:
+        templates = AutomationTemplate.query.filter_by(is_predefined=True).all()
+    except Exception as exc:
+        logger.error(f"Automation template query failed: {exc}")
+        templates = []
+    try:
+        active_executions = AutomationExecution.query.filter_by(status='active').count()
+    except Exception as exc:
+        logger.error(f"Automation execution query failed: {exc}")
+        active_executions = 0
     
     # Get AI agents info
-    scheduler = get_agent_scheduler()
-    agents = scheduler.agents if scheduler else {}
-    
+    try:
+        from agent_scheduler import get_agent_scheduler
+        scheduler = get_agent_scheduler()
+        agents = scheduler.agents if scheduler else {}
+    except Exception as exc:
+        logger.error(f"Agent scheduler unavailable: {exc}")
+        agents = {}
+
     # Build detailed agent info for enhanced tiles
     agent_details = [
         {
@@ -3811,6 +3843,7 @@ def agent_reports():
                          agent_names=agent_names,
                          current_agent=agent_type,
                          current_type=report_type)
+
 
 
 @main_bp.route('/agents/<agent_type>')
@@ -5277,6 +5310,122 @@ def view_agent_report(report_id):
     report = AgentReport.query.get_or_404(report_id)
     
     return render_template('view_agent_report.html', report=report)
+
+@main_bp.route('/market-intelligence')
+@login_required
+def market_intelligence_dashboard():
+    """Market intelligence dashboard"""
+    from models import Competitor, MarketSignal, StrategyRecommendation
+
+    company = current_user.get_default_company()
+    competitors = []
+    signals = []
+    recommendations = []
+
+    if company:
+        competitors = Competitor.query.filter_by(company_id=company.id).order_by(Competitor.name).all()
+        signals = MarketSignal.query.filter_by(company_id=company.id).order_by(
+            MarketSignal.signal_date.desc()
+        ).limit(10).all()
+        recommendations = StrategyRecommendation.query.filter_by(company_id=company.id).order_by(
+            StrategyRecommendation.created_at.desc()
+        ).limit(10).all()
+
+    return render_template(
+        'market_intelligence_dashboard.html',
+        company=company,
+        competitors=competitors,
+        signals=signals,
+        recommendations=recommendations
+    )
+
+@main_bp.route('/market-intelligence/reports')
+@login_required
+def market_intelligence_reports():
+    """Market intelligence reports list"""
+    from models import AgentReport
+
+    reports = AgentReport.query.filter_by(agent_type='market_intelligence').order_by(
+        AgentReport.created_at.desc()
+    ).limit(20).all()
+
+    return render_template('market_intelligence_reports.html', reports=reports)
+
+@main_bp.route('/admin/market-intelligence/refresh', methods=['POST'])
+def admin_market_intelligence_refresh():
+    """Admin-only manual refresh for market intelligence signals"""
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+
+    from models import MarketSignal
+    from services.market_intelligence_ingestion import MarketIntelligenceIngestionService
+
+    payload = request.get_json(silent=True) or {}
+    company_id = payload.get('company_id') or request.form.get('company_id')
+    if not company_id and current_user.is_authenticated:
+        default_company = current_user.get_default_company()
+        company_id = default_company.id if default_company else None
+
+    if not company_id:
+        return jsonify({'success': False, 'error': 'Company ID required'}), 400
+
+    signals_payloads = MarketIntelligenceIngestionService.ingest(int(company_id))
+    created = []
+    for signal_payload in signals_payloads:
+        signal = MarketSignal(
+            company_id=signal_payload.get('company_id', int(company_id)),
+            source=signal_payload.get('source', 'unknown'),
+            signal_type=signal_payload.get('signal_type', 'unknown'),
+            title=signal_payload.get('title', 'Market signal'),
+            summary=signal_payload.get('summary'),
+            severity=signal_payload.get('severity', 'medium'),
+            signal_date=signal_payload.get('signal_date', datetime.utcnow()),
+            raw_data=signal_payload.get('raw_data'),
+            is_actionable=signal_payload.get('is_actionable', True)
+        )
+        db.session.add(signal)
+        created.append(signal)
+
+    db.session.commit()
+
+    if request.is_json:
+        return jsonify({'success': True, 'created': len(created)})
+
+    flash(f'Refreshed market signals ({len(created)} added).', 'success')
+    return redirect(url_for('main.market_intelligence_dashboard'))
+
+@main_bp.route('/admin/market-intelligence/generate-report', methods=['POST'])
+def admin_market_intelligence_generate_report():
+    """Admin-only report generation for market intelligence"""
+    admin_guard = _ensure_admin_access()
+    if admin_guard:
+        return admin_guard
+
+    from agents.market_intelligence_agent import MarketIntelligenceAgent
+
+    payload = request.get_json(silent=True) or {}
+    cadence = payload.get('cadence') or request.form.get('cadence') or 'weekly'
+    company_id = payload.get('company_id') or request.form.get('company_id')
+
+    if not company_id and current_user.is_authenticated:
+        default_company = current_user.get_default_company()
+        company_id = default_company.id if default_company else None
+
+    if not company_id:
+        return jsonify({'success': False, 'error': 'Company ID required'}), 400
+
+    agent = MarketIntelligenceAgent()
+    result = agent.generate_report(int(company_id), cadence=cadence)
+
+    if request.is_json:
+        return jsonify(result)
+
+    if result.get('success'):
+        flash('Market intelligence report generated.', 'success')
+    else:
+        flash(result.get('error', 'Unable to generate report.'), 'error')
+    return redirect(url_for('main.market_intelligence_reports'))
 
 # ===== PHASE 2: SEO & ANALYTICS MODULE =====
 @main_bp.route('/seo/dashboard')

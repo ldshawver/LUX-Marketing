@@ -451,6 +451,14 @@ class Company(db.Model):
     logo_path = db.Column(db.String(255))
     icon_path = db.Column(db.String(255))
     website_url = db.Column(db.String(255))
+    legal_name = db.Column(db.String(255))
+    phone = db.Column(db.String(30))
+    address_line1 = db.Column(db.String(255))
+    address_line2 = db.Column(db.String(255))
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(50))
+    postal_code = db.Column(db.String(20))
+    country = db.Column(db.String(100))
     
     # Brand Customization
     primary_color = db.Column(db.String(7), default='#bc00ed')  # Purple
@@ -490,7 +498,7 @@ class Company(db.Model):
             secret = CompanySecret(company_id=self.id, key=key, value=value)
             db.session.add(secret)
         db.session.commit()
-    
+
     @property
     def user_count(self):
         return db.session.execute(
@@ -513,6 +521,7 @@ class CompanySecret(db.Model):
     
     def __repr__(self):
         return f'<CompanySecret {self.key}>'
+
 
 class Contact(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1743,33 +1752,10 @@ class Influencer(db.Model):
     def __repr__(self):
         return f'<Influencer {self.name}>'
 
-class InfluencerContract(db.Model):
-    """Influencer contracts and agreements"""
-    id = db.Column(db.Integer, primary_key=True)
-    influencer_id = db.Column(db.Integer, db.ForeignKey('influencer.id'), nullable=False)
-    campaign_name = db.Column(db.String(200))
-    deliverables = db.Column(JSON)  # List of required content pieces
-    compensation_type = db.Column(db.String(20))  # fixed, commission, product, hybrid
-    compensation_amount = db.Column(db.Float, default=0.0)
-    start_date = db.Column(db.DateTime)
-    end_date = db.Column(db.DateTime)
-    content_guidelines = db.Column(db.Text)
-    exclusivity_clause = db.Column(db.Boolean, default=False)
-    status = db.Column(db.String(20), default='draft')  # draft, active, completed, cancelled
-    signed_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    influencer = db.relationship('Influencer', backref='contracts')
-    
-    def __repr__(self):
-        return f'<InfluencerContract {self.campaign_name}>'
-
 class InfluencerContent(db.Model):
     """Track influencer content performance"""
     id = db.Column(db.Integer, primary_key=True)
     influencer_id = db.Column(db.Integer, db.ForeignKey('influencer.id'), nullable=False)
-    contract_id = db.Column(db.Integer, db.ForeignKey('influencer_contract.id'))
     platform = db.Column(db.String(50))  # instagram, tiktok, youtube, twitter
     content_type = db.Column(db.String(50))  # post, story, reel, video, tweet
     content_url = db.Column(db.String(500))
@@ -2033,6 +2019,82 @@ class NurtureCampaign(db.Model):
     company = db.relationship('Company', backref='nurture_campaigns')
 
 # ============= COMPETITOR ANALYSIS =============
+class Competitor(db.Model):
+    """Core competitor list for market intelligence"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    website_url = db.Column(db.String(255))
+    industry = db.Column(db.String(120))
+    status = db.Column(db.String(50), default='active')  # active, inactive, watchlist
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='competitors')
+    
+    def __repr__(self):
+        return f'<Competitor {self.name}>'
+
+class CompetitorContent(db.Model):
+    """Captured competitor content for intelligence tracking"""
+    id = db.Column(db.Integer, primary_key=True)
+    competitor_id = db.Column(db.Integer, db.ForeignKey('competitor.id'), nullable=False)
+    content_type = db.Column(db.String(100))  # ad, blog, press_release, social_post
+    title = db.Column(db.String(255))
+    url = db.Column(db.String(255))
+    summary = db.Column(db.Text)
+    source = db.Column(db.String(100))  # telegram, reddit, x, news, website
+    tags = db.Column(JSON)
+    published_at = db.Column(db.DateTime)
+    captured_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    competitor = db.relationship('Competitor', backref='content_items')
+    
+    def __repr__(self):
+        return f'<CompetitorContent {self.content_type}:{self.title}>'
+
+class MarketSignal(db.Model):
+    """External market signals detected from sources like trends or social chatter"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    source = db.Column(db.String(100), nullable=False)  # telegram, trends, reddit, x
+    signal_type = db.Column(db.String(100), nullable=False)  # launch, pricing, sentiment, demand
+    title = db.Column(db.String(255), nullable=False)
+    summary = db.Column(db.Text)
+    severity = db.Column(db.String(20), default='medium')  # low, medium, high
+    signal_date = db.Column(db.DateTime, default=datetime.utcnow)
+    raw_data = db.Column(JSON)
+    is_actionable = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='market_signals')
+    
+    def __repr__(self):
+        return f'<MarketSignal {self.source}:{self.title}>'
+
+class StrategyRecommendation(db.Model):
+    """Strategic recommendations generated from market intelligence"""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    related_signal_id = db.Column(db.Integer, db.ForeignKey('market_signal.id'))
+    title = db.Column(db.String(255), nullable=False)
+    recommendation_type = db.Column(db.String(100))  # positioning, pricing, channel, messaging
+    priority = db.Column(db.String(20), default='medium')  # low, medium, high
+    status = db.Column(db.String(50), default='draft')  # draft, accepted, in_progress, completed
+    rationale = db.Column(Text)
+    action_steps = db.Column(JSON)
+    generated_by = db.Column(db.String(100), default='market_intelligence_agent')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    company = db.relationship('Company', backref='strategy_recommendations')
+    related_signal = db.relationship('MarketSignal', backref='recommendations')
+    
+    def __repr__(self):
+        return f'<StrategyRecommendation {self.title}>'
+
 class CompetitorProfile(db.Model):
     """Comprehensive competitor tracking and intelligence"""
     id = db.Column(db.Integer, primary_key=True)

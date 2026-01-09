@@ -1,6 +1,9 @@
 import os
 import logging
-from flask import Flask, redirect, url_for, request
+import json
+import re
+from uuid import uuid4
+from flask import Flask, redirect, url_for, request, g, has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
@@ -8,7 +11,49 @@ from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+class RequestIdFilter(logging.Filter):
+    """Inject request IDs into log records when available."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if has_request_context():
+            record.request_id = getattr(g, "request_id", "-")
+        else:
+            record.request_id = "-"
+        return True
+
+
+log_format = "%(asctime)s %(levelname)s [%(name)s] [request_id=%(request_id)s] %(message)s"
+logging.basicConfig(level=logging.DEBUG, format=log_format)
+root_logger = logging.getLogger()
+root_logger.addFilter(RequestIdFilter())
+_old_factory = logging.getLogRecordFactory()
+
+
+def _record_factory(*args, **kwargs):
+    record = _old_factory(*args, **kwargs)
+    if not hasattr(record, "request_id"):
+        record.request_id = "-"
+    return record
+
+
+logging.setLogRecordFactory(_record_factory)
+
+
+class RedactionFilter(logging.Filter):
+    """Redact sensitive tax identifiers from logs."""
+
+    _nine_digit = re.compile(r"\b\d{9}\b")
+    _keys = re.compile(r"\b(tin|ssn|ein)\b", re.IGNORECASE)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.msg, str):
+            redacted = self._nine_digit.sub("***REDACTED***", record.msg)
+            redacted = self._keys.sub("[redacted]", redacted)
+            record.msg = redacted
+        return True
+
+
+root_logger.addFilter(RedactionFilter())
 
 class Base(DeclarativeBase):
     pass
@@ -21,7 +66,10 @@ app.secret_key = os.environ.get("SESSION_SECRET")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Configure the database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///email_marketing.db")
+database_url = os.environ.get("DATABASE_URL", "sqlite:///email_marketing.db")
+if database_url.startswith("mysql://"):
+    database_url = database_url.replace("mysql://", "mysql+pymysql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
@@ -166,6 +214,26 @@ except Exception as e:
 @app.route("/")
 def index():
     return redirect(url_for("auth.login"))
+
+
+@app.before_request
+def assign_request_id():
+    """Assign a request ID for correlation across logs and responses."""
+    header_request_id = request.headers.get("X-Request-ID")
+    g.request_id = header_request_id or str(uuid4())
+
+
+@app.after_request
+def attach_request_id(response):
+    """Attach request ID to response headers."""
+    request_id = getattr(g, "request_id", None)
+    if request_id:
+        response.headers["X-Request-ID"] = request_id
+        if response.mimetype == "application/json" and response.status_code >= 400:
+            payload = response.get_json(silent=True) or {}
+            payload.setdefault("request_id", request_id)
+            response.set_data(json.dumps(payload))
+    return response
 
 with app.app_context():
     # Import models to ensure tables are created

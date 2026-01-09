@@ -1,6 +1,6 @@
 """
 Influencer CRM Service
-Manage influencer relationships, contracts, and campaigns
+Manage influencer relationships and campaigns
 """
 
 from datetime import datetime, timedelta
@@ -53,47 +53,6 @@ class InfluencerService:
             
         except Exception as e:
             logger.error(f"Error creating influencer profile: {e}")
-            db.session.rollback()
-            return {'success': False, 'error': str(e)}
-    
-    @staticmethod
-    def create_contract(influencer_id, contract_data):
-        """
-        Create influencer contract.
-        
-        Args:
-            influencer_id: Influencer ID
-            contract_data: Contract details
-        
-        Returns:
-            dict: Created contract
-        """
-        try:
-            from models import InfluencerContract
-            
-            contract = InfluencerContract(
-                influencer_id=influencer_id,
-                campaign_name=contract_data.get('campaign'),
-                deliverables=contract_data.get('deliverables'),
-                compensation_type=contract_data.get('compensation_type', 'fixed'),
-                compensation_amount=contract_data.get('amount', 0),
-                start_date=contract_data.get('start_date'),
-                end_date=contract_data.get('end_date'),
-                content_guidelines=contract_data.get('guidelines'),
-                exclusivity_clause=contract_data.get('exclusivity', False),
-                status='draft'
-            )
-            
-            db.session.add(contract)
-            db.session.commit()
-            
-            return {
-                'success': True,
-                'contract_id': contract.id
-            }
-            
-        except Exception as e:
-            logger.error(f"Error creating contract: {e}")
             db.session.rollback()
             return {'success': False, 'error': str(e)}
     
@@ -151,7 +110,7 @@ class InfluencerService:
             dict: Influencer performance data
         """
         try:
-            from models import Influencer, InfluencerContent, InfluencerContract
+            from models import Influencer, InfluencerContent
             from sqlalchemy import func
             
             influencer = Influencer.query.get(influencer_id)
@@ -170,15 +129,6 @@ class InfluencerService:
                 InfluencerContent.influencer_id == influencer_id
             ).first()
             
-            # Get contract stats
-            contracts = InfluencerContract.query.filter_by(
-                influencer_id=influencer_id
-            ).all()
-            
-            total_contracts = len(contracts)
-            active_contracts = len([c for c in contracts if c.status == 'active'])
-            total_compensation = sum(c.compensation_amount for c in contracts)
-            
             return {
                 'success': True,
                 'influencer': {
@@ -195,11 +145,6 @@ class InfluencerService:
                     'total_clicks': content_stats.total_clicks or 0,
                     'total_conversions': content_stats.total_conversions or 0,
                     'avg_engagement': content_stats.avg_engagement or 0
-                },
-                'contracts': {
-                    'total': total_contracts,
-                    'active': active_contracts,
-                    'total_compensation': total_compensation
                 }
             }
             

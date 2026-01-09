@@ -123,14 +123,6 @@
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card border-success">
-                        <div class="card-body text-center">
-                            <h3>{{ "{:,}".format(active_contracts|default(0)) }}</h3>
-                            <p class="text-muted mb-0">Active Contracts</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
                     <div class="card border-info">
                         <div class="card-body text-center">
                             <h3>{{ "{:,.0f}".format(total_reach|default(0)) }}</h3>
@@ -497,10 +489,6 @@ function addInfluencer() {
 
 function viewInfluencer(id) {
     window.location.href = `/influencer/${id}`;
-}
-
-function createContract(id) {
-    alert(`Create contract for influencer ${id} - Feature coming soon!`);
 }
 
 // Re-initialize feather icons when tabs change

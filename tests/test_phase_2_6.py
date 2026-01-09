@@ -208,6 +208,24 @@ class TestSocialMediaModule:
         assert response.status_code == 200
         assert b'Social Media Accounts' in response.data
 
+    def test_facebook_accounts_page(self, auth_client):
+        """Test Facebook accounts page loads"""
+        response = auth_client.get('/facebook/accounts')
+        assert response.status_code == 200
+        assert b'Facebook Pages' in response.data
+
+    def test_facebook_posts_page(self, auth_client):
+        """Test Facebook posts page loads"""
+        response = auth_client.get('/facebook/posts')
+        assert response.status_code == 200
+        assert b'Facebook Posts' in response.data
+
+    def test_facebook_engagement_page(self, auth_client):
+        """Test Facebook engagement page loads"""
+        response = auth_client.get('/facebook/engagement')
+        assert response.status_code == 200
+        assert b'Facebook Engagement' in response.data
+
 # ===== AUTOMATION TESTS =====
 class TestAutomationModule:
     def test_trigger_library_seeded(self, auth_client):

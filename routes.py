@@ -5590,6 +5590,72 @@ def social_accounts():
     accounts = SocialMediaAccount.query.filter_by(is_active=True).all()
     return render_template('social_accounts.html', accounts=accounts)
 
+@main_bp.route('/facebook/accounts')
+@login_required
+def facebook_accounts():
+    """Manage Facebook Pages connection"""
+    from models import FacebookOAuth
+    company = current_user.get_default_company()
+    oauth_record = None
+    if company:
+        oauth_record = FacebookOAuth.query.filter_by(
+            user_id=current_user.id,
+            company_id=company.id
+        ).first()
+    return render_template(
+        'facebook_accounts.html',
+        facebook_connected=bool(oauth_record),
+        active_page={
+            'id': oauth_record.page_id,
+            'name': oauth_record.page_name,
+            'picture': oauth_record.page_avatar_url
+        } if oauth_record and oauth_record.page_id else None
+    )
+
+@main_bp.route('/facebook/posts')
+@login_required
+def facebook_posts():
+    """Create Facebook posts for the active page"""
+    from models import FacebookOAuth
+    company = current_user.get_default_company()
+    oauth_record = None
+    if company:
+        oauth_record = FacebookOAuth.query.filter_by(
+            user_id=current_user.id,
+            company_id=company.id
+        ).first()
+    return render_template(
+        'facebook_posts.html',
+        facebook_connected=bool(oauth_record),
+        active_page={
+            'id': oauth_record.page_id,
+            'name': oauth_record.page_name,
+            'picture': oauth_record.page_avatar_url
+        } if oauth_record and oauth_record.page_id else None
+    )
+
+@main_bp.route('/facebook/engagement')
+@login_required
+def facebook_engagement():
+    """View and manage Facebook engagement"""
+    from models import FacebookOAuth
+    company = current_user.get_default_company()
+    oauth_record = None
+    if company:
+        oauth_record = FacebookOAuth.query.filter_by(
+            user_id=current_user.id,
+            company_id=company.id
+        ).first()
+    return render_template(
+        'facebook_engagement.html',
+        facebook_connected=bool(oauth_record),
+        active_page={
+            'id': oauth_record.page_id,
+            'name': oauth_record.page_name,
+            'picture': oauth_record.page_avatar_url
+        } if oauth_record and oauth_record.page_id else None
+    )
+
 @main_bp.route('/social/accounts/connect', methods=['POST'])
 @login_required
 def connect_social_account():

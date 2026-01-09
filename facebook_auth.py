@@ -3,14 +3,14 @@ Facebook OAuth 2.0 Integration for LUX Marketing Platform
 Handles Facebook Login and Graph API access for business pages
 """
 
-import os
 import secrets
 import logging
+import json
 from datetime import datetime, timedelta
 from flask import Blueprint, redirect, url_for, request, jsonify, flash, session
 from flask_login import login_required, current_user
 from models import db, FacebookOAuth, CompanySecret
-from services.secret_vault import SecretVault
+from services.secret_vault import vault
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,7 @@ class FacebookService:
     AUTHORIZATION_URL = "https://www.facebook.com/v18.0/dialog/oauth"
     TOKEN_URL = "https://graph.facebook.com/v18.0/oauth/access_token"
     GRAPH_API_URL = "https://graph.facebook.com/v18.0"
+    PAGE_TOKEN_SECRET_KEY = "facebook_page_tokens"
     
     SCOPES = [
         'public_profile',
@@ -193,6 +194,70 @@ class FacebookService:
         except Exception as e:
             logger.error(f"Facebook pages error: {e}")
             return None, str(e)
+
+    @staticmethod
+    def _load_page_tokens(company_id):
+        """Load stored page access tokens for a company."""
+        secret = CompanySecret.query.filter_by(
+            company_id=company_id,
+            key=FacebookService.PAGE_TOKEN_SECRET_KEY
+        ).first()
+        if not secret or not secret.value:
+            return {}
+        try:
+            encrypted_tokens = json.loads(secret.value)
+        except json.JSONDecodeError:
+            logger.warning("Invalid stored Facebook page token payload.")
+            return {}
+
+        tokens = {}
+        for page_id, encrypted_token in encrypted_tokens.items():
+            try:
+                tokens[page_id] = vault.decrypt(encrypted_token)
+            except Exception:
+                tokens[page_id] = encrypted_token
+        return tokens
+
+    @staticmethod
+    def store_page_tokens(company_id, pages):
+        """Store page access tokens server-side only."""
+        if not pages:
+            return
+        tokens = FacebookService._load_page_tokens(company_id)
+        for page in pages:
+            page_id = page.get('id')
+            page_token = page.get('access_token')
+            if page_id and page_token:
+                tokens[str(page_id)] = page_token
+
+        encrypted_tokens = {
+            page_id: vault.encrypt(token)
+            for page_id, token in tokens.items()
+            if token
+        }
+
+        secret = CompanySecret.query.filter_by(
+            company_id=company_id,
+            key=FacebookService.PAGE_TOKEN_SECRET_KEY
+        ).first()
+        payload = json.dumps(encrypted_tokens)
+        if secret:
+            secret.value = payload
+            secret.updated_at = datetime.utcnow()
+        else:
+            secret = CompanySecret(
+                company_id=company_id,
+                key=FacebookService.PAGE_TOKEN_SECRET_KEY,
+                value=payload
+            )
+            db.session.add(secret)
+        db.session.commit()
+
+    @staticmethod
+    def get_page_token(company_id, page_id):
+        """Get a stored page access token."""
+        tokens = FacebookService._load_page_tokens(company_id)
+        return tokens.get(str(page_id))
     
     @staticmethod
     def post_to_page(page_id, page_access_token, message, link=None):
@@ -414,8 +479,18 @@ def get_pages():
     
     if error:
         return jsonify({'success': False, 'error': error}), 500
+
+    FacebookService.store_page_tokens(company.id, pages)
+    sanitized_pages = []
+    for page in pages:
+        sanitized_pages.append({
+            'id': page.get('id'),
+            'name': page.get('name'),
+            'category': page.get('category'),
+            'picture': page.get('picture')
+        })
     
-    return jsonify({'success': True, 'pages': pages})
+    return jsonify({'success': True, 'pages': sanitized_pages})
 
 
 @facebook_auth_bp.route('/post', methods=['POST'])
@@ -436,12 +511,18 @@ def post_to_page():
     
     data = request.get_json()
     page_id = data.get('page_id')
-    page_access_token = data.get('page_access_token')
     message = data.get('message')
     link = data.get('link')
     
-    if not page_id or not page_access_token or not message:
+    if data.get('page_access_token'):
+        return jsonify({'success': False, 'error': 'Page access tokens must not be provided by the client.'}), 400
+    
+    if not page_id or not message:
         return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+
+    page_access_token = FacebookService.get_page_token(company.id, page_id)
+    if not page_access_token:
+        return jsonify({'success': False, 'error': 'Page access token not found. Refresh pages list.'}), 400
     
     result, error = FacebookService.post_to_page(page_id, page_access_token, message, link)
     
@@ -449,68 +530,6 @@ def post_to_page():
         return jsonify({'success': False, 'error': error}), 500
     
     return jsonify({'success': True, 'post_id': result.get('id')})
-
-
-@facebook_auth_bp.route('/sdk-login', methods=['POST'])
-@login_required
-def sdk_login():
-    """Handle Facebook SDK login from frontend button"""
-    try:
-        company = current_user.get_default_company()
-        if not company:
-            return jsonify({'success': False, 'error': 'No company selected'}), 400
-        
-        data = request.get_json()
-        access_token = data.get('accessToken')
-        user_id = data.get('userID')
-        expires_in = data.get('expiresIn', 3600)
-        
-        if not access_token or not user_id:
-            return jsonify({'success': False, 'error': 'Missing access token or user ID'}), 400
-        
-        user_info, error = FacebookService.get_user_info(access_token)
-        if error:
-            return jsonify({'success': False, 'error': error}), 400
-        
-        oauth_record = FacebookOAuth.query.filter_by(
-            user_id=current_user.id,
-            company_id=company.id
-        ).first()
-        
-        if oauth_record:
-            oauth_record.access_token = access_token
-            oauth_record.facebook_user_id = user_id
-            oauth_record.facebook_name = user_info.get('name')
-            oauth_record.facebook_email = user_info.get('email')
-            oauth_record.avatar_url = user_info.get('picture', {}).get('data', {}).get('url')
-            oauth_record.expires_at = datetime.utcnow() + timedelta(seconds=int(expires_in))
-            oauth_record.updated_at = datetime.utcnow()
-        else:
-            oauth_record = FacebookOAuth(
-                user_id=current_user.id,
-                company_id=company.id,
-                access_token=access_token,
-                facebook_user_id=user_id,
-                facebook_name=user_info.get('name'),
-                facebook_email=user_info.get('email'),
-                avatar_url=user_info.get('picture', {}).get('data', {}).get('url'),
-                expires_at=datetime.utcnow() + timedelta(seconds=int(expires_in))
-            )
-            db.session.add(oauth_record)
-        
-        db.session.commit()
-        
-        logger.info(f"Facebook SDK login successful for user {current_user.id}")
-        return jsonify({
-            'success': True,
-            'user': {
-                'name': user_info.get('name'),
-                'email': user_info.get('email')
-            }
-        })
-    except Exception as e:
-        logger.error(f"Facebook SDK login error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 VERIFY_TOKEN = "lux_fb_verify_2025"

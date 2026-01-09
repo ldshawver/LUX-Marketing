@@ -3,6 +3,7 @@ import logging
 import json
 import re
 import importlib.util
+import secrets
 from uuid import uuid4
 from flask import Flask, redirect, url_for, request, g, has_request_context
 from flask_sqlalchemy import SQLAlchemy
@@ -63,10 +64,13 @@ db = SQLAlchemy(model_class=Base)
 
 # Create the app
 app = Flask(__name__)
-session_secret = os.environ.get("SESSION_SECRET")
-if not session_secret and os.environ.get("CODEX_ENV") == "dev":
-    session_secret = "dev-session-secret"
-    logging.getLogger(__name__).warning("SESSION_SECRET not set; using dev fallback.")
+session_secret = os.environ.get("SESSION_SECRET") or os.environ.get("SECRET_KEY")
+if not session_secret:
+    if os.environ.get("CODEX_ENV") == "dev":
+        session_secret = "dev-session-secret"
+        logging.getLogger(__name__).warning("SESSION_SECRET not set; using dev fallback.")
+    else:
+        raise RuntimeError("SESSION_SECRET or SECRET_KEY must be set in production.")
 app.secret_key = session_secret
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 

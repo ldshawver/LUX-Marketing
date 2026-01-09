@@ -2,6 +2,7 @@ import os
 import logging
 import json
 import re
+import importlib.util
 from uuid import uuid4
 from flask import Flask, redirect, url_for, request, g, has_request_context
 from flask_sqlalchemy import SQLAlchemy
@@ -62,11 +63,23 @@ db = SQLAlchemy(model_class=Base)
 
 # Create the app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET")
+session_secret = os.environ.get("SESSION_SECRET")
+if not session_secret and os.environ.get("CODEX_ENV") == "dev":
+    session_secret = "dev-session-secret"
+    logging.getLogger(__name__).warning("SESSION_SECRET not set; using dev fallback.")
+app.secret_key = session_secret
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Configure the database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///email_marketing.db")
+db_url = os.environ.get("DATABASE_URL", "sqlite:///email_marketing.db")
+if db_url.startswith("mysql") and importlib.util.find_spec("MySQLdb") is None:
+    if "pymysql" not in db_url and importlib.util.find_spec("pymysql") is not None:
+        db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
+        logging.getLogger(__name__).warning("MySQLdb missing; falling back to PyMySQL driver.")
+    elif os.environ.get("CODEX_ENV") == "dev":
+        db_url = "sqlite:///email_marketing.db"
+        logging.getLogger(__name__).warning("MySQLdb missing in dev; falling back to sqlite.")
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,

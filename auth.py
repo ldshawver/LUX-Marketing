@@ -4,6 +4,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app import db
 from models import User
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from sqlalchemy import or_
 import os
 
 auth_bp = Blueprint('auth', __name__)
@@ -37,12 +38,24 @@ def login():
             flash('Username and password are required', 'error')
             return render_template('login.html', replit_auth_enabled=replit_auth_enabled)
         
-        user = User.query.filter_by(username=username).first()
-        
-        if user and check_password_hash(user.password_hash, password):
+        normalized_email = username.lower() if "@" in username else None
+        email_lookup = normalized_email if normalized_email else username
+
+        preferred_match = User.email == email_lookup if normalized_email else User.username == username
+
+        user = User.query.filter(
+            or_(User.username == username, User.email == email_lookup)
+        ).order_by(preferred_match.desc()).first()
+
+        if user and user.password_hash and check_password_hash(user.password_hash, password):
             login_user(user, remember=remember)
             next_page = request.args.get('next')
             return redirect(next_page) if next_page else redirect(url_for('main.dashboard'))
+        elif user and not user.password_hash:
+            flash(
+                "This account doesn't have a password set. Please sign in using the original login method or reset your password.",
+                'error'
+            )
         else:
             flash('Invalid username or password', 'error')
     

@@ -92,15 +92,18 @@ session_secret = (
 )
 
 if not session_secret:
+    logger = logging.getLogger(__name__)
     if os.environ.get("CODEX_ENV") == "dev":
-        session_secret = "dev-session-secret"
-        logging.getLogger(__name__).warning(
-            "SESSION_SECRET not set; using dev fallback."
+        session_secret = uuid4().hex
+        logger.warning(
+            "SESSION_SECRET not set; using a temporary dev secret."
         )
     else:
-        raise RuntimeError(
-            "SESSION_SECRET or SECRET_KEY must be set in production."
+        session_secret = uuid4().hex
+        app.config["STARTUP_ERROR"] = (
+            "SESSION_SECRET is missing. Set it in your environment to start the app."
         )
+        logger.warning(app.config["STARTUP_ERROR"])
 
 app.secret_key = session_secret
 

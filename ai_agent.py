@@ -19,26 +19,31 @@ class LUXAgent:
     """LUX - Automated Email Marketing AI Agent"""
     
     def __init__(self):
-        try:
-            # Ensure clean OpenAI client initialization without conflicting parameters
-            api_key = os.environ.get("OPENAI_API_KEY")
-            if not api_key:
-                raise ValueError("OPENAI_API_KEY environment variable is required")
-            
-            # Initialize OpenAI client with minimal parameters to avoid conflicts
-            self.client = OpenAI(api_key=api_key)
-            self.model = "gpt-4o"  # Using GPT-4o for reliable performance
-            self.agent_name = "LUX"
-            self.agent_personality = """
-            You are LUX, an expert email marketing automation agent. You are professional, data-driven, 
-            and focused on creating high-converting email campaigns. You understand marketing psychology, 
-            audience segmentation, and email best practices. You always aim to maximize engagement rates 
-            and conversions while maintaining brand consistency.
-            """
-            logger.info("LUX AI Agent initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize LUX AI Agent: {e}")
-            raise
+        self._client = None
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            logger.error("OPENAI_API_KEY environment variable is required")
+        else:
+            try:
+                # Initialize OpenAI client with minimal parameters to avoid conflicts
+                self._client = OpenAI(api_key=api_key)
+                logger.info("LUX AI Agent initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize LUX AI Agent: {e}")
+        self.model = "gpt-4o"  # Using GPT-4o for reliable performance
+        self.agent_name = "LUX"
+        self.agent_personality = """
+        You are LUX, an expert email marketing automation agent. You are professional, data-driven, 
+        and focused on creating high-converting email campaigns. You understand marketing psychology, 
+        audience segmentation, and email best practices. You always aim to maximize engagement rates 
+        and conversions while maintaining brand consistency.
+        """
+
+    @property
+    def client(self):
+        if not self._client:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
+        return self._client
     
     def generate_campaign_content(self, campaign_objective, target_audience, brand_info=None):
         """Generate email campaign content based on objectives and audience"""

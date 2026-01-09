@@ -66,8 +66,11 @@ db = SQLAlchemy(model_class=Base)
 app = Flask(__name__)
 session_secret = os.environ.get("SESSION_SECRET") or os.environ.get("SECRET_KEY")
 if not session_secret:
-    session_secret = secrets.token_urlsafe(32)
-    logging.getLogger(__name__).warning("SESSION_SECRET not set; generated a temporary key.")
+    if os.environ.get("CODEX_ENV") == "dev":
+        session_secret = "dev-session-secret"
+        logging.getLogger(__name__).warning("SESSION_SECRET not set; using dev fallback.")
+    else:
+        raise RuntimeError("SESSION_SECRET or SECRET_KEY must be set in production.")
 app.secret_key = session_secret
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 

@@ -29,8 +29,8 @@ class FacebookService:
         'pages_show_list',
         'pages_read_engagement',
         'pages_manage_posts',
-        'pages_manage_metadata',
-        'business_management'
+        'pages_manage_engagement',
+        'publish_video'
     ]
     
     @staticmethod
@@ -290,6 +290,190 @@ class FacebookService:
             logger.error(f"Facebook post error: {e}")
             return None, str(e)
 
+    @staticmethod
+    def post_photo_to_page(page_id, page_access_token, message, image_file):
+        """Post an image to a Facebook page"""
+        import requests
+
+        try:
+            files = {
+                'source': (image_file.filename, image_file.stream, image_file.mimetype)
+            }
+            data = {
+                'caption': message or '',
+                'access_token': page_access_token
+            }
+            response = requests.post(
+                f"{FacebookService.GRAPH_API_URL}/{page_id}/photos",
+                data=data,
+                files=files,
+                timeout=60
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Image post failed: {error_msg}"
+
+            return response.json(), None
+        except Exception as e:
+            logger.error(f"Facebook image post error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def post_video_to_page(page_id, page_access_token, message, video_file):
+        """Post a video to a Facebook page"""
+        import requests
+
+        try:
+            files = {
+                'source': (video_file.filename, video_file.stream, video_file.mimetype)
+            }
+            data = {
+                'description': message or '',
+                'access_token': page_access_token
+            }
+            response = requests.post(
+                f"{FacebookService.GRAPH_API_URL}/{page_id}/videos",
+                data=data,
+                files=files,
+                timeout=300
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Video post failed: {error_msg}"
+
+            return response.json(), None
+        except Exception as e:
+            logger.error(f"Facebook video post error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def get_page_posts(page_id, page_access_token):
+        """Get recent posts and engagement stats for a page"""
+        import requests
+
+        try:
+            response = requests.get(
+                f"{FacebookService.GRAPH_API_URL}/{page_id}/posts",
+                params={
+                    'access_token': page_access_token,
+                    'fields': 'id,message,created_time,full_picture,permalink_url,'
+                              'attachments{media,type},'
+                              'likes.summary(true),comments.summary(true)'
+                },
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Failed to load posts: {error_msg}"
+
+            return response.json().get('data', []), None
+        except Exception as e:
+            logger.error(f"Facebook posts error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def get_post_comments(post_id, page_access_token):
+        """Get comments for a post"""
+        import requests
+
+        try:
+            response = requests.get(
+                f"{FacebookService.GRAPH_API_URL}/{post_id}/comments",
+                params={
+                    'access_token': page_access_token,
+                    'fields': 'id,message,from,created_time,like_count,comment_count,is_hidden'
+                },
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Failed to load comments: {error_msg}"
+
+            return response.json().get('data', []), None
+        except Exception as e:
+            logger.error(f"Facebook comments error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def reply_to_comment(comment_id, page_access_token, message):
+        """Reply to a comment as the page"""
+        import requests
+
+        try:
+            response = requests.post(
+                f"{FacebookService.GRAPH_API_URL}/{comment_id}/comments",
+                data={
+                    'access_token': page_access_token,
+                    'message': message
+                },
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Reply failed: {error_msg}"
+
+            return response.json(), None
+        except Exception as e:
+            logger.error(f"Facebook reply error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def like_comment(comment_id, page_access_token):
+        """Like a comment as the page"""
+        import requests
+
+        try:
+            response = requests.post(
+                f"{FacebookService.GRAPH_API_URL}/{comment_id}/likes",
+                data={'access_token': page_access_token},
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Like failed: {error_msg}"
+
+            return response.json(), None
+        except Exception as e:
+            logger.error(f"Facebook like error: {e}")
+            return None, str(e)
+
+    @staticmethod
+    def hide_comment(comment_id, page_access_token, is_hidden=True):
+        """Hide or unhide a comment"""
+        import requests
+
+        try:
+            response = requests.post(
+                f"{FacebookService.GRAPH_API_URL}/{comment_id}",
+                data={
+                    'access_token': page_access_token,
+                    'is_hidden': 'true' if is_hidden else 'false'
+                },
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                return None, f"Hide failed: {error_msg}"
+
+            return response.json(), None
+        except Exception as e:
+            logger.error(f"Facebook hide error: {e}")
+            return None, str(e)
+
 
 @facebook_auth_bp.route('/connect')
 @login_required
@@ -509,6 +693,9 @@ def post_to_page():
     if not oauth_record:
         return jsonify({'success': False, 'error': 'Facebook not connected'}), 401
     
+    if not oauth_record.page_id:
+        return jsonify({'success': False, 'error': 'No active page selected'}), 400
+
     data = request.get_json()
     page_id = data.get('page_id')
     message = data.get('message')

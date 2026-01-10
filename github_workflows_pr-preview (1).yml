@@ -1,0 +1,127 @@
+# PR Preview: starts a simple local server on the runner (PHP or Python) and exposes it via ngrok,
+# then comments the public URL on the PR. Ephemeral — lasts while the job runs.
+name: PR Preview (ngrok)
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install utilities
+        run: sudo apt-get update && sudo apt-get install -y jq unzip
+
+      - name: Setup PHP 8.2 (for composer / PHP built-in server)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Setup Python (for simple Python apps)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Start app server (PHP or Python)
+        id: start-server
+        run: |
+          set -e
+          # pick a port for the app
+          PORT=8000
+          echo "Using port $PORT"
+          # If composer.json present -> PHP app
+          if [ -f composer.json ]; then
+            echo "Detected composer.json -> starting PHP built-in server (public/ docroot)"
+            composer install --no-interaction --no-progress || true
+            # if public dir exists use it, otherwise use current directory
+            if [ -d public ]; then
+              php -S 127.0.0.1:$PORT -t public >/tmp/server.log 2>&1 & echo $! > server.pid
+            else
+              php -S 127.0.0.1:$PORT >/tmp/server.log 2>&1 & echo $! > server.pid
+            fi
+          # If requirements.txt present -> Python app (assumes Flask or similar)
+          elif [ -f requirements.txt ]; then
+            echo "Detected requirements.txt -> starting Python app (Flask/Gunicorn fallback)"
+            python -m pip install --upgrade pip
+            python -m pip install -r requirements.txt
+            # Try common Flask entrypoints
+            if [ -n "$FLASK_APP" ]; then
+              nohup flask run --host=127.0.0.1 --port=$PORT >/tmp/server.log 2>&1 & echo $! > server.pid
+            elif [ -f app.py ]; then
+              nohup python app.py >/tmp/server.log 2>&1 & echo $! > server.pid
+            elif [ -f wsgi.py ]; then
+              nohup python -m gunicorn --bind 127.0.0.1:$PORT wsgi:app >/tmp/server.log 2>&1 & echo $! > server.pid || true
+            else
+              echo "No recognized Python entrypoint (app.py/wsgi.py/FLASK_APP). Starting simple HTTP server for directory."
+              nohup python -m http.server $PORT >/tmp/server.log 2>&1 & echo $! > server.pid
+            fi
+          else
+            echo "No composer.json or requirements.txt detected. Falling back to PHP built-in server from repo root."
+            php -S 127.0.0.1:$PORT >/tmp/server.log 2>&1 & echo $! > server.pid
+          fi
+
+          # Wait for server to start (simple check)
+          for i in {1..20}; do
+            sleep 1
+            if curl -sSf http://127.0.0.1:$PORT >/dev/null 2>&1; then
+              echo "Server is responding on port $PORT"
+              break
+            fi
+            echo "Waiting for server... ($i)"
+          done
+
+      - name: Install ngrok
+        run: |
+          wget -q -O ngrok.zip https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-amd64.zip
+          unzip -o ngrok.zip -d /usr/local/bin
+          ngrok version
+
+      - name: Start ngrok and export URL
+        id: start-ngrok
+        env:
+          NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
+        run: |
+          set -e
+          PORT=8000
+          if [ -z "$NGROK_AUTHTOKEN" ]; then
+            echo "NGROK_AUTHTOKEN is not set. Exiting."
+            exit 1
+          fi
+          ngrok config add-authtoken "$NGROK_AUTHTOKEN" >/dev/null 2>&1 || true
+          nohup ngrok http $PORT --log=stdout >/tmp/ngrok.log 2>&1 &
+          # wait for ngrok API to be available
+          for i in {1..20}; do
+            sleep 1
+            URL=$(curl -s http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url // empty')
+            if [ -n "$URL" ]; then
+              echo "ngrok URL: $URL"
+              echo "ngrok_url=$URL" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            echo "Waiting for ngrok ($i)..."
+          done
+          echo "Failed to get ngrok URL"
+          exit 1
+
+      - name: Comment on PR with preview URL
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const url = '${{ steps.start-ngrok.outputs.ngrok_url }}';
+            if (!url) {
+              core.setFailed('No ngrok URL available');
+              return;
+            }
+            const body = `Preview available for this PR (ephemeral): ${url}\n\nThis preview will remain while the CI job runs (timeout ${process.env.GITHUB_JOB_TIMEOUT_MINUTES || 30} minutes).`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });

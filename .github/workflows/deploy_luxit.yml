@@ -1,0 +1,28 @@
+name: Deploy LuxIT (Validation Only)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+jobs:
+  validate-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets are present
+        run: |
+          set -euo pipefail
+          test -n "${{ secrets.AUTHORIZED_KEYS }}"
+          test -n "${{ secrets.LUX_SHH }}"
+          test -n "${{ secrets.VPS_HOST }}"
+          test -n "${{ secrets.VPS_SSH_KEY }}"
+          test -n "${{ secrets.VPS_USER }}"
+          test -n "${APP_ROOT:-}"
+
+      - name: Deployment placeholder
+        run: |
+          echo "Deployment steps intentionally omitted to avoid VPS modifications."

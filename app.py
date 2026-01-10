@@ -2,10 +2,12 @@ import os
 import logging
 import json
 import re
+import importlib
 import importlib.util
-from uuid import uuid4
+import subprocess
+import sys
 
-from flask import Flask, redirect, url_for, request, g, has_request_context
+from flask import Flask, redirect, url_for, request, g, has_request_context, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
@@ -80,32 +82,33 @@ db = SQLAlchemy(model_class=Base)
 # Create Flask app
 # ============================================================
 
+REQUIRED_ENV = ["SECRET_KEY", "SESSION_SECRET"]
+missing_env = [key for key in REQUIRED_ENV if not os.environ.get(key)]
+if missing_env:
+    logging.getLogger(__name__).error(
+        "Missing required env vars: %s",
+        ", ".join(missing_env),
+    )
+    sys.exit(1)
+
 app = Flask(__name__)
 
 # ------------------------------------------------------------
 # Session / secret key handling (deterministic & review-safe)
 # ------------------------------------------------------------
 
-session_secret = (
-    os.environ.get("SESSION_SECRET")
-    or os.environ.get("SECRET_KEY")
-)
+app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
+app.secret_key = os.environ["SESSION_SECRET"]
 
-if not session_secret:
+if os.environ.get("DEBUG_DEPLOY") == "1":
     logger = logging.getLogger(__name__)
-    if os.environ.get("CODEX_ENV") == "dev":
-        session_secret = uuid4().hex
-        logger.warning(
-            "SESSION_SECRET not set; using a temporary dev secret."
-        )
-    else:
-        session_secret = uuid4().hex
-        app.config["STARTUP_ERROR"] = (
-            "SESSION_SECRET is missing. Set it in your environment to start the app."
-        )
-        logger.warning(app.config["STARTUP_ERROR"])
-
-app.secret_key = session_secret
+    logger.info("DEBUG_DEPLOY=1; cwd=%s", os.getcwd())
+    logger.info("DEBUG_DEPLOY=1; __file__=%s", os.path.abspath(__file__))
+    module = importlib.import_module(app.import_name)
+    logger.info(
+        "DEBUG_DEPLOY=1; Flask import path=%s",
+        os.path.abspath(getattr(module, "__file__", app.import_name)),
+    )
 
 # Trust reverse proxy headers (required on VPS / load balancers)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
@@ -173,6 +176,32 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "auth.login"
 login_manager.login_message = "Please log in to access this page."
+
+
+def get_app_version() -> str:
+    version = os.environ.get("APP_VERSION")
+    if version:
+        return version
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            text=True,
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return "unknown"
+
+
+@app.route("/health")
+def health_check():
+    return jsonify(
+        {
+            "status": "ok",
+            "app": "lux-marketing",
+            "cwd": os.getcwd(),
+            "version": get_app_version(),
+        }
+    )
 
 
 @login_manager.user_loader

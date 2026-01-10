@@ -2,7 +2,7 @@ import os
 import subprocess
 
 
-def test_missing_session_secret_logs_warning():
+def test_missing_session_secret_fails_startup():
     env = os.environ.copy()
     env.pop("SESSION_SECRET", None)
     env.pop("SECRET_KEY", None)
@@ -18,5 +18,5 @@ def test_missing_session_secret_logs_warning():
         check=False,
     )
 
-    assert result.returncode == 0
-    assert "SESSION_SECRET is missing. Set it in your environment to start the app." in result.stderr
+    assert result.returncode != 0
+    assert "Missing required env vars: SECRET_KEY, SESSION_SECRET" in result.stderr

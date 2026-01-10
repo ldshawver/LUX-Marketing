@@ -98,7 +98,8 @@ app = Flask(__name__)
 # ------------------------------------------------------------
 
 app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
-app.secret_key = os.environ["SESSION_SECRET"]
+app.config["SESSION_SECRET"] = os.environ["SESSION_SECRET"]
+app.secret_key = app.config["SECRET_KEY"]
 
 if os.environ.get("DEBUG_DEPLOY") == "1":
     logger = logging.getLogger(__name__)

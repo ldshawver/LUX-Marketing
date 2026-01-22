@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # SSH Key Setup Script for GitHub
 # This script helps add SSH keys to your GitHub account
@@ -50,7 +50,7 @@ if [ ! -f "$SSH_KEY_PATH" ]; then
     echo -e "${RED}Error: SSH key not found at ${SSH_KEY_PATH}${NC}"
     echo ""
     echo "To generate a new SSH key, run:"
-    echo "  ssh-keygen -t ed25519 -C \"your_email@example.com\" -f ~/.ssh/id_ed25519_luxit"
+    echo "  ssh-keygen -t ed25519 -C \"your_email@example.com\" -f ${SSH_KEY_PATH%.pub}"
     exit 1
 fi
 

@@ -53,6 +53,12 @@ A comprehensive email marketing automation platform built with Flask, featuring 
 
 ## 🛠️ Installation
 
+### 0. Setup SSH Key (Optional)
+If you need to add an SSH key for GitHub access, see [SSH_KEY_SETUP.md](SSH_KEY_SETUP.md) or run:
+```bash
+./setup-ssh-key.sh
+```
+
 ### 1. Clone the Repository
 ```bash
 git clone <repository-url>

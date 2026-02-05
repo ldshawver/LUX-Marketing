@@ -3,7 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches:
-      - main    # deploy when main is updated
+      - main
 
 jobs:
   deploy:
@@ -13,21 +13,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to VPS via SSH
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
+          username: root
           key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
           script: |
-            cd /var/www/lux
+            set -e
+
+            echo "📦 Deploying LUX Email Bot"
+            cd /root/lux-email-bot
+
+            echo "🔄 Fetching latest code"
             git fetch --all
             git reset --hard origin/main
-            # if you have a venv and requirements.txt:
-            if [ -d "venv" ]; then
-              source venv/bin/activate
-              if [ -f "requirements.txt" ]; then
-                pip install -r requirements.txt
-              fi
-            fi
-            systemctl restart lux
+
+            echo "🚀 Restarting service"
+            systemctl restart lux-email-bot
+
+            echo "✅ Deploy complete"
